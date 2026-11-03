@@ -161,3 +161,34 @@ describe('documentos, cuenta y compartir', () => {
     expect(store.getState().accounts.some((a) => a.email === 'luis@correo.com')).toBe(false);
   });
 });
+
+describe('editar perfil', () => {
+  beforeEach(() => store.signIn(DEMO_EMAIL, DEMO_PASSWORD));
+
+  it('actualiza nombre y correo, y conserva el nivel elegido al registrarse', () => {
+    store.setLevel('school');
+    expect(
+      store.updateProfile({ fullName: 'Ana María Torres', email: 'ana.maria@correo.com' }),
+    ).toEqual({ ok: true });
+    expect(store.getState().session).toMatchObject({
+      fullName: 'Ana María Torres',
+      email: 'ana.maria@correo.com',
+      level: 'school',
+    });
+  });
+
+  it('cambiar contraseña exige la actual, 8 caracteres y escribirla dos veces igual', () => {
+    expect(store.changePassword('mala', 'nueva12345', 'nueva12345')).toMatchObject({
+      error: 'AUTH_INVALID',
+    });
+    expect(store.changePassword(DEMO_PASSWORD, 'corta', 'corta')).toMatchObject({
+      error: 'AUTH_WEAK_PASSWORD',
+    });
+    expect(store.changePassword(DEMO_PASSWORD, 'nueva12345', 'nueva12346')).toMatchObject({
+      error: 'AUTH_PASSWORD_MISMATCH',
+    });
+    expect(store.changePassword(DEMO_PASSWORD, 'nueva12345', 'nueva12345')).toEqual({ ok: true });
+    store.signOut();
+    expect(store.signIn(DEMO_EMAIL, 'nueva12345')).toEqual({ ok: true });
+  });
+});

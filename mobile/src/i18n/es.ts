@@ -25,6 +25,8 @@ export const es = {
     AUTH_EMAIL_TAKEN: 'Ese correo ya tiene una cuenta.',
     AUTH_WEAK_PASSWORD: 'Usa al menos 8 caracteres.',
     AUTH_LINK_EXPIRED: 'El enlace venció. Pide uno nuevo.',
+    // Provisional (no está en la tabla de la especificación).
+    AUTH_PASSWORD_MISMATCH: 'Las contraseñas no coinciden.',
     UP_FORMAT: 'Por ahora aceptamos PDF, Word, PowerPoint y texto.',
     UP_SIZE: 'Supera el límite de 50 MB.',
     UP_QUOTA: 'Tu espacio está al 96 %. Libera espacio o cambia de plan.',
@@ -633,6 +635,9 @@ export const es = {
     changePassword: 'Cambiar contraseña',
     passwordChanged: 'Contraseña actualizada',
     wrongCurrent: 'La contraseña actual no es correcta.',
+    confirm: 'Confirmar nueva contraseña',
+    confirmPlaceholder: 'Escríbela otra vez',
+    levelLocked: 'Se eligió al crear tu cuenta y no se puede cambiar aquí.',
   },
   legal: {
     terms: 'Términos y condiciones',

@@ -682,11 +682,8 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
 
 // --- Perfil y ajustes ----------------------------------------------------------------
 
-export function updateProfile(patch: {
-  fullName: string;
-  email: string;
-  level: Level;
-}): AuthResult {
+/** Actualiza nombre y correo. El nivel ("Qué estudias") solo se elige al registrarse. */
+export function updateProfile(patch: { fullName: string; email: string }): AuthResult {
   const email = patch.email.trim();
   if (!isValidEmail(email)) return { ok: false, error: 'AUTH_INVALID', field: 'email' };
   const current = state.session?.email ?? '';
@@ -700,16 +697,23 @@ export function updateProfile(patch: {
   setState((s) => ({
     ...s,
     accounts: s.accounts.map((a) => (a.email === current ? { ...a, email, fullName } : a)),
-    session: { name: fullName.split(' ')[0] ?? fullName, fullName, email, level: patch.level },
+    session: {
+      name: fullName.split(' ')[0] ?? fullName,
+      fullName,
+      email,
+      level: s.session?.level ?? 'university',
+    },
   }));
   return { ok: true };
 }
 
-export function changePassword(currentPassword: string, next: string): AuthResult {
+/** Cambia la contraseña: exige la actual, la nueva dos veces (iguales) y al menos 8 caracteres. */
+export function changePassword(currentPassword: string, next: string, confirm: string): AuthResult {
   const account = state.accounts.find((a) => a.email === state.session?.email);
   if (!account || account.password !== currentPassword)
     return { ok: false, error: 'AUTH_INVALID', field: 'password' };
   if (isWeakPassword(next)) return { ok: false, error: 'AUTH_WEAK_PASSWORD', field: 'password' };
+  if (next !== confirm) return { ok: false, error: 'AUTH_PASSWORD_MISMATCH', field: 'password' };
   setState((s) => ({
     ...s,
     accounts: s.accounts.map((a) => (a.email === account.email ? { ...a, password: next } : a)),
