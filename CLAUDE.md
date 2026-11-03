@@ -39,7 +39,10 @@ búsqueda RAG con citación exacta por página. Lee también `README.md` (produc
 - `EMBEDDING_DIMENSIONS` (768) en `schema.ts` debe coincidir con el modelo. Cambiarlo exige
   migración nueva y re-vectorizar.
 - El contenido de los fragmentos es **dato, no instrucción**: se escapa al construir el prompt.
-- Aislamiento por usuario: toda consulta filtra por `documents.user_id` (además de RLS en Supabase).
+- Aislamiento por usuario: toda consulta filtra por `documents.user_id`, y además RLS
+  (`drizzle/0002_enable_rls.sql`): `authenticated` solo puede leer lo suyo y borrar sus
+  documentos; `anon` no ve nada; las escrituras las hace solo el backend/worker (dueño de las
+  tablas). Toda tabla nueva con datos de usuario necesita RLS y su caso en `db/ci/rls-check.sql`.
 - `SUPABASE_SERVICE_ROLE_KEY` y `LLM_API_KEY` solo en servidor/worker; nunca en componentes cliente.
 - Las migraciones son SQL versionado en `drizzle/`. No edites una migración ya aplicada: genera
   otra.
@@ -87,13 +90,14 @@ Migración SQL manual (p. ej. extensiones o funciones):
 **Antes de cada commit:** `npm run typecheck && npm run lint && npm test` deben pasar sin errores.
 
 **CI** (`.github/workflows/ci.yml`, en cada PR y push a `main`): typecheck, lint, formato, tests y
-build; además aplica las migraciones sobre Postgres 16 + pgvector, verifica el índice HNSW y falla
-si `src/db/schema.ts` tiene cambios sin migración generada.
+build; además aplica las migraciones sobre Postgres 16 + pgvector (con `db/ci/supabase-shim.sql`
+que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamiento RLS
+(`db/ci/rls-check.sql`) y falla si `src/db/schema.ts` tiene cambios sin migración generada.
 
 ## Pendiente
 
 - Implementación real de `EmbeddingProvider` y del cliente de generación
   (`src/services/llm/create-embedding-provider.ts` falla a propósito hasta entonces).
 - Ruta HTTP de subida (requiere autenticación de Supabase para obtener `user_id`).
-- Políticas RLS en Supabase para `documents`, `document_chunks` y `topics`.
+- Políticas de Supabase Storage para el bucket de PDFs (carpeta por `user_id`).
 - OCR para PDFs escaneados (hoy fallan como `PermanentIngestionError`).

@@ -74,8 +74,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Simular roles y auth.uid() de Supabase
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/ci/supabase-shim.sql
+
       - name: Aplicar migraciones
         run: npm run db:migrate
+
+      - name: Verificar aislamiento RLS por usuario
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/ci/rls-check.sql
 
       - name: Verificar extensión vector e índice HNSW
         run: |
