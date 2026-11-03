@@ -1,7 +1,9 @@
 # CLAUDE.md — Reglas del proyecto APUNTOR
 
 Sistema de estudio e inteligencia documental: ingesta asíncrona de PDFs, árbol de temas y
-búsqueda RAG con citación exacta por página. Lee también `README.md` (producto y principios).
+búsqueda RAG con citación exacta por página. Lee también `README.md` (producto y principios) y
+`docs/producto/mvp-ux.md` (alcance del MVP, mapa de 44 pantallas, estados por pantalla y textos de
+error). Lo marcado **Por confirmar** en esa especificación no es una decisión cerrada.
 
 ## Stack principal
 
@@ -50,6 +52,16 @@ búsqueda RAG con citación exacta por página. Lee también `README.md` (produc
   embeddings. `source_pages` solo contiene páginas donde realmente aparece el tema o sus subtemas.
   `summary` queda en `null` hasta que exista el cliente de generación.
 - Con pgvector ≥ 0.8 y filtros muy selectivos, considera `SET hnsw.iterative_scan = relaxed_order`.
+
+### Reglas de producto (de `docs/producto/mvp-ux.md`)
+
+- Todo error visible al usuario se expresa con un **código estable** (`AUTH_INVALID`, `UP_FORMAT`,
+  `UP_SIZE`…) que sirve de clave de traducción; el texto vive en la tabla de la especificación.
+  Mensajes sin culpar al usuario y siempre con una acción. Nada de texto incrustado en imágenes.
+- Material propio en verde, contexto externo en violeta y **siempre con fuente**; el usuario puede
+  apagar el contexto externo en Perfil.
+- Cada pantalla define sus estados cargando / vacío / error / sin conexión según la tabla de estados.
+- Límite de subida de 50 MB (por confirmar) y formatos PDF, Word, PowerPoint, texto y fotos con OCR.
 
 ## Estructura
 
