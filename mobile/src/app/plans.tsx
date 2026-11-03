@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button, Chip, Icon, IconButton, Screen, Segmented, Text } from '@/components/ui';
 import { plans } from '@/data/mock';
 import { formatSoles, studentPrice } from '@/lib/pricing';
 import { choosePlan } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 type Plan = 'free' | 'student' | 'school';
 type Billing = 'monthly' | 'yearly';
@@ -33,7 +34,7 @@ export default function Plans() {
   ) => {
     const active = plan === key;
     return (
-      <Pressable
+      <Tap
         key={key}
         accessibilityRole="radio"
         accessibilityState={{ selected: active }}
@@ -89,7 +90,7 @@ export default function Plans() {
             <Text variant="caption">{item}</Text>
           </View>
         ))}
-      </Pressable>
+      </Tap>
     );
   };
 

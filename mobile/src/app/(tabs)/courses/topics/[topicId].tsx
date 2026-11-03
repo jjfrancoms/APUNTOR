@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { ShareSheets, type ShareStep } from '@/components/domain/ShareSheets';
 import {
   Card,
@@ -16,6 +16,7 @@ import {
 import { topicDetail, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 type Tab = 'mine' | 'external' | 'compare';
 
@@ -98,7 +99,7 @@ export default function TopicDetail() {
         {(Object.keys(s.topic.tabs) as Tab[]).map((key) => {
           const active = key === tab;
           return (
-            <Pressable
+            <Tap
               key={key}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
@@ -108,7 +109,7 @@ export default function TopicDetail() {
               <Text variant="smallStrong" color={active ? 'text' : 'textMuted'}>
                 {s.topic.tabs[key]}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

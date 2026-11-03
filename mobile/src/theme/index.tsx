@@ -3,12 +3,13 @@ import { useColorScheme } from 'react-native';
 import {
   colors,
   layout,
+  mascotPalette,
   navigationLayoutFor,
   type ColorMode,
   type ColorTokens,
 } from '../../../src/design/tokens';
 
-export { layout, navigationLayoutFor };
+export { layout, mascotPalette, navigationLayoutFor };
 /** Paletas completas, para superficies que no cambian con el tema (p. ej. el visor de cámara). */
 export { colors as palettes };
 export type { ColorTokens };

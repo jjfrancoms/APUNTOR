@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { TextInput } from 'react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -18,6 +18,7 @@ import { enqueueUploads } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { fonts, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 29 · Lectura poco clara */
 export default function ScanReview() {
@@ -73,7 +74,7 @@ export default function ScanReview() {
             ]}
           />
         ) : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityHint={r.tapHint}
             onPress={() => setEditing(true)}
@@ -86,7 +87,7 @@ export default function ScanReview() {
             ]}
           >
             <Text variant="small">{fixed}</Text>
-          </Pressable>
+          </Tap>
         )}
         <Text variant="caption" color="textMuted">
           {r.tapHint}

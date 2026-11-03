@@ -758,6 +758,7 @@ export const en: Strings = {
     chooseMonth: 'Choose month',
     day: (day: number, month: string, year: number) => `${month} ${day}, ${year}`,
   },
+  mascot: { label: 'Illari, your mascot' },
   map: {
     title: 'Screen map',
     intro: 'Preview with sample data. Tap a screen to open it.',

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
@@ -17,6 +17,7 @@ import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 20 · Detalle de curso */
 export default function CourseDetail() {
@@ -94,7 +95,7 @@ export default function CourseDetail() {
                 ? s.course.notStarted
                 : formatPercent(klass.progress);
           return (
-            <Pressable
+            <Tap
               key={klass.id}
               accessibilityRole="button"
               accessibilityLabel={`${klass.title}, ${status}`}
@@ -112,7 +113,7 @@ export default function CourseDetail() {
                 </Text>
               </View>
               <Icon name="chevron-right" color="textMuted" />
-            </Pressable>
+            </Tap>
           );
         })}
       </Card>

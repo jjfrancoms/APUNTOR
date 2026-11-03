@@ -11,6 +11,7 @@ export default tseslint.config(
       'drizzle/**',
       'next-env.d.ts',
       'coverage/**',
+      '.claude/skills/**',
     ],
   },
   js.configs.recommended,

@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { normalize } from '@/lib/text-search';
 import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 23 · Conversaciones (el historial se guarda hasta que lo borres). */
 export default function Conversations() {
@@ -46,14 +47,14 @@ export default function Conversations() {
         <Text variant="display" accessibilityRole="header" style={styles.flex}>
           {s.conversations.title}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={s.conversations.new}
           onPress={() => router.push('/conversation')}
           style={[styles.add, { backgroundColor: c.primary }]}
         >
           <Icon name="plus" size={20} color="onPrimary" />
-        </Pressable>
+        </Tap>
       </View>
       <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Icon name="search" size={18} color="textMuted" />
@@ -74,7 +75,7 @@ export default function Conversations() {
           {conversations
             .filter((cv) => cv.group === g.key)
             .map((cv) => (
-              <Pressable
+              <Tap
                 key={cv.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${cv.title}, ${cv.time}`}
@@ -94,7 +95,7 @@ export default function Conversations() {
                   </Text>
                   <Chip label={cv.course || s.tabs.chat} tone="primary" />
                 </Card>
-              </Pressable>
+              </Tap>
             ))}
         </View>
       ))}

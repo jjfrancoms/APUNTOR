@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
 import {
   ListRow,
   Sheet,
@@ -18,12 +18,15 @@ import {
 import { extLabel } from '@/lib/upload-rules';
 import { deleteDocument, moveDocument, renameDocument, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 19 · Detalle de documento, con la confirmación de eliminación (27). */
 export default function DocumentDetail() {
   const s = useStrings();
   const { c } = useTheme();
+  const reducedMotion = useReducedMotion();
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
   const record = useStore((st) => st.documents.find((d) => d.id === documentId) ?? st.documents[0]);
   const [confirming, setConfirming] = useState(confirm === '1');
@@ -201,10 +204,10 @@ export default function DocumentDetail() {
       <Modal
         visible={confirming}
         transparent
-        animationType="slide"
+        animationType={reducedMotion ? 'fade' : 'slide'}
         onRequestClose={() => setConfirming(false)}
       >
-        <View style={styles.backdrop}>
+        <View style={[styles.backdrop, { backgroundColor: c.scrim }]}>
           <View style={[styles.sheet, { backgroundColor: c.surface }]} accessibilityViewIsModal>
             <View style={[styles.handle, { backgroundColor: c.border }]} />
             <View style={[styles.dangerIcon, { backgroundColor: c.dangerSoft }]}>
@@ -253,7 +256,7 @@ function ActionButton({
 }) {
   const { c } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
@@ -263,7 +266,7 @@ function ActionButton({
       <Text variant="smallStrong" color={danger ? 'danger' : 'text'}>
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     minHeight: layout.minTouchTarget,
   },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

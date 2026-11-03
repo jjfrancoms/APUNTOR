@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button, Icon, Mascot, Screen, Text, TextLink, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { setLevel as saveLevel } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 type Level = 'school' | 'university' | 'other';
 const LEVEL_ICONS: Record<Level, IconName> = {
@@ -56,7 +57,7 @@ export default function Onboarding() {
           const selected = key === level;
           const item = s.onboarding.levels[key];
           return (
-            <Pressable
+            <Tap
               key={key}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
@@ -87,7 +88,7 @@ export default function Onboarding() {
                 </Text>
               </View>
               {selected ? <Icon name="check-circle" size={20} color="primary" /> : null}
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

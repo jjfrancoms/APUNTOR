@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import {
   Chip,
   Icon,
@@ -14,6 +14,7 @@ import {
 import { courses } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Burbuja del estudiante (derecha, verde). */
 export function UserBubble({ text }: { text: string }) {
@@ -31,7 +32,11 @@ export function UserBubble({ text }: { text: string }) {
 export function MascotBubble({ children, sources }: { children: ReactNode; sources?: ReactNode }) {
   const { c } = useTheme();
   return (
-    <View style={[styles.mascot, { backgroundColor: c.surface, borderColor: c.border }]}>
+    <View
+      // Los lectores de pantalla anuncian la respuesta cuando llega.
+      accessibilityLiveRegion="polite"
+      style={[styles.mascot, { backgroundColor: c.surface, borderColor: c.border }]}
+    >
       {children}
       {sources ? <View style={styles.sources}>{sources}</View> : null}
     </View>
@@ -93,7 +98,7 @@ export function Composer({
         />
         <Icon name="mic" size={18} color="textMuted" />
       </View>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={busy ? s.chat.stop : s.chat.send}
         accessibilityState={{ disabled: !canSend && !busy }}
@@ -108,7 +113,7 @@ export function Composer({
         ]}
       >
         <Icon name={busy ? 'square' : 'send'} size={18} color="onPrimary" />
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -145,6 +150,7 @@ export function ChatScreen({
         />
       }
       footer={composer}
+      stickToBottom
     >
       {children}
     </Screen>

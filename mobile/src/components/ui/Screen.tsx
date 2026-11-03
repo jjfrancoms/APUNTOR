@@ -1,5 +1,12 @@
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useRef, type ComponentRef, type ReactNode } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { layout, space, useTheme } from '@/theme';
 
@@ -13,6 +20,8 @@ export interface ScreenProps {
   edges?: Edge[];
   /** En escritorio, usa un ancho mayor (pantallas con varias columnas, como Inicio). */
   wide?: boolean;
+  /** Mantiene visible lo último (chat): baja al final cuando crece el contenido. */
+  stickToBottom?: boolean;
 }
 
 /** Contenedor de pantalla: fondo del tema, márgenes seguros y ancho máximo en tablet/escritorio. */
@@ -23,8 +32,10 @@ export function Screen({
   scroll = true,
   edges = ['top', 'left', 'right'],
   wide = false,
+  stickToBottom = false,
 }: ScreenProps) {
   const { c } = useTheme();
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const desktop = useWindowDimensions().width >= layout.breakpoints.desktop;
   // En escritorio: más aire a los lados y arriba, y un ancho máximo legible.
   const pad = desktop ? { paddingHorizontal: space.xxxl } : null;
@@ -36,12 +47,21 @@ export function Screen({
   const body = <View style={[styles.content, limit]}>{children}</View>;
   return (
     <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: c.bg }]}>
-      <View style={[styles.column, column]}>
+      {/* En iOS el teclado tapa el pie (botones, campo del chat): se sube el contenido. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.column, column]}
+      >
         {header ? <View style={[styles.header, pad, limit]}>{header}</View> : null}
         {scroll ? (
           <ScrollView
+            ref={scrollRef}
             contentContainerStyle={[styles.scroll, pad]}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            onContentSizeChange={
+              stickToBottom ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined
+            }
           >
             {body}
           </ScrollView>
@@ -49,7 +69,7 @@ export function Screen({
           <View style={[styles.scroll, styles.flex, pad]}>{body}</View>
         )}
         {footer ? <View style={[styles.footer, pad, limit]}>{footer}</View> : null}
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

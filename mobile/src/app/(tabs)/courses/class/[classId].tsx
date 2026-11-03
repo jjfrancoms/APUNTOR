@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
@@ -18,6 +18,7 @@ import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { classOf, useStore, type ContentKind } from '@/store/store';
 import { space } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 type Filter = 'all' | ContentKind;
 const KIND_TONE: Record<ContentKind, ChipTone> = {
@@ -103,7 +104,7 @@ export default function ClassDetail() {
             </Text>
           ) : (
             visible.map((item) => (
-              <Pressable
+              <Tap
                 key={item.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${cv.kind[item.kind]}: ${item.title}`}
@@ -123,7 +124,7 @@ export default function ClassDetail() {
                   <Text variant="small" numberOfLines={3}>
                     {item.text}
                   </Text>
-                  <Pressable
+                  <Tap
                     accessibilityRole="link"
                     onPress={() => router.push(`/documents/${item.documentId}`)}
                     hitSlop={8}
@@ -134,9 +135,9 @@ export default function ClassDetail() {
                       tone="primary"
                       icon="file-text"
                     />
-                  </Pressable>
+                  </Tap>
                 </Card>
-              </Pressable>
+              </Tap>
             ))
           )}
         </>

@@ -18,7 +18,7 @@ export function Chip({
   // El ámbar nunca es texto: los avisos usan fondo ámbar suave con texto principal.
   const tones: Record<
     ChipTone,
-    { bg: string; fg: Exclude<keyof ColorTokens, 'accent' | 'accentSoft'> }
+    { bg: string; fg: Exclude<keyof ColorTokens, 'accent' | 'accentSoft' | 'scrim'> }
   > = {
     primary: { bg: c.primarySoft, fg: 'primary' },
     external: { bg: c.externalSoft, fg: 'external' },

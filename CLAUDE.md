@@ -67,7 +67,27 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - Cada pantalla define sus estados cargando / vacío / error / sin conexión según la tabla de estados.
 - Límite de subida de 50 MB (por confirmar) y formatos PDF, Word, PowerPoint, texto y fotos con OCR.
 
-## Estructura
+## Diseño y skills
+
+- **`PRODUCT.md`** (raíz): usuarios, propósito, modo de cada superficie (Operate / Read /
+  Persuade) y compromisos de marca, para las skills. Se mantiene al día con la especificación.
+- **`DESIGN.md`** (raíz) es la identidad visual: paleta, tipografía, espacios, patrones y qué
+  evitar. Manda sobre cualquier propuesta de una skill. Si cambias `src/design/tokens.ts`,
+  actualiza `DESIGN.md` (lo verifica `tests/design-md.test.ts`).
+- Skills de diseño en `.claude/skills/` (se cargan solas al trabajar en vistas; ver
+  `.claude/skills/README.md`):
+  - `frontend-design` (Anthropic): planificar el sistema y la dirección antes de codificar.
+  - `impeccable` (pbakaus): `/impeccable critique`, `audit`, `polish`, `harden`… Para esta app
+    usa las guías nativas (`audit.native.md`, `ios.md`, `android.md`).
+  - `ui-ux-pro-max` (nextlevelbuilder): reglas de UX y accesibilidad; consulta el stack
+    `react-native`, no los de Tailwind/shadcn.
+- Las skills de terceros se copian tal cual (no se formatean ni se lintean) y no instalan hooks.
+- Reglas que salieron de la auditoría con las skills (manténlas):
+  - Todo lo tocable usa `Tap` (no `Pressable`): da respuesta al toque igual en toda la app.
+  - `Screen` maneja el teclado (iOS) y `stickToBottom` mantiene visible lo último (chat).
+  - Hojas y diálogos usan `useReducedMotion()` y el token `scrim` para el velo.
+  - `TextLink` es un botón por defecto; `role="link"` solo para abrir documentos o páginas.
+  - Sin etiquetas en mayúsculas sobre un título: las secciones llevan su encabezado normal.
 
 ```
 src/

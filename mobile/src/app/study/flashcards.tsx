@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -18,6 +18,7 @@ import { flashcards, flashcardSession } from '@/data/mock';
 import { gradeCard } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /**
  * Pantalla 22 · Flashcards con repetición espaciada (lib/flashcards.ts).
@@ -101,7 +102,7 @@ export default function Flashcards() {
         <TextLink label={f.howTitle} onPress={() => setShowHow((v) => !v)} />
       </View>
       {showHow ? <Banner tone="info" icon="info" title={f.how} /> : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityHint={flipped ? f.tapToReturn : f.tapToFlip}
         onPress={() => setFlipped(!flipped)}
@@ -127,7 +128,7 @@ export default function Flashcards() {
             {flipped ? f.tapToReturn : f.tapToFlip}
           </Text>
         </View>
-      </Pressable>
+      </Tap>
       <View style={styles.center}>
         <Chip label={s.quiz.source(card.klass, card.page)} tone="primary" icon="file-text" />
       </View>

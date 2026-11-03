@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
   Chip,
@@ -16,6 +16,7 @@ import { useStrings } from '@/i18n/es';
 import { extLabel } from '@/lib/upload-rules';
 import { assignUploadCourse, confirmUploads, createCourse, useStore } from '@/store/store';
 import { space } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 16 · Revisar clasificación: propone y, si duda, pregunta. Guarda solo lo confirmado. */
 export default function ReviewClassification() {
@@ -91,7 +92,7 @@ export default function ReviewClassification() {
                 setEditing(null);
               }}
             />
-            <Pressable
+            <Tap
               accessibilityRole="button"
               style={styles.row}
               onPress={() => assignUploadCourse(r.id, createCourse(s.demo.newCourseName))}
@@ -100,7 +101,7 @@ export default function ReviewClassification() {
               <Text variant="smallStrong" color="primary">
                 {s.review.newCourse}
               </Text>
-            </Pressable>
+            </Tap>
           </FileRow>
         ),
       )}

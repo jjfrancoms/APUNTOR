@@ -755,6 +755,7 @@ export const es = {
     chooseMonth: 'Elegir mes',
     day: (day: number, month: string, year: number) => `${day} de ${month} de ${year}`,
   },
+  mascot: { label: 'Illari, tu mascota' },
   map: {
     title: 'Mapa de pantallas',
     intro: 'Vista previa con datos de ejemplo. Toca una pantalla para abrirla.',

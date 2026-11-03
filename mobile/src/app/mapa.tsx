@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
 import { allScreens, screenGroups } from '@/data/screens';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Índice de la vista previa: las 44 pantallas agrupadas como el mapa de navegación. */
 export default function ScreenMap() {
@@ -26,7 +27,7 @@ export default function ScreenMap() {
           </Text>
           <Card style={styles.list}>
             {g.screens.map((scr, i) => (
-              <Pressable
+              <Tap
                 key={scr.n}
                 accessibilityRole="link"
                 accessibilityLabel={`${scr.n} ${scr.name}`}
@@ -44,7 +45,7 @@ export default function ScreenMap() {
                 </Text>
                 {scr.designed ? null : <Chip label={s.map.proposal} tone="warning" />}
                 <Icon name="chevron-right" size={16} color="textMuted" />
-              </Pressable>
+              </Tap>
             ))}
           </Card>
         </View>

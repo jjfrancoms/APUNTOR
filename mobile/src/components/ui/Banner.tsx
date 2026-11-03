@@ -26,7 +26,7 @@ export function Banner({
     {
       bg: string;
       border: string;
-      fg: Exclude<keyof ColorTokens, 'accent' | 'accentSoft'>;
+      fg: Exclude<keyof ColorTokens, 'accent' | 'accentSoft' | 'scrim'>;
       icon: IconName;
     }
   > = {
