@@ -9,8 +9,18 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { hydrate } from '@/store/store';
+import { hydrate, useStore } from '@/store/store';
 import { ThemeProvider, useTheme } from '@/theme';
+
+/** Aplica la apariencia elegida en Perfil (automática, clara u oscura). */
+function ThemedApp() {
+  const pref = useStore((st) => st.settings.theme);
+  return (
+    <ThemeProvider mode={pref === 'system' ? undefined : pref}>
+      <Root />
+    </ThemeProvider>
+  );
+}
 
 function Root() {
   const { c, mode } = useTheme();
@@ -38,9 +48,7 @@ export default function RootLayout() {
   if (!loaded || !ready) return null;
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <Root />
-      </ThemeProvider>
+      <ThemedApp />
     </SafeAreaProvider>
   );
 }

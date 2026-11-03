@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react';
 import type { ErrorCode } from '@/i18n/es';
 import { normalize, overlapScore } from '@/lib/text-search';
 import { extensionOf, suggestCourse, validateUpload } from '@/lib/upload-rules';
-import { isValidEmail, isWeakPassword } from '@/lib/validation';
+import { ADULT_AGE, ageOn, isValidEmail, isWeakPassword, parseBirthDate } from '@/lib/validation';
 import type { TopicDetail } from '@/data/mock';
 import {
   createSeed,
@@ -66,7 +66,15 @@ export async function hydrate(): Promise<void> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AppState>;
-      if (parsed.version === 2) state = { ...createSeed(), ...parsed } as AppState;
+      if (parsed.version === 2) {
+        const seed = createSeed();
+        // Mezcla los ajustes para que los añadidos después (p. ej. el tema) tengan valor.
+        state = {
+          ...seed,
+          ...parsed,
+          settings: { ...seed.settings, ...parsed.settings },
+        } as AppState;
+      }
     }
   } catch {
     state = createSeed();
@@ -114,8 +122,8 @@ export function pendingReview(s: AppState): UploadJob[] {
 
 // --- Sesión ----------------------------------------------------------------------
 
-export type AuthResult =
-  { ok: true } | { ok: false; error: ErrorCode; field: 'email' | 'password' };
+export type AuthField = 'email' | 'password' | 'confirm' | 'birthDate';
+export type AuthResult = { ok: true } | { ok: false; error: ErrorCode; field: AuthField };
 
 export function signIn(email: string, password: string): AuthResult {
   const account = state.accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
@@ -134,22 +142,36 @@ export function signIn(email: string, password: string): AuthResult {
   return { ok: true };
 }
 
-export function signUp(fullName: string, email: string, password: string): AuthResult {
+export interface SignUpInput {
+  fullName: string;
+  email: string;
+  password: string;
+  confirm: string;
+  /** DD/MM/AAAA */
+  birthDate: string;
+}
+
+/**
+ * Registro. Valida correo, contraseña (8+ caracteres, escrita dos veces igual) y fecha de
+ * nacimiento. Los menores de 18 no crean cuenta: AUTH_MINOR lleva a la lista de espera (44).
+ */
+export function signUp(input: SignUpInput): AuthResult {
+  const email = input.email.trim();
   if (!isValidEmail(email)) return { ok: false, error: 'AUTH_INVALID', field: 'email' };
-  if (state.accounts.some((a) => a.email.toLowerCase() === email.trim().toLowerCase()))
+  if (state.accounts.some((a) => a.email.toLowerCase() === email.toLowerCase()))
     return { ok: false, error: 'AUTH_EMAIL_TAKEN', field: 'email' };
-  if (isWeakPassword(password))
+  if (isWeakPassword(input.password))
     return { ok: false, error: 'AUTH_WEAK_PASSWORD', field: 'password' };
-  const name = fullName.trim() || email.split('@')[0] || 'Estudiante';
+  if (input.password !== input.confirm)
+    return { ok: false, error: 'AUTH_PASSWORD_MISMATCH', field: 'confirm' };
+  const birth = parseBirthDate(input.birthDate);
+  if (!birth) return { ok: false, error: 'AUTH_BIRTHDATE_INVALID', field: 'birthDate' };
+  if (ageOn(birth) < ADULT_AGE) return { ok: false, error: 'AUTH_MINOR', field: 'birthDate' };
+  const name = input.fullName.trim() || email.split('@')[0] || 'Estudiante';
   setState((s) => ({
     ...s,
-    accounts: [...s.accounts, { email: email.trim(), password, fullName: name }],
-    session: {
-      name: name.split(' ')[0] ?? name,
-      fullName: name,
-      email: email.trim(),
-      level: 'university',
-    },
+    accounts: [...s.accounts, { email, password: input.password, fullName: name }],
+    session: { name: name.split(' ')[0] ?? name, fullName: name, email, level: 'university' },
   }));
   return { ok: true };
 }

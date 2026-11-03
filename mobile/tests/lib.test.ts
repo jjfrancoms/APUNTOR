@@ -45,3 +45,23 @@ describe('splitMatch', () => {
     expect(splitMatch('abc', '')).toEqual([{ text: 'abc', hit: false }]);
   });
 });
+
+describe('fecha de nacimiento', async () => {
+  const { ageOn, formatBirthInput, parseBirthDate } = await import('../src/lib/validation');
+  const today = new Date(2026, 10, 3);
+  it('formatea mientras se escribe', () => {
+    expect(formatBirthInput('1')).toBe('1');
+    expect(formatBirthInput('1503')).toBe('15/03');
+    expect(formatBirthInput('15032008x9')).toBe('15/03/2008');
+  });
+  it('rechaza fechas imposibles, futuras o mal escritas', () => {
+    expect(parseBirthDate('31/02/2000', today)).toBeNull();
+    expect(parseBirthDate('01/01/2030', today)).toBeNull();
+    expect(parseBirthDate('1/1/2000', today)).toBeNull();
+    expect(parseBirthDate('15/03/2000', today)).not.toBeNull();
+  });
+  it('calcula la edad respetando si ya pasó el cumpleaños', () => {
+    expect(ageOn(new Date(2008, 10, 3), today)).toBe(18);
+    expect(ageOn(new Date(2008, 10, 4), today)).toBe(17);
+  });
+});

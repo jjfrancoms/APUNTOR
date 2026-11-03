@@ -31,7 +31,11 @@ export interface SessionUser {
   level: Level;
 }
 
+/** Apariencia: 'system' sigue el modo claro/oscuro del dispositivo. */
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export interface Settings {
+  theme: ThemePreference;
   useDocs: boolean;
   external: boolean;
   analytics: boolean;
@@ -157,6 +161,7 @@ export function createSeed(): AppState {
       external: true,
       analytics: false,
       saveProgress: true,
+      theme: 'system',
       lightMode: false,
       voice: false,
       notifProcessed: true,

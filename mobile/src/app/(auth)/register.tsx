@@ -4,7 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Checkbox, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ErrorCode } from '@/i18n/es';
-import { signInWithProvider, signUp } from '@/store/store';
+import { formatBirthInput } from '@/lib/validation';
+import { signInWithProvider, signUp, type AuthField } from '@/store/store';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 11 · Registro */
@@ -14,11 +15,15 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [accepted, setAccepted] = useState(true);
-  const [error, setError] = useState<{ code: ErrorCode; field: 'email' | 'password' } | null>(null);
+  const [error, setError] = useState<{ code: ErrorCode; field: AuthField } | null>(null);
   const submit = () => {
-    const r = signUp(name, email, password);
+    const r = signUp({ fullName: name, email, password, confirm, birthDate });
     if (r.ok) router.push('/privacy');
+    // Menores de 18: no se crea la cuenta; la lista de espera explica la versión para colegios.
+    else if (r.error === 'AUTH_MINOR') router.replace('/waitlist');
     else setError({ code: r.error, field: r.field });
   };
   const provider = () => {
@@ -61,6 +66,35 @@ export default function Register() {
         autoComplete="new-password"
         error={error?.field === 'password' ? s.errors[error.code] : undefined}
       />
+      <TextField
+        label={s.register.confirm}
+        placeholder={s.register.confirmPlaceholder}
+        value={confirm}
+        onChangeText={(v) => {
+          setConfirm(v);
+          if (error?.field === 'confirm') setError(null);
+        }}
+        secureTextEntry
+        autoComplete="new-password"
+        error={error?.field === 'confirm' ? s.errors[error.code] : undefined}
+      />
+      <View style={styles.intro}>
+        <TextField
+          label={s.register.birthDate}
+          placeholder={s.register.birthPlaceholder}
+          value={birthDate}
+          onChangeText={(v) => {
+            setBirthDate(formatBirthInput(v));
+            if (error?.field === 'birthDate') setError(null);
+          }}
+          keyboardType="number-pad"
+          autoComplete="birthdate-full"
+          error={error?.field === 'birthDate' ? s.errors[error.code] : undefined}
+        />
+        <Text variant="caption" color="textMuted">
+          {s.register.birthNote}
+        </Text>
+      </View>
       <Checkbox
         checked={accepted}
         onChange={setAccepted}
@@ -87,7 +121,17 @@ export default function Register() {
           </Text>
         </Text>
       </Checkbox>
-      <Button label={s.register.submit} onPress={submit} disabled={!accepted} />
+      <Button
+        label={s.register.submit}
+        onPress={submit}
+        disabled={
+          !accepted ||
+          email.length === 0 ||
+          password.length === 0 ||
+          confirm.length === 0 ||
+          birthDate.length < 10
+        }
+      />
       <View style={styles.divider}>
         <View style={[styles.line, { backgroundColor: c.border }]} />
         <Text variant="caption" color="textMuted">

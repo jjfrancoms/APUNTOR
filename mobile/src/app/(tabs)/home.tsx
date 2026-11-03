@@ -1,12 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
-import { Button, Card, Icon, Mascot, ProgressBar, Screen, Text, TextLink } from '@/components/ui';
+import {
+  Button,
+  Card,
+  Icon,
+  ListRow,
+  Mascot,
+  ProgressBar,
+  Screen,
+  Text,
+  TextLink,
+} from '@/components/ui';
 import { continueLearning, todayReview } from '@/data/mock';
-import { useStore } from '@/store/store';
+import { FREE_DAILY_QUESTIONS, questionsToday, quotaMb, usedMb, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
-import { space, useTheme } from '@/theme';
+import { layout, space, useTheme } from '@/theme';
 
 /** Pantalla 6 · Inicio */
 export default function Home() {
@@ -14,6 +24,12 @@ export default function Home() {
   const { c } = useTheme();
   const name = useStore((st) => st.session?.name ?? 'Ana');
   const courses = useStore((st) => st.courses);
+  const docCount = useStore((st) => st.documents.length);
+  const asked = useStore(questionsToday);
+  const plan = useStore((st) => st.plan);
+  const used = useStore(usedMb);
+  const quota = useStore(quotaMb);
+  const desktop = useWindowDimensions().width >= layout.breakpoints.desktop;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   // Pantalla 51 · Inicio cargando: esqueleto con la forma de la pantalla.
   if (demo === 'loading') {
@@ -48,8 +64,8 @@ export default function Home() {
       </Screen>
     );
   }
-  return (
-    <Screen>
+  const greetingBlock = (
+    <>
       <View>
         <Text variant="display" accessibilityRole="header">
           {s.home.hello(name)}
@@ -58,8 +74,12 @@ export default function Home() {
           {s.home.subtitle}
         </Text>
       </View>
+    </>
+  );
+  const main = (
+    <>
       <Card tone="primary" style={styles.review}>
-        <Mascot size={80} />
+        <Mascot size={desktop ? 112 : 80} />
         <View style={styles.flex}>
           <Text variant="bodyStrong">{s.home.review(todayReview.topic)}</Text>
           <View style={styles.start}>
@@ -121,6 +141,76 @@ export default function Home() {
           </Pressable>
         ))}
       </Card>
+    </>
+  );
+  // Columna lateral (solo escritorio): resumen de uso y accesos rápidos.
+  const side = (
+    <>
+      <Text variant="heading">{s.home.summary}</Text>
+      <Card style={styles.summary}>
+        <View style={styles.stat}>
+          <Text variant="small" color="textMuted" style={styles.flex}>
+            {s.home.documents}
+          </Text>
+          <Text variant="bodyStrong">{docCount}</Text>
+        </View>
+        {plan === 'free' ? (
+          <View style={styles.flex}>
+            <View style={styles.stat}>
+              <Text variant="small" color="textMuted" style={styles.flex}>
+                {s.home.questions}
+              </Text>
+              <Text variant="bodyStrong">{`${asked} / ${FREE_DAILY_QUESTIONS}`}</Text>
+            </View>
+            <ProgressBar value={asked / FREE_DAILY_QUESTIONS} label={s.home.questions} />
+          </View>
+        ) : null}
+        <View style={styles.flex}>
+          <View style={styles.stat}>
+            <Text variant="small" color="textMuted" style={styles.flex}>
+              {s.home.storage}
+            </Text>
+            <Text variant="bodyStrong">{s.home.of(`${used} MB`, `${quota} MB`)}</Text>
+          </View>
+          <ProgressBar value={used / quota} label={s.home.storage} />
+        </View>
+      </Card>
+      <Text variant="heading">{s.home.quickActions}</Text>
+      <Card style={styles.list}>
+        <ListRow
+          icon="check-square"
+          title={s.home.quiz}
+          onPress={() => router.push('/study/quiz-setup')}
+        />
+        <ListRow
+          icon="layers"
+          title={s.home.flashcards}
+          onPress={() => router.push('/study/flashcards')}
+        />
+        <ListRow
+          icon="message-circle"
+          title={s.home.ask}
+          divider={false}
+          onPress={() => router.push('/conversation')}
+        />
+      </Card>
+    </>
+  );
+  if (desktop) {
+    return (
+      <Screen wide>
+        {greetingBlock}
+        <View style={styles.columns}>
+          <View style={styles.mainCol}>{main}</View>
+          <View style={styles.sideCol}>{side}</View>
+        </View>
+      </Screen>
+    );
+  }
+  return (
+    <Screen>
+      {greetingBlock}
+      {main}
     </Screen>
   );
 }
@@ -132,5 +222,10 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1, gap: space.xs },
   list: { padding: 0, gap: 0 },
+  summary: { gap: space.lg },
+  stat: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  mainCol: { flex: 2, gap: space.lg, minWidth: 0 },
+  sideCol: { flex: 1, gap: space.lg, minWidth: 0 },
   courseRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
 });

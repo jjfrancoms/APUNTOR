@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { space, useTheme } from '@/theme';
+import { layout, space, useTheme } from '@/theme';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -11,6 +11,8 @@ export interface ScreenProps {
   header?: ReactNode;
   scroll?: boolean;
   edges?: Edge[];
+  /** En escritorio, usa un ancho mayor (pantallas con varias columnas, como Inicio). */
+  wide?: boolean;
 }
 
 /** Contenedor de pantalla: fondo del tema, márgenes seguros y ancho máximo en tablet/escritorio. */
@@ -20,21 +22,29 @@ export function Screen({
   header,
   scroll = true,
   edges = ['top', 'left', 'right'],
+  wide = false,
 }: ScreenProps) {
   const { c } = useTheme();
+  const desktop = useWindowDimensions().width >= layout.breakpoints.desktop;
+  // En escritorio: más aire a los lados y arriba, y un ancho máximo legible.
+  const pad = desktop ? { paddingHorizontal: space.xxxl } : null;
+  const column = desktop ? { maxWidth: wide ? 1120 : 800, paddingTop: space.xl } : null;
   const body = <View style={styles.content}>{children}</View>;
   return (
     <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: c.bg }]}>
-      <View style={styles.column}>
-        {header ? <View style={styles.header}>{header}</View> : null}
+      <View style={[styles.column, column]}>
+        {header ? <View style={[styles.header, pad]}>{header}</View> : null}
         {scroll ? (
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={[styles.scroll, pad]}
+            keyboardShouldPersistTaps="handled"
+          >
             {body}
           </ScrollView>
         ) : (
-          <View style={[styles.scroll, styles.flex]}>{body}</View>
+          <View style={[styles.scroll, styles.flex, pad]}>{body}</View>
         )}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? <View style={[styles.footer, pad]}>{footer}</View> : null}
       </View>
     </SafeAreaView>
   );

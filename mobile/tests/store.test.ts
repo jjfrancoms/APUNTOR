@@ -21,14 +21,66 @@ describe('sesión', () => {
   });
 
   it('registra cuentas nuevas y detecta correo repetido y contraseña corta', () => {
-    expect(store.signUp('Ana', DEMO_EMAIL, '12345678')).toMatchObject({
+    expect(
+      store.signUp({
+        fullName: 'Ana',
+        email: DEMO_EMAIL,
+        password: '12345678',
+        confirm: '12345678',
+        birthDate: '15/03/2000',
+      }),
+    ).toMatchObject({
       error: 'AUTH_EMAIL_TAKEN',
     });
-    expect(store.signUp('Luis Pérez', 'luis@correo.com', '123')).toMatchObject({
+    expect(
+      store.signUp({
+        fullName: 'Luis Pérez',
+        email: 'luis@correo.com',
+        password: '123',
+        confirm: '123',
+        birthDate: '15/03/2000',
+      }),
+    ).toMatchObject({
       error: 'AUTH_WEAK_PASSWORD',
     });
-    expect(store.signUp('Luis Pérez', 'luis@correo.com', '12345678')).toEqual({ ok: true });
+    expect(
+      store.signUp({
+        fullName: 'Luis Pérez',
+        email: 'luis@correo.com',
+        password: '12345678',
+        confirm: '12345678',
+        birthDate: '15/03/2000',
+      }),
+    ).toEqual({ ok: true });
     expect(store.getState().session).toMatchObject({ name: 'Luis', email: 'luis@correo.com' });
+  });
+});
+
+describe('registro: confirmación y edad', () => {
+  const base = {
+    fullName: 'Sofía',
+    email: 'sofia@correo.com',
+    password: '12345678',
+    confirm: '12345678',
+    birthDate: '15/03/2000',
+  };
+  it('exige escribir la contraseña dos veces igual', () => {
+    expect(store.signUp({ ...base, confirm: '12345679' })).toEqual({
+      ok: false,
+      error: 'AUTH_PASSWORD_MISMATCH',
+      field: 'confirm',
+    });
+  });
+  it('valida la fecha de nacimiento', () => {
+    expect(store.signUp({ ...base, birthDate: '31/02/2000' })).toMatchObject({
+      error: 'AUTH_BIRTHDATE_INVALID',
+    });
+  });
+  it('los menores de 18 no crean cuenta (van a la lista de espera)', () => {
+    const minor = new Date();
+    const d = `${String(minor.getDate()).padStart(2, '0')}/${String(minor.getMonth() + 1).padStart(2, '0')}/${minor.getFullYear() - 15}`;
+    expect(store.signUp({ ...base, birthDate: d })).toMatchObject({ error: 'AUTH_MINOR' });
+    expect(store.getState().accounts.some((a) => a.email === base.email)).toBe(false);
   });
 });
 
@@ -155,7 +207,13 @@ describe('documentos, cuenta y compartir', () => {
   });
 
   it('borrar la cuenta elimina la cuenta y la sesión', () => {
-    store.signUp('Luis', 'luis@correo.com', '12345678');
+    store.signUp({
+      fullName: 'Luis',
+      email: 'luis@correo.com',
+      password: '12345678',
+      confirm: '12345678',
+      birthDate: '15/03/2000',
+    });
     store.deleteAccount();
     expect(store.getState().session).toBeNull();
     expect(store.getState().accounts.some((a) => a.email === 'luis@correo.com')).toBe(false);

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { quizQuestions, quizSession } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
-import { buildQuiz } from '@/lib/quiz';
+import { buildQuiz, type QuizQuestion } from '@/lib/quiz';
 import { classOf, recordQuiz, useStore } from '@/store/store';
 import { useMemo } from 'react';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -28,7 +28,7 @@ export default function Quiz() {
   const { n, classId = 'c3' } = useLocalSearchParams<{ n?: string; classId?: string }>();
   const state = useStore((st) => st);
   // La Clase 3 de Cálculo I tiene un banco curado; las demás se arman con su contenido.
-  const bank = useMemo(
+  const bank: QuizQuestion[] = useMemo(
     () => (classId === 'c3' ? quizQuestions : buildQuiz(state.items, classId)),
     [state.items, classId],
   );
@@ -117,6 +117,11 @@ export default function Quiz() {
       <Text variant="heading" accessibilityRole="header">
         {q.prompt}
       </Text>
+      {q.quote ? (
+        <Card>
+          <Text variant="body">{q.quote}</Text>
+        </Card>
+      ) : null}
       <View accessibilityRole="radiogroup" style={styles.options}>
         {q.options.map((opt, i) => {
           const right = answered && i === q.answer;

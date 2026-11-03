@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Icon, Text, type IconName } from '@/components/ui';
+import { Icon, Mascot, Text, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { layout, space, useTheme, navigationLayoutFor } from '@/theme';
+import { updateSettings, useStore } from '@/store/store';
+import { layout, radius, space, useTheme, navigationLayoutFor } from '@/theme';
 
 export const TAB_ROUTES = ['home', 'courses', 'chat', 'profile'] as const;
 type TabRoute = (typeof TAB_ROUTES)[number];
@@ -21,7 +22,9 @@ const ICONS: Record<TabRoute, IconName> = {
  */
 export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
   const s = useStrings();
-  const { c } = useTheme();
+  const { c, mode: colorMode } = useTheme();
+  const fullName = useStore((st) => st.session?.fullName ?? '');
+  const email = useStore((st) => st.session?.email ?? '');
   const { width } = useWindowDimensions();
   const mode = navigationLayoutFor(width);
   const vertical = mode !== 'bottom-bar';
@@ -57,39 +60,121 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       );
     });
 
+  const sidebar = mode === 'sidebar';
   const upload = (
     <Pressable
       key="upload"
       accessibilityRole="button"
       accessibilityLabel={s.tabs.upload}
       onPress={() => router.push('/upload')}
-      style={[styles.item, mode === 'sidebar' && styles.itemWide]}
+      style={({ pressed }) => [
+        sidebar ? [styles.uploadWide, { backgroundColor: c.primary }] : styles.item,
+        { opacity: pressed ? 0.85 : 1 },
+      ]}
     >
-      <View style={[styles.fab, { backgroundColor: c.primary }]}>
-        <Icon name="plus" size={24} color="onPrimary" />
-      </View>
-      {mode === 'sidebar' ? <Text variant="bodyStrong">{s.tabs.upload}</Text> : null}
+      {sidebar ? (
+        <>
+          <Icon name="plus" size={20} color="onPrimary" />
+          <Text variant="bodyStrong" color="onPrimary">
+            {s.tabs.upload}
+          </Text>
+        </>
+      ) : (
+        <View style={[styles.fab, { backgroundColor: c.primary }]}>
+          <Icon name="plus" size={24} color="onPrimary" />
+        </View>
+      )}
     </Pressable>
   );
 
-  const ordered = vertical ? [upload, ...items] : [items[0], items[1], upload, items[2], items[3]];
+  // Cambio rápido de tema; en Perfil › Apariencia también se puede volver a "Automático".
+  const nextTheme = colorMode === 'dark' ? 'light' : 'dark';
+  const themeLabel = colorMode === 'dark' ? s.tabs.toLight : s.tabs.toDark;
+  const themeToggle = (
+    <Pressable
+      key="theme"
+      accessibilityRole="button"
+      accessibilityLabel={themeLabel}
+      onPress={() => updateSettings({ theme: nextTheme })}
+      style={[styles.item, sidebar && [styles.itemWide, styles.flexNone]]}
+    >
+      <Icon name={colorMode === 'dark' ? 'sun' : 'moon'} size={20} color="textMuted" />
+      {sidebar ? (
+        <Text variant="smallStrong" color="textMuted">
+          {themeLabel}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+
+  if (!vertical) {
+    return (
+      <View
+        accessibilityRole="tablist"
+        style={[
+          styles.bar,
+          { backgroundColor: c.surface, borderColor: c.border },
+          { paddingBottom: Math.max(insets.bottom, space.sm) },
+        ]}
+      >
+        {[items[0], items[1], upload, items[2], items[3]]}
+      </View>
+    );
+  }
 
   return (
     <View
       accessibilityRole="tablist"
       style={[
-        vertical ? styles.rail : styles.bar,
+        styles.rail,
         { backgroundColor: c.surface, borderColor: c.border },
-        vertical
-          ? {
-              width: mode === 'sidebar' ? layout.sidebarWidth.desktop : layout.sidebarWidth.tablet,
-              paddingTop: insets.top + space.lg,
-            }
-          : { paddingBottom: Math.max(insets.bottom, space.sm) },
-        mode === 'sidebar' && styles.railWide,
+        {
+          width: sidebar ? layout.sidebarWidth.desktop : layout.sidebarWidth.tablet,
+          paddingTop: insets.top + space.xl,
+          paddingBottom: insets.bottom + space.lg,
+        },
+        sidebar && styles.railWide,
       ]}
     >
-      {ordered}
+      {sidebar ? (
+        <View style={styles.brand}>
+          <Mascot size={40} />
+          <View>
+            <Text variant="heading">{s.tabs.brand}</Text>
+            <Text variant="caption" color="textMuted">
+              {s.tabs.tagline}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Mascot size={40} />
+      )}
+      {upload}
+      <View style={[styles.nav, sidebar && styles.navWide]}>{items}</View>
+      <View style={styles.spacer} />
+      {themeToggle}
+      {sidebar && fullName ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${s.tabs.profile}: ${fullName}`}
+          onPress={() => router.navigate('/profile')}
+          style={[styles.user, { borderColor: c.border }]}
+        >
+          <View style={[styles.avatar, { backgroundColor: c.primarySoft }]}>
+            <Text variant="bodyStrong" color="primary">
+              {fullName.charAt(0)}
+            </Text>
+          </View>
+          <View style={styles.flex}>
+            <Text variant="smallStrong" numberOfLines={1}>
+              {fullName}
+            </Text>
+            <Text variant="caption" color="textMuted" numberOfLines={1}>
+              {email}
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -109,7 +194,36 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     height: '100%',
   },
-  railWide: { alignItems: 'stretch', paddingHorizontal: space.lg },
+  railWide: { alignItems: 'stretch', paddingHorizontal: space.lg, gap: space.lg },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs },
+  nav: { gap: space.md, alignItems: 'center' },
+  navWide: { gap: space.xs, alignItems: 'stretch' },
+  spacer: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
+  flexNone: { minHeight: 40 },
+  uploadWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    minHeight: 48,
+    borderRadius: radius.md,
+  },
+  user: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: space.lg,
+    paddingHorizontal: space.xs,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   item: {
     alignItems: 'center',
     justifyContent: 'center',

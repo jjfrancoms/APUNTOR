@@ -48,6 +48,10 @@ describe('buildQuiz', async () => {
         expect(q.answer).toBeGreaterThanOrEqual(0);
         expect(q.answer).toBeLessThan(q.options.length);
         expect(q.page).toBeGreaterThan(0);
+        // Nada se recorta: ni las opciones ni la descripción.
+        for (const o of q.options) expect(o.endsWith('…')).toBe(false);
+        expect(q.quote && contentItems.some((i) => i.text === q.quote)).toBe(true);
+        expect(q.options[q.answer]).toBe(contentItems.find((i) => i.text === q.quote)?.title);
       }
     }
   });

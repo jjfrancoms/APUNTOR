@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Card, ListRow, Screen, Text, TextLink, Toggle } from '@/components/ui';
+import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
 import { resetDemo, signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
@@ -69,6 +69,23 @@ export default function Profile() {
           divider={false}
           trailing={toggle(s.profile.progress.title, progress, setProgress)}
         />
+      </Card>
+      <Text variant="overline" color="textMuted">
+        {s.profile.appearance.header}
+      </Text>
+      <Card>
+        <Segmented
+          options={[
+            { value: 'system', label: s.profile.appearance.system },
+            { value: 'light', label: s.profile.appearance.light },
+            { value: 'dark', label: s.profile.appearance.dark },
+          ]}
+          value={st.theme}
+          onChange={(theme) => updateSettings({ theme })}
+        />
+        <Text variant="caption" color="textMuted">
+          {s.profile.appearance.detail}
+        </Text>
       </Card>
       <Text variant="overline" color="textMuted">
         {s.profile.mascotHeader}
