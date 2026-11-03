@@ -1,0 +1,65 @@
+import { useState } from 'react';
+import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { Text } from './Text';
+
+export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
+  label: string;
+  /** Mensaje de error en línea, bajo el campo. */
+  error?: string;
+  multiline?: boolean;
+}
+
+export function TextField({ label, error, multiline, onFocus, onBlur, ...input }: TextFieldProps) {
+  const { c } = useTheme();
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.wrap}>
+      <Text variant="smallStrong">{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        placeholderTextColor={c.textMuted}
+        multiline={multiline}
+        {...input}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
+        style={[
+          styles.input,
+          {
+            color: c.text,
+            backgroundColor: c.surface,
+            // El foco se indica con el borde (en web se quita el contorno del navegador).
+            borderColor: error ? c.danger : focused ? c.primary : c.border,
+            minHeight: multiline ? 120 : layout.primaryButtonHeight,
+            textAlignVertical: multiline ? 'top' : 'center',
+          },
+        ]}
+      />
+      {error ? (
+        <Text variant="caption" color="danger" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { gap: space.xs + 2 },
+  input: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+  },
+});

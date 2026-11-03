@@ -4,7 +4,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'next-env.d.ts', 'coverage/**'],
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'mobile/**',
+      'drizzle/**',
+      'next-env.d.ts',
+      'coverage/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

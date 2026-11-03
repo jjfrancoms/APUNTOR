@@ -85,6 +85,12 @@ src/
 │   └── storage/file-storage.ts  # Supabase Storage
 └── worker.ts                    # entrada del proceso worker
 drizzle/                         # migraciones SQL (0000 habilita `vector`)
+mobile/                          # app Expo/React Native (Expo Router, SDK 58), paquete npm propio
+├── src/app/                     # rutas: (auth)/ acceso, (tabs)/ navegación principal, documents/
+├── src/components/ui/           # componentes base (Button, TextField, Card, Chip, Mascot…)
+├── src/theme/                   # tema claro/oscuro desde src/design/tokens.ts (compartido)
+├── src/i18n/es.ts               # todos los textos visibles (listos para traducir)
+└── src/data/mock.ts             # datos de ejemplo hasta conectar la API
 tests/                           # Vitest
 ```
 
@@ -103,6 +109,20 @@ tests/                           # Vitest
 | `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`   |
 | `npm run db:push`     | Sincroniza el esquema sin migración (solo local) |
 | `npm run db:studio`   | Drizzle Studio                                   |
+
+App móvil (dentro de `mobile/`, con su propio `package.json`):
+
+| Comando                  | Qué hace                                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `npm start`              | Servidor de desarrollo de Expo (`w` abre la versión web)                                        |
+| `npm run typecheck`      | `tsc --noEmit`                                                                                  |
+| `npm test`               | Vitest (lógica de `src/lib`, datos y textos)                                                    |
+| `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
+| `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
+
+Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`); sin
+texto literal fuera de `src/i18n/es.ts`; sin hex sueltos (usa `useTheme()`); el ámbar nunca es
+color de texto (el tipo de `Text` lo impide); íconos sin texto llevan `accessibilityLabel`.
 
 Migración SQL manual (p. ej. extensiones o funciones):
 `npx drizzle-kit generate --custom --name <nombre>`.

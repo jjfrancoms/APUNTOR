@@ -1,0 +1,251 @@
+/**
+ * Textos de la app en español (Perú). Toda cadena visible vive aquí para poder
+ * traducirla; las pantallas no deben tener texto literal.
+ * Los mensajes de error usan los códigos de docs/producto/mvp-ux.md §4.
+ */
+export const es = {
+  common: {
+    back: 'Volver',
+    close: 'Cerrar',
+    more: 'Más opciones',
+    continue: 'Continuar',
+    cancel: 'Cancelar',
+    change: 'Cambiar',
+    seeAll: 'Ver todos',
+    or: 'o',
+    google: 'Continuar con Google',
+    apple: 'Continuar con Apple',
+    terms: 'Términos',
+    privacyPolicy: 'Política de privacidad',
+    and: 'y la',
+    comingSoon: 'Esta pantalla todavía está en diseño.',
+  },
+  errors: {
+    AUTH_INVALID: 'Correo o contraseña incorrectos.',
+    AUTH_EMAIL_TAKEN: 'Ese correo ya tiene una cuenta.',
+    AUTH_WEAK_PASSWORD: 'Usa al menos 8 caracteres.',
+    AUTH_LINK_EXPIRED: 'El enlace venció. Pide uno nuevo.',
+    UP_FORMAT: 'Por ahora aceptamos PDF, Word, PowerPoint y texto.',
+    UP_SIZE: 'Supera el límite de 50 MB.',
+    UP_QUOTA: 'Tu espacio está al 96 %. Libera espacio o cambia de plan.',
+    UP_NETWORK: 'Sin conexión durante la subida. No se perdió nada.',
+  },
+  login: {
+    title: 'Estudia con tus propios apuntes',
+    subtitle:
+      'Sube tus documentos y pregúntale a tu mascota lo que no entiendas. Aprende cómo estudias para ayudarte mejor.',
+    email: 'Correo electrónico',
+    emailPlaceholder: 'tucorreo@ejemplo.com',
+    password: 'Contraseña',
+    forgot: '¿Olvidaste tu contraseña?',
+    submit: 'Iniciar sesión',
+    firstTime: '¿Primera vez aquí?',
+    createAccount: 'Crear cuenta',
+    privacyNote: 'Tus documentos son privados y solo te ayudan a ti.',
+  },
+  register: {
+    header: 'Crear cuenta',
+    title: 'Empecemos',
+    subtitle: 'Con tu cuenta, tu mascota te conoce y guarda tu progreso.',
+    name: 'Nombre',
+    namePlaceholder: 'Ana Torres',
+    email: 'Correo',
+    emailPlaceholder: 'ana@correo.com',
+    password: 'Contraseña',
+    passwordPlaceholder: 'Mínimo 8 caracteres',
+    accept: 'Acepto los',
+    submit: 'Crear cuenta',
+    haveAccount: '¿Ya tienes cuenta?',
+    signIn: 'Inicia sesión',
+  },
+  forgot: {
+    header: 'Recuperar acceso',
+    title: '¿Olvidaste tu contraseña?',
+    subtitle:
+      'Escribe tu correo y te enviamos un enlace para crear una nueva. El enlace vence en 30 minutos.',
+    email: 'Correo',
+    submit: 'Enviar enlace',
+    remembered: '¿La recordaste?',
+    backToLogin: 'Volver a iniciar sesión',
+  },
+  linkSent: {
+    title: 'Revisa tu correo',
+    body: (email: string) =>
+      `Enviamos el enlace a ${email}. Si no lo ves, revisa spam o promociones.`,
+    openMail: 'Abrir correo',
+    resendIn: (time: string) => `Reenviar en ${time}`,
+    resend: 'Reenviar enlace',
+    wrongEmail: '¿Correo equivocado?',
+  },
+  onboarding: {
+    step: (n: number, total: number) => `Paso ${n} de ${total}`,
+    greeting: '¡Hola! Para ayudarte mejor, cuéntame qué estudias.',
+    levels: {
+      school: { title: 'Colegio', detail: 'Primaria o secundaria' },
+      university: { title: 'Universidad', detail: 'Pregrado o posgrado' },
+      other: { title: 'Otro', detail: 'Cursos libres, idiomas, certificaciones' },
+    },
+    skip: 'Omitir por ahora',
+  },
+  privacy: {
+    header: 'Tu privacidad',
+    intro:
+      'Tú decides qué hace tu mascota con tus datos. Puedes cambiarlo cuando quieras en Perfil.',
+    useDocs: {
+      title: 'Usar mis documentos para ayudarme',
+      detail: 'Necesario para que la app funcione. Solo tú los ves.',
+    },
+    external: {
+      title: 'Buscar contexto externo',
+      detail: 'Se muestra aparte, siempre con su fuente.',
+    },
+    analytics: {
+      title: 'Mejorar la app con datos anónimos',
+      detail: 'Opcional. Nunca incluye tus documentos.',
+    },
+    minorTitle: '¿Tienes menos de 18 años?',
+    minorBody:
+      'Pediremos el correo de tu padre, madre o tutor para que autorice tu cuenta antes de usar la app.',
+    minorAction: 'Soy menor de 18',
+    readAndAccept: 'Leí y acepto los',
+    submit: 'Aceptar y continuar',
+    fullPolicy: 'Ver política completa',
+  },
+  notificationsPermission: {
+    title: '¿Te aviso cuando esté listo?',
+    subtitle: 'Solo te escribo cuando sirve. Puedes cambiarlo cuando quieras en Perfil.',
+    items: [
+      {
+        title: 'Tus documentos terminaron de procesarse',
+        detail: 'Para que no tengas que esperar',
+      },
+      { title: 'Tu repaso del día', detail: 'Una vez al día, a la hora que elijas' },
+      { title: 'Tu límite diario se renovó', detail: 'Opcional, viene apagado' },
+    ],
+    enable: 'Activar notificaciones',
+    notNow: 'Ahora no',
+  },
+  tabs: {
+    home: 'Inicio',
+    courses: 'Cursos',
+    upload: 'Subir documentos',
+    chat: 'Chat',
+    profile: 'Perfil',
+  },
+  home: {
+    hello: (name: string) => `Hola, ${name}`,
+    subtitle: 'Esto es lo que te toca hoy',
+    review: (topic: string) => `Hoy te toca repasar ${topic}. ¿Empezamos?`,
+    reviewNow: 'Repasar ahora',
+    continue: 'Continúa donde lo dejaste',
+    myCourses: 'Mis cursos',
+  },
+  courses: {
+    title: 'Mis cursos',
+    search: 'Buscar en tus temas…',
+    pendingReview: (n: number) => `${n} documentos esperan tu revisión`,
+    classesTopics: (classes: number, topics: number) => `${classes} clases · ${topics} temas`,
+    sections: (n: number) => `${n} secciones`,
+    emptyTitle: 'Aún no tienes cursos',
+    emptyBody: 'Sube tu primer documento y lo organizo por curso, clase y tema para ti.',
+    emptyUpload: 'Subir mi primer documento',
+    howItWorks: 'Cómo funciona',
+  },
+  course: {
+    classes: 'clases',
+    topics: 'temas',
+    documents: 'documentos',
+    progress: 'Progreso del curso',
+    classesHeader: 'CLASES',
+    classProgress: (topics: number, status: string) => `${topics} temas · ${status}`,
+    completed: 'completada',
+    notStarted: 'sin empezar',
+    studyWithMascot: 'Estudiar con la mascota',
+    addDocument: 'Agregar documento al curso',
+  },
+  topic: {
+    tabs: { mine: 'Mi material', external: 'Externo', compare: 'Comparar' },
+    yourMaterial: 'Tu material',
+    externalContext: 'Contexto externo',
+    seeSource: 'Ver fuente',
+    noticed: 'Lo que noté al comparar',
+    askMascot: 'Preguntarle a tu mascota sobre esto',
+    externalEmpty: 'No encontramos fuentes externas para este tema.',
+  },
+  document: {
+    header: 'Documento',
+    meta: (type: string, size: string, pages: number, when: string) =>
+      `${type} · ${size} · ${pages} páginas · subido ${when}`,
+    page: (n: number, total: number) => `Página ${n} de ${total}`,
+    classifiedIn: 'CLASIFICADO EN',
+    detectedTopics: 'TEMAS DETECTADOS',
+    share: 'Compartir',
+    rename: 'Renombrar',
+    delete: 'Eliminar',
+    ask: 'Preguntar sobre este documento',
+    deleteTitle: '¿Eliminar este documento?',
+    deleteBody: (name: string, topics: number) =>
+      `Se borrará "${name}" y los ${topics} temas detectados. Tus cursos no cambian. Esta acción no se puede deshacer.`,
+  },
+  profile: {
+    title: 'Perfil',
+    edit: 'Editar',
+    privacyHeader: 'PRIVACIDAD Y DATOS',
+    useDocs: { title: 'Usar mis documentos para ayudarme', detail: 'Solo tú los ves' },
+    external: { title: 'Buscar contexto externo', detail: 'Con fuentes visibles' },
+    progress: { title: 'Guardar mi progreso de estudio', detail: '' },
+    mascotHeader: 'MASCOTA',
+    lightMode: { title: 'Modo ligero (sin 3D)', detail: 'Menos batería y datos' },
+    voice: { title: 'Voz de la mascota', detail: '' },
+    notifications: 'Notificaciones',
+    subscription: 'Suscripción',
+    help: 'Ayuda y contacto',
+    data: 'Descargar o borrar mis datos',
+  },
+  search: {
+    placeholder: 'Buscar en tus temas…',
+    clear: 'Borrar búsqueda',
+    tabs: (all: number, docs: number, chats: number) =>
+      [`Todo · ${all}`, `Documentos · ${docs}`, `Chats · ${chats}`] as const,
+    count: (n: number) => `${n} resultados`,
+    page: (n: number) => `Página ${n}`,
+    empty: (q: string) => `No encontramos nada para "${q}".`,
+    emptyHint: 'Prueba con otras palabras.',
+  },
+  help: {
+    header: 'Ayuda',
+    search: 'Buscar en la ayuda…',
+    categories: ['Subir documentos', 'Cuenta y privacidad', 'Quiz y repaso', 'Planes y pagos'],
+    faqHeader: 'PREGUNTAS FRECUENTES',
+    faqs: [
+      '¿Qué formatos puedo subir?',
+      '¿Por qué se clasificó mal mi documento?',
+      '¿Cómo borro mis datos?',
+      '¿Qué es el contexto externo?',
+    ],
+    notFoundTitle: '¿No encuentras tu respuesta?',
+    notFoundBody: 'Escríbenos, respondemos en 1 a 2 días hábiles',
+  },
+  contact: {
+    header: 'Contactar soporte',
+    topic: 'Tema',
+    topicValue: 'Problema con la subida',
+    message: 'Mensaje',
+    messagePlaceholder: 'Cuéntanos qué pasó y qué esperabas…',
+    attach: 'Adjuntar una captura (opcional)',
+    technical:
+      'Incluir datos técnicos (versión de la app y modelo del teléfono). Nunca adjuntamos tus documentos.',
+    replyIn: (email: string) => `Te respondemos en 1 a 2 días hábiles a ${email}.`,
+    send: 'Enviar mensaje',
+  },
+  placeholder: {
+    chat: 'Chat',
+    upload: 'Subir documentos',
+  },
+} as const;
+
+export type Strings = typeof es;
+
+export function useStrings(): Strings {
+  return es;
+}
