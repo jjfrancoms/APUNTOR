@@ -101,3 +101,19 @@ describe('idiomas', () => {
     expect(walk(es, en, 'es')).toEqual([]);
   });
 });
+
+describe('calendario', () => {
+  it('arma el mes empezando el lunes, en filas de 7', async () => {
+    const { monthGrid, daysInMonth, formatDayMonthYear, yearRange } =
+      await import('../src/lib/calendar');
+    // 1 de noviembre de 2026 es domingo → 6 huecos antes.
+    const nov = monthGrid(2026, 10);
+    expect(nov.slice(0, 7)).toEqual([null, null, null, null, null, null, 1]);
+    expect(nov.length % 7).toBe(0);
+    expect(nov.filter((d) => d !== null)).toHaveLength(30);
+    expect(daysInMonth(2024, 1)).toBe(29);
+    expect(daysInMonth(2026, 1)).toBe(28);
+    expect(formatDayMonthYear(2000, 2, 5)).toBe('05/03/2000');
+    expect(yearRange(2026, 2024)).toEqual([2026, 2025, 2024]);
+  });
+});

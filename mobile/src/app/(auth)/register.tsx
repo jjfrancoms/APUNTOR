@@ -1,10 +1,18 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Checkbox, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
+import {
+  Button,
+  Checkbox,
+  DateField,
+  Screen,
+  Text,
+  TextField,
+  TextLink,
+  TopBar,
+} from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ErrorCode } from '@/i18n/es';
-import { formatBirthInput } from '@/lib/validation';
 import { signInWithProvider, signUp, type AuthField } from '@/store/store';
 import { space, useTheme } from '@/theme';
 
@@ -79,16 +87,14 @@ export default function Register() {
         error={error?.field === 'confirm' ? s.errors[error.code] : undefined}
       />
       <View style={styles.intro}>
-        <TextField
+        <DateField
           label={s.register.birthDate}
           placeholder={s.register.birthPlaceholder}
           value={birthDate}
-          onChangeText={(v) => {
-            setBirthDate(formatBirthInput(v));
+          onChange={(v) => {
+            setBirthDate(v);
             if (error?.field === 'birthDate') setError(null);
           }}
-          keyboardType="number-pad"
-          autoComplete="birthdate-full"
           error={error?.field === 'birthDate' ? s.errors[error.code] : undefined}
         />
         <Text variant="caption" color="textMuted">

@@ -10,6 +10,7 @@ export { ProgressBar } from './ProgressBar';
 export { Screen } from './Screen';
 export { Text } from './Text';
 export { TextField } from './TextField';
+export { DateField } from './DateField';
 export { TextLink } from './TextLink';
 export { Toggle } from './Toggle';
 export { TopBar } from './TopBar';
