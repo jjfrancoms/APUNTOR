@@ -10,7 +10,11 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **TypeScript estricto** (`strict: true`, `noUncheckedIndexedAccess`). **Prohibido `any`**
   (explícito o implícito): ESLint lo trata como error (`no-explicit-any`, `no-unsafe-*`). Usa
   `unknown` + validación (zod) en los bordes del sistema.
-- **Node.js ≥ 22.13 / Next.js (App Router)** en `src/app/`.
+- **App cliente: Expo/React Native** (decisión cerrada del 30 oct 2026): una sola base para Android,
+  iOS y web, con variantes móvil, tablet, escritorio y modo oscuro. Colores, breakpoints y tamaños
+  táctiles salen de `src/design/tokens.ts`; no uses hex sueltos en las pantallas.
+- **Backend: Node.js ≥ 22.13.** `src/app/` (Next.js) es provisional y solo sirve hoy como
+  contenedor del servidor; la capa de UI va en la app Expo.
 - **PostgreSQL / Supabase con `pgvector`** y **Drizzle ORM** (`src/db/schema.ts`).
 - **Cola**: BullMQ sobre Redis (`REDIS_URL`). El worker es un proceso aparte (`src/worker.ts`).
 

@@ -89,3 +89,95 @@ traducción.
 
 > **Incompleto:** la tabla original continúa más allá de `UP_NETWORK`; las filas restantes aún no
 > se han transcrito.
+
+## 5. Reglas de diseño y responsive
+
+Los valores exactos están en la colección de variables "Tokens" (en código:
+`src/design/tokens.ts`).
+
+- **Color con significado:** verde = material propio. Violeta = contexto externo. Ámbar = solo
+  avisos y mascota, nunca texto. Rojo = errores y acciones destructivas.
+- **Tamaños táctiles:** mínimo 44 px. Botones principales de 52 px de alto.
+- **Tipografía:** Plus Jakarta Sans. Escala definida en la guía de marca.
+- **Contraste:** verde principal `#1D7568` sobre su fondo suave cumple AA. Revisar al agregar colores
+  nuevos.
+- **Breakpoints** _(por confirmar)_: móvil 390 px (barra inferior), tablet 768 px (barra lateral de
+  88 px, dos columnas) y escritorio 1440 px (barra lateral de 280 px). Tablet solo en 4 pantallas
+  clave; el resto se adapta con las mismas reglas.
+- **Modo oscuro** _(por confirmar)_: diseñado en 6 pantallas clave con la colección "Tokens · Oscuro".
+  El resto se obtiene aplicando la misma colección.
+- **Accesibilidad:** no depender solo del color (siempre ícono o texto). Etiquetas para lector de
+  pantalla en íconos sin texto.
+
+## 6. Decisiones cerradas del producto
+
+Resultado de la ronda de preguntas con el equipo de desarrollo (30 oct 2026). Lo marcado "Por
+confirmar" no está resuelto.
+
+| Área                 | Decisión                                                                                                         | Estado                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Plataforma           | Una sola base con Expo/React Native: Android, iOS y web.                                                         | Cerrada                    |
+| Documentos           | PDF, Word, PowerPoint, texto y OCR de fotos y escaneos. Español e inglés. Máximo 50 MB.                          | Cerrada                    |
+| Contexto externo     | Búsqueda web con citas visibles. Siempre en violeta y con fuente.                                                | Cerrada                    |
+| Clasificación        | Compara con tus cursos y propone; si duda, pregunta (16). Aprende de tus correcciones, solo dentro de tu cuenta. | Cerrada                    |
+| Chat                 | Responde solo con tus documentos; si no está, lo dice y ofrece buscar fuera (30).                                | Cerrada                    |
+| Historial y búsqueda | El historial se guarda hasta que lo borres. La búsqueda cubre títulos y contenido (39).                          | Cerrada                    |
+| Quiz y repaso        | Cantidad 5, 10 o 20 con dificultad adaptativa (31). Repetición espaciada (32).                                   | Cerrada                    |
+| Notificaciones       | Documentos procesados, repaso del día y límite renovado (esta última apagada por defecto).                       | Cerrada                    |
+| Compartir            | Enlace de solo lectura a un resumen generado por IA, con caducidad y revocable.                                  | Cerrada · revisión legal   |
+| Login                | Correo y contraseña, Google y Apple.                                                                             | Cerrada                    |
+| Pagos                | Compra dentro de la app (Google Play y App Store).                                                               | Cerrada                    |
+| Offline              | Solo leer lo ya cargado.                                                                                         | Cerrada                    |
+| Borrado de cuenta    | Inmediato y definitivo, con contraseña y confirmación escrita.                                                   | Cerrada · revisión legal   |
+| Analítica            | Eventos anónimos de uso, nunca contenido y sin identificador persistente.                                        | Por confirmar (legal)      |
+| Mascota              | 2D animada (Rive) con 7 estados. El 3D queda para después.                                                       | Cerrada                    |
+| Variantes            | Móvil, tablet, escritorio y modo oscuro.                                                                         | Cerrada                    |
+| Soporte              | Centro de ayuda y correo de contacto.                                                                            | Cerrada                    |
+| Lanzamiento          | Universidad y colegio a la vez; los menores de 18 entran a lista de espera.                                      | Cerrada · bloqueante legal |
+| Precio               | Plan Estudiante a S/ 14 al mes (cifra de ejemplo).                                                               | Por confirmar              |
+| Política de IA       | Proveedor con acuerdo de no entrenar con los datos del usuario.                                                  | Por confirmar (legal)      |
+
+## 7. Modo oscuro y tablet (tokens de color)
+
+El modo oscuro se diseñó en 6 pantallas (fila inferior de la página Móvil). La tablet, en 4
+pantallas (página Escritorio, fila inferior).
+
+| Token                      | Claro                 | Oscuro                | Notas                                               |
+| -------------------------- | --------------------- | --------------------- | --------------------------------------------------- |
+| `color/bg`                 | `#FAF9F6`             | `#121413`             | Fondo de pantalla                                   |
+| `color/surface`            | `#FFFFFF`             | `#1C1F1E`             | Tarjetas y campos                                   |
+| `color/surface-alt`        | `#F2F0EB`             | `#262A29`             | Selectores y fondos secundarios                     |
+| `color/border`             | `#E7E4DD`             | `#363B3A`             | Bordes de 1 px                                      |
+| `color/text`               | `#1C1C1E`             | `#F2F2F0`             | Contraste 16,5:1 sobre el fondo oscuro              |
+| `color/text-muted`         | `#6B6B72`             | `#A9AEAC`             | Contraste 7,4:1 sobre la superficie oscura          |
+| `color/primary`            | `#1D7568`             | `#4DB6A6`             | Contraste 7,5:1 sobre el fondo oscuro               |
+| `color/on-primary`         | `#FFFFFF`             | `#0B1F1C`             | Texto sobre botones; 7,0:1 sobre el primario oscuro |
+| `color/primary-soft`       | `#E3F1EE`             | `#1B3A36`             | Texto primario sobre este fondo: 5,0:1              |
+| `color/external` / `-soft` | `#5B4FC7` / `#ECEAFB` | `#B3A8F7` / `#2A2650` | Contraste 6,6:1                                     |
+| `color/danger` / `-soft`   | `#C0392B` / `#FBEAE8` | `#F28B80` / `#3D1F1C` | Contraste 6,2:1                                     |
+| `color/accent` / `-soft`   | `#F2A93B` / `#FDF1DC` | `#F2A93B` / `#3A2E17` | Sigue sin usarse para texto                         |
+
+- **Implementación:** en producción deben ser dos modos de una sola colección. Figma Starter solo
+  permite un modo, por eso en el archivo está como colección aparte "Tokens · Oscuro" con los mismos
+  nombres.
+- **Tablet:** entre 600 y 1023 px: barra lateral de 88 px con íconos y etiqueta, contenido a dos
+  columnas (cursos y detalle, material propio y externo). Menos de 600 px: barra inferior. 1024 px o
+  más: barra lateral de 280 px.
+- **Mascota en oscuro** _(por confirmar)_: no se redibujó; sobre fondo oscuro se ve bien. Revisar en
+  dispositivo real.
+- **Pendiente** _(por confirmar)_: verificar contraste en las pantallas oscuras no diseñadas y probar
+  tablet en horizontal.
+
+## 8. Pantallas ya diseñadas (referencia visual)
+
+| #   | Pantalla                    | Notas de diseño                                                                                                                                                                                              |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Inicio de sesión            | Mascota arriba; "Estudia con tus propios apuntes"; correo, contraseña, "¿Olvidaste tu contraseña?"; Iniciar sesión, Google, Apple; "Crear cuenta"; nota "Tus documentos son privados y solo te ayudan a ti." |
+| 11  | Registro                    | "Empecemos"; nombre, correo, contraseña (mínimo 8); aceptar Términos y Política de privacidad; Google y Apple.                                                                                               |
+| 12  | Recuperar contraseña        | "¿Olvidaste tu contraseña?"; el enlace vence en 30 minutos.                                                                                                                                                  |
+| 13  | Enlace enviado              | "Revisa tu correo"; Abrir correo; "Reenviar en 0:42"; "¿Correo equivocado? Cambiar".                                                                                                                         |
+| 15  | Privacidad y consentimiento | Interruptores: usar mis documentos (necesario), buscar contexto externo, datos anónimos (opcional, apagado). Bloque "¿Tienes menos de 18 años?" → correo del padre, madre o tutor.                           |
+| 33  | Permiso de notificaciones   | "¿Te aviso cuando esté listo?": documentos procesados, repaso del día, límite renovado (opcional, apagado).                                                                                                  |
+| 8   | Cursos vacío                | "Aún no tienes cursos"; Subir mi primer documento; Cómo funciona.                                                                                                                                            |
+
+**Barra inferior (móvil):** Inicio · Cursos · botón central "+" (subir) · Chat · Perfil.
