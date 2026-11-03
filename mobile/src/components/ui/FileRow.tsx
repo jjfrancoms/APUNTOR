@@ -39,7 +39,7 @@ export function FileRow({
             {detail}
           </Text>
         </View>
-        {trailing}
+        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
       {children}
     </View>
@@ -56,5 +56,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  flex: { flex: 1, gap: 2 },
+  // minWidth 0: el nombre se ajusta en vez de empujar o aplastarse contra el control derecho.
+  flex: { flex: 1, minWidth: 0, gap: 2 },
+  trailing: { flexShrink: 0, maxWidth: '45%' },
 });

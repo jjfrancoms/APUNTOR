@@ -30,7 +30,7 @@ export function Chip({
   return (
     <View style={[styles.chip, { backgroundColor: t.bg }]}>
       {icon ? <Icon name={icon} size={12} color={t.fg} /> : null}
-      <Text variant="caption" color={t.fg}>
+      <Text variant="caption" color={t.fg} numberOfLines={1} style={styles.label}>
         {label}
       </Text>
     </View>
@@ -46,5 +46,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm + 2,
     paddingVertical: space.xs,
     borderRadius: radius.pill,
+    maxWidth: '100%',
   },
+  label: { flexShrink: 1 },
 });

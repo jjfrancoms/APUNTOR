@@ -17,6 +17,8 @@ export function FilterChips<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      // Sin esto, dentro de una columna flexible el carrusel crece y estira los chips a lo alto.
+      style={styles.scroll}
       contentContainerStyle={styles.row}
       accessibilityRole="tablist"
     >
@@ -47,8 +49,10 @@ export function FilterChips<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: space.sm, paddingRight: space.lg },
+  scroll: { flexGrow: 0, flexShrink: 0 },
+  row: { gap: space.sm, paddingRight: space.lg, alignItems: 'center' },
   chip: {
+    alignSelf: 'center',
     borderWidth: 1,
     borderRadius: radius.pill,
     paddingHorizontal: space.lg,

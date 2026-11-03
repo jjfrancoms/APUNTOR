@@ -15,7 +15,7 @@ import {
 import { useStrings } from '@/i18n/es';
 import { pickFiles, SAMPLE_FILES } from '@/lib/pick-files';
 import { extLabel } from '@/lib/upload-rules';
-import { jobTone } from '@/lib/upload-view';
+import { failureTitle, jobTone } from '@/lib/upload-view';
 import {
   enqueueUploads,
   removeUpload,
@@ -37,9 +37,10 @@ export default function Upload() {
   const add = (files: PickedFile[]) => {
     if (files.length > 0) enqueueUploads(files);
   };
+  // El motivo del error va en la línea de detalle; el chip solo lleva una etiqueta corta.
   const label = (j: UploadJob) =>
     j.status === 'failed'
-      ? s.errors[j.error ?? 'UP_FORMAT']
+      ? s.upload.status.unsupported
       : j.status === 'review'
         ? s.upload.status.ready
         : j.status === 'processing'
@@ -95,25 +96,28 @@ export default function Upload() {
               name={j.name}
               detail={
                 j.status === 'failed'
-                  ? s.errors[j.error ?? 'UP_FORMAT']
+                  ? failureTitle(j.error ?? 'UP_FORMAT', s)
                   : `${extLabel(j.name)} · ${j.sizeMb} MB`
               }
               detailTone={j.status === 'failed' ? 'danger' : 'textMuted'}
               tone={j.status === 'failed' ? 'danger' : 'default'}
               trailing={
-                <View style={styles.row}>
+                // Como en la pantalla 18: si falló, motivo corto en rojo y solo la acción de quitar.
+                j.status === 'failed' ? (
+                  <IconButton
+                    icon="x"
+                    label={s.uploadProblems.dismiss}
+                    onPress={() => removeUpload(j.id)}
+                  />
+                ) : (
                   <Chip label={label(j)} tone={jobTone(j)} />
-                  {j.status === 'failed' ? (
-                    <IconButton
-                      icon="x"
-                      label={s.uploadProblems.dismiss}
-                      onPress={() => removeUpload(j.id)}
-                    />
-                  ) : null}
-                </View>
+                )
               }
             />
           ))}
+          {jobs.some((j) => j.status === 'failed') ? (
+            <TextLink label={s.demo.seeProblems} onPress={() => router.push('/upload/problems')} />
+          ) : null}
         </>
       )}
       {plan.length > 0 ? (
