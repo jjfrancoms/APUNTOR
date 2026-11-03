@@ -12,68 +12,118 @@ import {
   TextLink,
   TopBar,
 } from '@/components/ui';
-import { storage } from '@/data/mock';
-import { useStrings } from '@/i18n/es';
-import { space } from '@/theme';
+import { useStrings, type ErrorCode } from '@/i18n/es';
+import { extLabel } from '@/lib/upload-rules';
+import {
+  quotaMb,
+  removeUpload,
+  retryUpload,
+  usedMb,
+  useStore,
+  type UploadJob,
+} from '@/store/store';
 
-/** Pantalla 18 · Subida con problemas (códigos UP_FORMAT, UP_SIZE, UP_NETWORK, UP_QUOTA). */
+/** Pantalla 18 · Subida con problemas: cada error con su motivo (código) y su acción. */
 export default function UploadProblems() {
   const s = useStrings();
   const p = s.uploadProblems;
-  const remove = <IconButton icon="x" label={p.dismiss} />;
+  const uploads = useStore((st) => st.uploads);
+  const used = useStore(usedMb);
+  const quota = useStore(quotaMb);
+  const failed = uploads.filter((u) => u.status === 'failed');
+  const ok = uploads.filter((u) => u.status !== 'failed' && u.status !== 'done').length;
+
+  const detail = (
+    code: ErrorCode,
+    job: UploadJob,
+  ): { title: string; body: string; action: string; onPress: () => void } => {
+    switch (code) {
+      case 'UP_SIZE':
+        return {
+          title: p.sizeTitle,
+          body: p.sizeBody(job.sizeMb),
+          action: p.remove,
+          onPress: () => removeUpload(job.id),
+        };
+      case 'UP_NETWORK':
+        return {
+          title: p.networkTitle,
+          body: p.networkBody,
+          action: p.retry,
+          onPress: () => retryUpload(job.id),
+        };
+      case 'UP_QUOTA':
+        return {
+          title: s.errors.UP_QUOTA,
+          body: p.spaceValue(used, quota),
+          action: p.seePlans,
+          onPress: () => router.push('/plans'),
+        };
+      case 'UP_LANGUAGE':
+        return {
+          title: s.language.title,
+          body: s.language.detected('un idioma no compatible'),
+          action: p.chooseOther,
+          onPress: () => router.push('/upload/language'),
+        };
+      default:
+        return {
+          title: p.formatTitle,
+          body: p.formatBody,
+          action: p.chooseOther,
+          onPress: () => router.push('/upload'),
+        };
+    }
+  };
+
   return (
     <Screen
       header={<TopBar title={p.header} />}
-      footer={<Button label={p.retryFailed} onPress={() => router.replace('/upload/progress')} />}
+      footer={
+        <Button
+          label={p.retryFailed}
+          disabled={failed.length === 0}
+          onPress={() => {
+            failed.forEach((f) => retryUpload(f.id));
+            router.replace('/upload/progress');
+          }}
+        />
+      }
     >
-      <Banner tone="danger" title={p.title(3)} body={p.saved(2)} />
-      <FileRow
-        tone="danger"
-        ext="RAR"
-        name="Examen final.rar"
-        detail={p.formatTitle}
-        detailTone="danger"
-        trailing={remove}
-      >
-        <Text variant="caption" color="textMuted">
-          {p.formatBody}
-        </Text>
-        <TextLink label={p.chooseOther} onPress={() => router.push('/upload')} />
-      </FileRow>
-      <FileRow
-        tone="danger"
-        ext="MP4"
-        name="Clase grabada.mp4"
-        detail={p.sizeTitle}
-        detailTone="danger"
-        trailing={remove}
-      >
-        <Text variant="caption" color="textMuted">
-          {p.sizeBody(212)}
-        </Text>
-        <TextLink label={p.remove} />
-      </FileRow>
-      <FileRow
-        tone="danger"
-        ext="PDF"
-        name="Resumen cap. 4.pdf"
-        detail={p.networkTitle}
-        detailTone="danger"
-        trailing={remove}
-      >
-        <Text variant="caption" color="textMuted">
-          {p.networkBody}
-        </Text>
-        <TextLink label={p.retry} />
-      </FileRow>
+      {failed.length > 0 ? (
+        <Banner tone="danger" title={p.title(failed.length)} body={p.saved(ok)} />
+      ) : (
+        <Banner tone="info" icon="check" title={s.demo.uploadsDone} />
+      )}
+      {failed.map((job) => {
+        const d = detail(job.error ?? 'UP_FORMAT', job);
+        return (
+          <FileRow
+            key={job.id}
+            tone="danger"
+            ext={extLabel(job.name)}
+            name={job.name}
+            detail={d.title}
+            detailTone="danger"
+            trailing={
+              <IconButton icon="x" label={p.dismiss} onPress={() => removeUpload(job.id)} />
+            }
+          >
+            <Text variant="caption" color="textMuted">
+              {d.body}
+            </Text>
+            <TextLink label={d.action} onPress={d.onPress} />
+          </FileRow>
+        );
+      })}
       <Card tone="accent">
         <View style={styles.row}>
           <Text variant="smallStrong" style={styles.flex}>
             {p.space}
           </Text>
-          <Text variant="smallStrong">{p.spaceValue(storage.usedMb, storage.totalMb)}</Text>
+          <Text variant="smallStrong">{p.spaceValue(used, quota)}</Text>
         </View>
-        <ProgressBar value={storage.usedMb / storage.totalMb} tone="accent" label={p.space} />
+        <ProgressBar value={used / quota} tone="accent" label={p.space} />
         <TextLink label={p.seePlans} onPress={() => router.push('/plans')} />
       </Card>
     </Screen>

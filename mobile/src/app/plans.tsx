@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Chip, Icon, IconButton, Screen, Segmented, Text } from '@/components/ui';
 import { plans } from '@/data/mock';
+import { choosePlan } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 
@@ -72,7 +73,20 @@ export default function Plans() {
   };
 
   return (
-    <Screen footer={<Button label={p.continueWith(names[plan])} disabled={plan === 'free'} />}>
+    <Screen
+      footer={
+        <Button
+          label={p.continueWith(names[plan])}
+          disabled={plan === 'free'}
+          onPress={() => {
+            // Colegio o institución se cotiza a medida: va a soporte.
+            if (plan === 'school') return router.push('/profile/contact');
+            choosePlan('student');
+            router.replace('/profile/subscription');
+          }}
+        />
+      }
+    >
       <View style={styles.row}>
         <IconButton
           icon="arrow-left"

@@ -28,7 +28,12 @@ export default function QuizSetup() {
   return (
     <Screen
       header={<TopBar icon="x" title={q.header} />}
-      footer={<Button label={q.start} onPress={() => router.push('/study/quiz')} />}
+      footer={
+        <Button
+          label={q.start}
+          onPress={() => router.push({ pathname: '/study/quiz', params: { n: amount } })}
+        />
+      }
     >
       <View style={styles.bubbleRow}>
         <Mascot size={64} />

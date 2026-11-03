@@ -11,7 +11,8 @@ import {
   Text,
   TextLink,
 } from '@/components/ui';
-import { sharedSummary, user } from '@/data/mock';
+import { sharedSummary } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 
@@ -21,7 +22,11 @@ export default function PublicSummary() {
   const { c } = useTheme();
   const p = s.publicSummary;
   const { token } = useLocalSearchParams<{ token: string }>();
-  if (token === 'expired') {
+  const share = useStore((st) => st.shares.find((sh) => sh.token === token));
+  const owner = useStore((st) => st.session?.name ?? 'Ana');
+  // 'Xk3m9' es el enlace de ejemplo del diseño; los demás deben existir y estar activos.
+  const available = token === 'Xk3m9' || share?.active === true;
+  if (!available) {
     return (
       <Screen>
         <EmptyState
@@ -55,7 +60,7 @@ export default function PublicSummary() {
           {sharedSummary.title}
         </Text>
         <Text variant="caption" color="textMuted">
-          {p.sharedBy(user.name, sharedSummary.course)}
+          {p.sharedBy(owner, sharedSummary.course)}
         </Text>
       </View>
       <Card>

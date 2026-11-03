@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Button, Chip, Icon, ProgressBar, Screen, Text, TopBar } from '@/components/ui';
+import { Button, Chip, Icon, Mascot, ProgressBar, Screen, Text, TopBar } from '@/components/ui';
 import { flashcards, flashcardSession } from '@/data/mock';
+import { gradeCard } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 
@@ -13,14 +14,37 @@ export default function Flashcards() {
   const f = s.flashcards;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [known, setKnown] = useState(0);
+  const [finished, setFinished] = useState(false);
   const card = flashcards[index];
   if (!card) return null;
-  const n = flashcardSession.current + index;
-  const grade = () => {
-    if (index === flashcards.length - 1) return router.replace('/home');
+  const total = flashcards.length;
+  const n = index + 1;
+  const grade = (isKnown: boolean) => {
+    gradeCard(card.id, isKnown);
+    if (isKnown) setKnown((v) => v + 1);
+    if (index === total - 1) return setFinished(true);
     setIndex(index + 1);
     setFlipped(false);
   };
+  if (finished) {
+    return (
+      <Screen
+        header={<TopBar icon="x" title={f.header} onBack={() => router.replace('/home')} />}
+        footer={<Button label={s.empty.backHome} onPress={() => router.replace('/home')} />}
+      >
+        <View style={styles.done}>
+          <Mascot size={110} mood="sparkle" halo />
+          <Text variant="title" align="center" accessibilityRole="header">
+            {s.demo.cardsDone}
+          </Text>
+          <Text variant="heading" color="primary" align="center">
+            {s.demo.cardsResult(known, total)}
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
   return (
     <Screen
       header={
@@ -28,24 +52,26 @@ export default function Flashcards() {
           icon="x"
           title={f.header}
           subtitle={flashcardSession.location}
-          right={<Chip label={f.counter(n, flashcardSession.total)} tone="primary" />}
+          right={<Chip label={f.counter(n, total)} tone="primary" />}
         />
       }
       footer={
         <View style={styles.grades}>
           <View style={styles.flex}>
-            <Button label={f.notYet} variant="dangerOutline" icon="x" onPress={grade} />
+            <Button
+              label={f.notYet}
+              variant="dangerOutline"
+              icon="x"
+              onPress={() => grade(false)}
+            />
           </View>
           <View style={styles.flex}>
-            <Button label={f.know} icon="check" onPress={grade} />
+            <Button label={f.know} icon="check" onPress={() => grade(true)} />
           </View>
         </View>
       }
     >
-      <ProgressBar
-        value={n / flashcardSession.total}
-        label={f.counter(n, flashcardSession.total)}
-      />
+      <ProgressBar value={n / total} label={f.counter(n, total)} />
       <Pressable
         accessibilityRole="button"
         accessibilityHint={flipped ? f.tapToReturn : f.tapToFlip}
@@ -85,4 +111,5 @@ const styles = StyleSheet.create({
   grades: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   center: { alignItems: 'center' },
+  done: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
 });

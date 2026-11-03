@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Mascot, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { isValidEmail } from '@/lib/validation';
 import { space } from '@/theme';
 
 /** Pantalla 12 · Recuperar contraseña */
@@ -43,9 +44,8 @@ export default function ForgotPassword() {
       />
       <Button
         label={s.forgot.submit}
-        onPress={() =>
-          router.push({ pathname: '/link-sent', params: { email: email || 'ana@correo.com' } })
-        }
+        disabled={!isValidEmail(email)}
+        onPress={() => router.push({ pathname: '/link-sent', params: { email: email.trim() } })}
       />
     </Screen>
   );

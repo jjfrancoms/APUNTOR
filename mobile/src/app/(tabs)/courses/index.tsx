@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
-import { courses as allCourses, pendingReviewCount, type Course } from '@/data/mock';
+import type { Course } from '@/data/mock';
+import { pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -12,6 +13,8 @@ export default function Courses() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const allCourses = useStore((st) => st.courses);
+  const pendingReviewCount = useStore((st) => pendingReview(st).length);
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
 
@@ -75,17 +78,19 @@ export default function Courses() {
           {s.courses.search}
         </Text>
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/upload/review')}
-        style={[styles.banner, { backgroundColor: c.accentSoft }]}
-      >
-        <Icon name="star" size={16} />
-        <Text variant="smallStrong" style={styles.flex}>
-          {s.courses.pendingReview(pendingReviewCount)}
-        </Text>
-        <Icon name="chevron-right" size={16} />
-      </Pressable>
+      {pendingReviewCount > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/upload/review')}
+          style={[styles.banner, { backgroundColor: c.accentSoft }]}
+        >
+          <Icon name="star" size={16} />
+          <Text variant="smallStrong" style={styles.flex}>
+            {s.courses.pendingReview(pendingReviewCount)}
+          </Text>
+          <Icon name="chevron-right" size={16} />
+        </Pressable>
+      ) : null}
       {courses.map((course) => (
         <CourseCard
           key={course.id}

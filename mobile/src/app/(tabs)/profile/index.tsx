@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, ListRow, Screen, Text, TextLink, Toggle } from '@/components/ui';
-import { user } from '@/data/mock';
+import { resetDemo, signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 
@@ -10,11 +9,25 @@ import { space, useTheme } from '@/theme';
 export default function Profile() {
   const s = useStrings();
   const { c } = useTheme();
-  const [useDocs, setUseDocs] = useState(true);
-  const [external, setExternal] = useState(true);
-  const [progress, setProgress] = useState(true);
-  const [light, setLight] = useState(false);
-  const [voice, setVoice] = useState(false);
+  const session = useStore((st) => st.session);
+  const st = useStore((x) => x.settings);
+  const user = {
+    fullName: session?.fullName ?? 'Ana Torres',
+    email: session?.email ?? 'ana@correo.com',
+    level: s.onboarding.levels[session?.level ?? 'university'].title,
+  };
+  const [useDocs, external, progress, light, voice] = [
+    st.useDocs,
+    st.external,
+    st.saveProgress,
+    st.lightMode,
+    st.voice,
+  ];
+  const setUseDocs = (v: boolean) => updateSettings({ useDocs: v });
+  const setExternal = (v: boolean) => updateSettings({ external: v });
+  const setProgress = (v: boolean) => updateSettings({ saveProgress: v });
+  const setLight = (v: boolean) => updateSettings({ lightMode: v });
+  const setVoice = (v: boolean) => updateSettings({ voice: v });
   const toggle = (title: string, value: boolean, set: (v: boolean) => void) => (
     <Toggle value={value} onChange={set} label={title} />
   );
@@ -95,6 +108,25 @@ export default function Profile() {
           onPress={() => router.push('/profile/delete-account')}
         />
       </Card>
+      {/* Fuera del diseño: utilidades para probar con datos de ejemplo. */}
+      <View style={styles.demo}>
+        <TextLink
+          label={s.demo.signOut}
+          color="danger"
+          onPress={() => {
+            signOut();
+            router.replace('/login');
+          }}
+        />
+        <TextLink
+          label={s.demo.reset}
+          color="textMuted"
+          onPress={() => {
+            resetDemo();
+            router.replace('/login');
+          }}
+        />
+      </View>
     </Screen>
   );
 }
@@ -110,4 +142,5 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   list: { padding: 0, gap: 0 },
+  demo: { alignItems: 'center', gap: space.sm },
 });

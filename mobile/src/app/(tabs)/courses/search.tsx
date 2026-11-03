@@ -2,7 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Card, Chip, EmptyState, Icon, Screen, Text } from '@/components/ui';
-import { searchQuery, searchResults, type SearchResult } from '@/data/mock';
+import { searchQuery } from '@/data/mock';
+import { searchAll, useStore, type SearchHit } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { splitMatch } from '@/lib/text';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
@@ -17,12 +18,8 @@ export default function Search() {
   const [query, setQuery] = useState(searchQuery);
   const [cleared, setCleared] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
-  const matches = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase('es');
-    return q.length === 0
-      ? []
-      : searchResults.filter((r) => `${r.title} ${r.snippet}`.toLocaleLowerCase('es').includes(q));
-  }, [query]);
+  const state = useStore((st) => st);
+  const matches = useMemo(() => searchAll(query, state), [query, state]);
   const docs = matches.filter((r) => r.kind === 'document').length;
   const chats = matches.length - docs;
   const visible = filter === 'all' ? matches : matches.filter((r) => r.kind === filter);
@@ -114,13 +111,19 @@ export default function Search() {
   );
 }
 
-function ResultCard({ result, query }: { result: SearchResult; query: string }) {
+function ResultCard({ result, query }: { result: SearchHit; query: string }) {
   const parts = splitMatch(result.snippet, query);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${result.title}, ${result.location}`}
-      onPress={() => result.kind === 'document' && router.push('/documents/limites-continuidad')}
+      onPress={() =>
+        router.push(
+          result.kind === 'document'
+            ? `/documents/${result.targetId}`
+            : { pathname: '/conversation', params: { id: result.targetId } },
+        )
+      }
     >
       <Card>
         <View style={styles.row}>

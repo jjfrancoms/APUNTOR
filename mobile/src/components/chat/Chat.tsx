@@ -55,13 +55,20 @@ export function Composer({
   placeholder,
   busy = false,
   disabled = false,
+  value,
+  onChangeText,
+  onSend,
 }: {
   placeholder: string;
   busy?: boolean;
   disabled?: boolean;
+  value?: string;
+  onChangeText?: (v: string) => void;
+  onSend?: () => void;
 }) {
   const s = useStrings();
   const { c } = useTheme();
+  const canSend = !busy && !disabled && (value === undefined || value.trim().length > 0);
   return (
     <View style={styles.composer}>
       <View style={[styles.input, { backgroundColor: c.surface, borderColor: c.border }]}>
@@ -70,6 +77,10 @@ export function Composer({
           placeholder={placeholder}
           placeholderTextColor={c.textMuted}
           editable={!busy && !disabled}
+          value={value}
+          onChangeText={onChangeText}
+          onSubmitEditing={() => canSend && onSend?.()}
+          returnKeyType="send"
           style={[styles.field, { color: c.text }]}
         />
         <Icon name="mic" size={18} color="textMuted" />
@@ -77,11 +88,15 @@ export function Composer({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={busy ? s.chat.stop : s.chat.send}
-        accessibilityState={{ disabled }}
-        disabled={disabled}
+        accessibilityState={{ disabled: !canSend && !busy }}
+        disabled={!canSend && !busy}
+        onPress={onSend}
         style={[
           styles.send,
-          { backgroundColor: busy ? c.textMuted : c.primary, opacity: disabled ? 0.5 : 1 },
+          {
+            backgroundColor: busy ? c.textMuted : c.primary,
+            opacity: disabled || (!canSend && !busy) ? 0.5 : 1,
+          },
         ]}
       >
         <Icon name={busy ? 'square' : 'send'} size={18} color="onPrimary" />

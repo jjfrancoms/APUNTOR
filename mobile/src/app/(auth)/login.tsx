@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Icon, Mascot, Screen, Text, TextField, TextLink } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 1 · Inicio de sesión */
@@ -10,6 +11,16 @@ export default function Login() {
   const s = useStrings();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | undefined>();
+  const submit = () => {
+    const r = signIn(email, password);
+    if (r.ok) router.replace('/home');
+    else setError(s.errors[r.error]);
+  };
+  const provider = () => {
+    signInWithProvider();
+    router.replace('/home');
+  };
   return (
     <Screen>
       <View style={styles.hero}>
@@ -33,17 +44,26 @@ export default function Login() {
       <TextField
         label={s.login.password}
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(v) => {
+          setPassword(v);
+          setError(undefined);
+        }}
         secureTextEntry
         autoComplete="current-password"
+        onSubmitEditing={submit}
+        error={error}
       />
       <View style={styles.right}>
         <TextLink label={s.login.forgot} onPress={() => router.push('/forgot-password')} />
       </View>
       <View style={styles.actions}>
-        <Button label={s.login.submit} onPress={() => router.replace('/home')} />
-        <Button label={s.common.google} variant="secondary" />
-        <Button label={s.common.apple} variant="secondary" />
+        <Button
+          label={s.login.submit}
+          onPress={submit}
+          disabled={email.length === 0 || password.length === 0}
+        />
+        <Button label={s.common.google} variant="secondary" onPress={provider} />
+        <Button label={s.common.apple} variant="secondary" onPress={provider} />
       </View>
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">
@@ -57,6 +77,9 @@ export default function Login() {
           {s.login.privacyNote}
         </Text>
       </View>
+      <Text variant="caption" color="textMuted" align="center" selectable>
+        {s.demo.account(DEMO_EMAIL, DEMO_PASSWORD)}
+      </Text>
     </Screen>
   );
 }

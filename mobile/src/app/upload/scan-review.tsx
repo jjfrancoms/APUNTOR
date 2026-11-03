@@ -12,6 +12,7 @@ import {
   TopBar,
 } from '@/components/ui';
 import { scanReading } from '@/data/mock';
+import { enqueueUploads } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { radius, space, useTheme } from '@/theme';
@@ -26,7 +27,13 @@ export default function ScanReview() {
       header={<TopBar title={r.header} />}
       footer={
         <>
-          <Button label={r.fix} onPress={() => router.push('/upload/progress')} />
+          <Button
+            label={r.fix}
+            onPress={() => {
+              enqueueUploads([{ name: 'Apunte escaneado.jpg', sizeMb: 0.9 }]);
+              router.push('/upload/progress');
+            }}
+          />
           <Button label={r.rescan} variant="secondary" onPress={() => router.back()} />
           <View style={styles.center}>
             <TextLink label={r.useAnyway} onPress={() => router.push('/upload/progress')} />

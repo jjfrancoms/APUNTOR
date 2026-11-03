@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { isValidEmail } from '@/lib/validation';
+import { joinWaitlist } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 44 · Lista de espera para menores de 18 (bloqueante legal). */
@@ -31,7 +32,10 @@ export default function Waitlist() {
           <Button
             label={w.join}
             disabled={joined || !consent || !isValidEmail(email)}
-            onPress={() => setJoined(true)}
+            onPress={() => {
+              joinWaitlist(email);
+              setJoined(true);
+            }}
           />
           <View style={styles.inline}>
             <Text variant="small" color="textMuted">

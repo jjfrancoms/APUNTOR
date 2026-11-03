@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Card, Icon, IconButton, ProgressBar, Screen, Text, TopBar } from '@/components/ui';
-import { findCourse } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { space, useTheme } from '@/theme';
@@ -11,12 +11,15 @@ export default function CourseDetail() {
   const s = useStrings();
   const { c } = useTheme();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const course = findCourse(courseId);
+  const course = useStore((st) => st.courses.find((k) => k.id === courseId));
+  const documentCount = useStore(
+    (st) => st.documents.filter((d) => d.courseId === courseId).length,
+  );
   if (!course) return <Screen header={<TopBar />}>{null}</Screen>;
   const stats = [
     [course.classes.length, s.course.classes],
     [course.topicCount, s.course.topics],
-    [course.documentCount, s.course.documents],
+    [documentCount, s.course.documents],
   ] as const;
   return (
     <Screen

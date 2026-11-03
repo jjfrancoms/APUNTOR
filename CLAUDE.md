@@ -90,7 +90,8 @@ mobile/                          # app Expo/React Native (Expo Router, SDK 58), 
 ├── src/components/ui/           # componentes base (Button, TextField, Card, Chip, Mascot…)
 ├── src/theme/                   # tema claro/oscuro desde src/design/tokens.ts (compartido)
 ├── src/i18n/es.ts               # todos los textos visibles (listos para traducir)
-└── src/data/mock.ts             # datos de ejemplo hasta conectar la API
+├── src/store/                   # backend simulado: estado, acciones y datos de prueba (seed.ts)
+└── src/data/mock.ts             # contenido estático de ejemplo para las pantallas
 tests/                           # Vitest
 ```
 
@@ -119,6 +120,12 @@ App móvil (dentro de `mobile/`, con su propio `package.json`):
 | `npm test`               | Vitest (lógica de `src/lib`, datos y textos)                                                    |
 | `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
 | `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
+
+Datos de prueba: la app usa `mobile/src/store/` como backend simulado (persistido en el dispositivo)
+con la misma semántica que tendrá la API: validación con códigos de error, ingesta asíncrona, respuestas
+que solo citan fragmentos propios por página, límite diario y cuotas. Cuenta de prueba:
+`ana@correo.com` / `apuntor123`. "Restablecer datos de prueba" (Perfil) vuelve al estado inicial. Al
+conectar la API, se reemplazan las acciones del store; las pantallas no cambian.
 
 Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
 en `mobile/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga

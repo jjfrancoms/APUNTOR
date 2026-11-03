@@ -1,15 +1,50 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Button, Card, Chip, FileRow, Icon, Screen, Text, TextLink, TopBar } from '@/components/ui';
-import { uploadPicking, uploadPlan } from '@/data/mock';
-import { STATUS_TONE } from '@/lib/upload';
+import {
+  Button,
+  Card,
+  Chip,
+  FileRow,
+  Icon,
+  IconButton,
+  Screen,
+  Text,
+  TextLink,
+  TopBar,
+} from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { pickFiles, SAMPLE_FILES } from '@/lib/pick-files';
+import { extLabel } from '@/lib/upload-rules';
+import { jobTone } from '@/lib/upload-view';
+import {
+  enqueueUploads,
+  removeUpload,
+  useStore,
+  type PickedFile,
+  type UploadJob,
+} from '@/store/store';
 import { radius, space, useTheme } from '@/theme';
 
-/** Pantalla 2 · Subir documentos */
+/** Pantalla 2 · Subir documentos. Valida al elegir; la subida sigue en segundo plano. */
 export default function Upload() {
   const s = useStrings();
   const { c } = useTheme();
+  const uploads = useStore((st) => st.uploads);
+  const jobs = uploads.filter(
+    (u) => u.status !== 'done' && !(u.status === 'review' && u.id.startsWith('up-r')),
+  );
+  const plan = jobs.find((j) => j.path.length > 0)?.path ?? [];
+  const add = (files: PickedFile[]) => {
+    if (files.length > 0) enqueueUploads(files);
+  };
+  const label = (j: UploadJob) =>
+    j.status === 'failed'
+      ? s.errors[j.error ?? 'UP_FORMAT']
+      : j.status === 'review'
+        ? s.upload.status.ready
+        : j.status === 'processing'
+          ? s.upload.status.analyzing
+          : s.upload.status.queued;
   return (
     <Screen
       header={<TopBar title={s.upload.header} />}
@@ -21,13 +56,18 @@ export default function Upload() {
             icon="camera"
             onPress={() => router.push('/upload/scan')}
           />
-          <Button label={s.upload.confirm} onPress={() => router.push('/upload/progress')} />
+          <Button
+            label={s.upload.confirm}
+            disabled={jobs.length === 0}
+            onPress={() => router.push('/upload/progress')}
+          />
         </>
       }
     >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${s.upload.dropTitle}. ${s.upload.dropDetail}`}
+        onPress={() => void pickFiles().then(add)}
         style={[styles.drop, { backgroundColor: c.primarySoft, borderColor: c.primary }]}
       >
         <View style={[styles.dropIcon, { backgroundColor: c.surface }]}>
@@ -38,41 +78,63 @@ export default function Upload() {
           {s.upload.dropDetail}
         </Text>
       </Pressable>
-      <Text variant="smallStrong">{s.upload.processing(uploadPicking.length)}</Text>
-      {uploadPicking.map((f) => (
-        <FileRow
-          key={f.id}
-          ext={f.ext}
-          name={f.name}
-          detail={`${f.kind} · ${f.size}`}
-          trailing={
-            <Chip
-              label={s.upload.status[f.status === 'uploading' ? 'processing' : f.status]}
-              tone={STATUS_TONE[f.status]}
-            />
-          }
-        />
-      ))}
-      <Card>
-        <View style={styles.row}>
-          <Icon name="star" size={14} color="primary" />
-          <Text variant="smallStrong" style={styles.flex}>
-            {s.upload.planTitle}
-          </Text>
-          <TextLink label={s.upload.edit} />
-        </View>
-        <View style={styles.crumbs}>
-          {uploadPlan.map((p, i) => (
-            <View key={p} style={styles.row}>
-              {i > 0 ? <Icon name="chevron-right" size={12} color="textMuted" /> : null}
-              <Chip label={p} />
-            </View>
-          ))}
-        </View>
-        <Text variant="caption" color="textMuted">
-          {s.upload.planDetail}
+      <View style={styles.center}>
+        <TextLink label={s.demo.sampleFiles} onPress={() => add(SAMPLE_FILES)} />
+      </View>
+      {jobs.length === 0 ? (
+        <Text variant="small" color="textMuted" align="center">
+          {s.demo.noUploads}
         </Text>
-      </Card>
+      ) : (
+        <>
+          <Text variant="smallStrong">{s.upload.processing(jobs.length)}</Text>
+          {jobs.map((j) => (
+            <FileRow
+              key={j.id}
+              ext={extLabel(j.name)}
+              name={j.name}
+              detail={
+                j.status === 'failed'
+                  ? s.errors[j.error ?? 'UP_FORMAT']
+                  : `${extLabel(j.name)} · ${j.sizeMb} MB`
+              }
+              detailTone={j.status === 'failed' ? 'danger' : 'textMuted'}
+              tone={j.status === 'failed' ? 'danger' : 'default'}
+              trailing={
+                <View style={styles.row}>
+                  <Chip label={label(j)} tone={jobTone(j)} />
+                  {j.status === 'failed' ? (
+                    <IconButton
+                      icon="x"
+                      label={s.uploadProblems.dismiss}
+                      onPress={() => removeUpload(j.id)}
+                    />
+                  ) : null}
+                </View>
+              }
+            />
+          ))}
+        </>
+      )}
+      {plan.length > 0 ? (
+        <Card>
+          <View style={styles.row}>
+            <Icon name="star" size={14} color="primary" />
+            <Text variant="smallStrong" style={styles.flex}>
+              {s.upload.planTitle}
+            </Text>
+            <TextLink label={s.upload.edit} onPress={() => router.push('/upload/review')} />
+          </View>
+          <View style={styles.crumbs}>
+            {plan.map((p, i) => (
+              <View key={p} style={styles.row}>
+                {i > 0 ? <Icon name="chevron-right" size={12} color="textMuted" /> : null}
+                <Chip label={p} />
+              </View>
+            ))}
+          </View>
+        </Card>
+      ) : null}
     </Screen>
   );
 }
@@ -97,4 +159,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   crumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   flex: { flex: 1 },
+  center: { alignItems: 'center', marginTop: -space.sm },
 });

@@ -6,8 +6,10 @@ import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-san
 import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
 import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { hydrate } from '@/store/store';
 import { ThemeProvider, useTheme } from '@/theme';
 
 function Root() {
@@ -28,7 +30,12 @@ export default function RootLayout() {
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
   });
-  if (!loaded) return null;
+  // Carga los datos guardados en el dispositivo (o los de prueba) antes de mostrar la app.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    void hydrate().finally(() => setReady(true));
+  }, []);
+  if (!loaded || !ready) return null;
   return (
     <SafeAreaProvider>
       <ThemeProvider>

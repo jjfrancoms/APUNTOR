@@ -463,6 +463,44 @@ export const quizQuestions = [
     explanation:
       'Delta fija qué tan cerca de a debe estar x para que f(x) quede a menos de épsilon de L.',
   },
+  {
+    id: 'q5',
+    prompt: '¿Cuándo existe el límite de f(x) cuando x tiende a a?',
+    options: [
+      'Cuando f(a) está definida',
+      'Cuando los límites laterales existen y coinciden',
+      'Siempre que f sea un polinomio',
+      'Cuando f(x) crece sin cota',
+    ],
+    answer: 1,
+    klass: 3,
+    page: 14,
+    explanation: 'El límite existe solo si ambos límites laterales existen y coinciden.',
+  },
+  {
+    id: 'q6',
+    prompt: '¿Qué condición NO es necesaria para que f sea continua en a?',
+    options: [
+      'f(a) está definida',
+      'El límite en a existe',
+      'El límite coincide con f(a)',
+      'f es derivable en a',
+    ],
+    answer: 3,
+    klass: 3,
+    page: 16,
+    explanation:
+      'La continuidad pide que f(a) exista, que exista el límite y que coincidan; no exige derivabilidad.',
+  },
+  {
+    id: 'q7',
+    prompt: 'Para f(x) = (x² − 4)/(x − 2), ¿cuánto vale el límite cuando x tiende a 2?',
+    options: ['0', '2', '4', 'No existe'],
+    answer: 2,
+    klass: 3,
+    page: 3,
+    explanation: 'Al factorizar, (x − 2)(x + 2)/(x − 2) = x + 2, que vale 4 cuando x tiende a 2.',
+  },
 ];
 
 export const flashcardSession = { location: 'Cálculo I · Clase 3', current: 4, total: 12 };

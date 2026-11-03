@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { Banner, Card, ListRow, Screen, Text, TextLink, Toggle, TopBar } from '@/components/ui';
-import { plans } from '@/data/mock';
+import { updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
@@ -9,9 +8,11 @@ import { space } from '@/theme';
 export default function NotificationSettings() {
   const s = useStrings();
   const n = s.notificationSettings;
-  const [processed, setProcessed] = useState(true);
-  const [review, setReview] = useState(true);
-  const [limit, setLimit] = useState(false);
+  const st = useStore((x) => x.settings);
+  const [processed, review, limit] = [st.notifProcessed, st.notifReview, st.notifLimit];
+  const setProcessed = (v: boolean) => updateSettings({ notifProcessed: v });
+  const setReview = (v: boolean) => updateSettings({ notifReview: v });
+  const setLimit = (v: boolean) => updateSettings({ notifLimit: v });
   return (
     <Screen header={<TopBar title={n.header} />}>
       <Banner tone="warning" icon="bell" title={n.deniedTitle} body={n.deniedBody}>
@@ -45,7 +46,7 @@ export default function NotificationSettings() {
             trailing={
               <View style={styles.row}>
                 <Text variant="smallStrong" color="primary">
-                  {plans.reviewTime}
+                  {st.reviewTime}
                 </Text>
               </View>
             }

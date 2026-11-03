@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Button, Checkbox, Icon, Screen, Text, TextField, TopBar } from '@/components/ui';
-import { user } from '@/data/mock';
+import { Banner, Button, Checkbox, Icon, Screen, Text, TextField, TopBar } from '@/components/ui';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -11,11 +11,23 @@ export default function Contact() {
   const { c } = useTheme();
   const [message, setMessage] = useState('');
   const [technical, setTechnical] = useState(true);
+  const [sent, setSent] = useState(false);
+  const email = useStore((st) => st.session?.email ?? 'ana@correo.com');
   return (
     <Screen
       header={<TopBar title={s.contact.header} />}
-      footer={<Button label={s.contact.send} disabled={message.trim().length === 0} />}
+      footer={
+        <Button
+          label={s.contact.send}
+          disabled={message.trim().length === 0}
+          onPress={() => {
+            setSent(true);
+            setMessage('');
+          }}
+        />
+      }
     >
+      {sent ? <Banner tone="info" icon="check" title={s.demo.contactSent} /> : null}
       <View style={styles.gap}>
         <Text variant="smallStrong">{s.contact.topic}</Text>
         <Pressable
@@ -51,7 +63,7 @@ export default function Contact() {
         </Text>
       </Checkbox>
       <Text variant="caption" color="textMuted">
-        {s.contact.replyIn(user.email)}
+        {s.contact.replyIn(email)}
       </Text>
     </Screen>
   );

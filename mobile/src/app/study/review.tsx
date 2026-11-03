@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Button, Card, EmptyState, Icon, ListRow, Screen, Text, TopBar } from '@/components/ui';
 import { reviewToday } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
@@ -10,7 +11,10 @@ export default function DailyReview() {
   const s = useStrings();
   const r = s.dailyReview;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
-  if (demo === 'empty' || reviewToday.cards === 0) {
+  // Las tarjetas que ya marcaste como sabidas salen del repaso de hoy (repetición espaciada).
+  const knownCount = useStore((st) => st.study.known.length);
+  const cards = Math.max(0, reviewToday.cards - knownCount);
+  if (demo === 'empty' || cards === 0) {
     return (
       <Screen>
         <Text variant="display" accessibilityRole="header">
@@ -38,7 +42,7 @@ export default function DailyReview() {
     >
       <Card tone="primary" style={styles.hero}>
         <Text variant="display" color="primary" style={styles.big}>
-          {String(reviewToday.cards)}
+          {String(cards)}
         </Text>
         <Text variant="bodyStrong">{r.cardsToday}</Text>
         <Text variant="caption" color="textMuted">

@@ -13,20 +13,31 @@ import {
   TextLink,
 } from '@/components/ui';
 import { sharedSummary } from '@/data/mock';
+import { createShare, stopSharing } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 
 export type ShareStep = 'closed' | 'create' | 'created';
 
 /** Pantallas 35 (Compartir resumen) y 36 (Enlace creado) como hojas sobre el tema. */
-export function ShareSheets({ step, onStep }: { step: ShareStep; onStep: (s: ShareStep) => void }) {
+export function ShareSheets({
+  step,
+  onStep,
+  topicId,
+}: {
+  step: ShareStep;
+  onStep: (s: ShareStep) => void;
+  topicId: string;
+}) {
   const s = useStrings();
   const { c } = useTheme();
   const sh = s.share;
   const [expiry, setExpiry] = useState<string>(sh.expiryOptions[1]);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const url = `https://${sharedSummary.link}`;
+  const [token, setToken] = useState<string | null>(null);
+  const link = token ? `app.ejemplo.pe/r/${token}` : sharedSummary.link;
+  const url = `https://${link}`;
   const close = () => onStep('closed');
   const copy = async () => {
     try {
@@ -62,7 +73,9 @@ export function ShareSheets({ step, onStep }: { step: ShareStep; onStep: (s: Sha
           onPress={() => {
             setCreating(true);
             setTimeout(() => {
+              setToken(createShare(topicId, expiry));
               setCreating(false);
+              setCopied(false);
               onStep('created');
             }, 500);
           }}
@@ -76,7 +89,7 @@ export function ShareSheets({ step, onStep }: { step: ShareStep; onStep: (s: Sha
         <View style={[styles.link, { borderColor: c.border, backgroundColor: c.bg }]}>
           <Icon name="link" size={16} color="textMuted" />
           <Text variant="small" selectable style={styles.flex}>
-            {sharedSummary.link}
+            {link}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -100,7 +113,14 @@ export function ShareSheets({ step, onStep }: { step: ShareStep; onStep: (s: Sha
           variant="secondary"
           onPress={() => void copy()}
         />
-        <Pressable accessibilityRole="button" onPress={close} style={styles.stop}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            if (token) stopSharing(token);
+            close();
+          }}
+          style={styles.stop}
+        >
           <Icon name="x" size={14} color="danger" />
           <Text variant="smallStrong" color="danger">
             {sh.stop}

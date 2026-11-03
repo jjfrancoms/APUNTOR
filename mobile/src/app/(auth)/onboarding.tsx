@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Icon, Mascot, Screen, Text, TextLink, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { setLevel as saveLevel } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
 
 type Level = 'school' | 'university' | 'other';
@@ -18,7 +19,10 @@ export default function Onboarding() {
   const s = useStrings();
   const { c } = useTheme();
   const [level, setLevel] = useState<Level>('university');
-  const next = () => router.push('/notifications-permission');
+  const next = () => {
+    saveLevel(level);
+    router.push('/notifications-permission');
+  };
   return (
     <Screen
       footer={

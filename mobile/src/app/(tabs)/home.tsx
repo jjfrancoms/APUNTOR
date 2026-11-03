@@ -2,7 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, Icon, Mascot, ProgressBar, Screen, Text, TextLink } from '@/components/ui';
-import { continueLearning, courses, todayReview, user } from '@/data/mock';
+import { continueLearning, todayReview } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { space, useTheme } from '@/theme';
@@ -11,6 +12,8 @@ import { space, useTheme } from '@/theme';
 export default function Home() {
   const s = useStrings();
   const { c } = useTheme();
+  const name = useStore((st) => st.session?.name ?? 'Ana');
+  const courses = useStore((st) => st.courses);
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   // Pantalla 51 · Inicio cargando: esqueleto con la forma de la pantalla.
   if (demo === 'loading') {
@@ -49,7 +52,7 @@ export default function Home() {
     <Screen>
       <View>
         <Text variant="display" accessibilityRole="header">
-          {s.home.hello(user.name)}
+          {s.home.hello(name)}
         </Text>
         <Text variant="small" color="textMuted">
           {s.home.subtitle}

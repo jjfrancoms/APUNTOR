@@ -14,14 +14,19 @@ import {
   TopBar,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { updateSettings, useStore } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 15 · Privacidad y consentimiento */
 export default function Privacy() {
   const s = useStrings();
-  const [useDocs, setUseDocs] = useState(true);
-  const [external, setExternal] = useState(true);
-  const [analytics, setAnalytics] = useState(false);
+  const settings = useStore((st) => st.settings);
+  const useDocs = settings.useDocs;
+  const external = settings.external;
+  const analytics = settings.analytics;
+  const setUseDocs = (v: boolean) => updateSettings({ useDocs: v });
+  const setExternal = (v: boolean) => updateSettings({ external: v });
+  const setAnalytics = (v: boolean) => updateSettings({ analytics: v });
   const [accepted, setAccepted] = useState(true);
   return (
     <Screen

@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Checkbox, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { isWeakPassword } from '@/lib/validation';
+import type { ErrorCode } from '@/i18n/es';
+import { signInWithProvider, signUp } from '@/store/store';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 11 · Registro */
@@ -14,11 +15,15 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(true);
-  const [submitted, setSubmitted] = useState(false);
-  const weak = submitted && isWeakPassword(password);
+  const [error, setError] = useState<{ code: ErrorCode; field: 'email' | 'password' } | null>(null);
   const submit = () => {
-    setSubmitted(true);
-    if (!isWeakPassword(password) && accepted) router.push('/privacy');
+    const r = signUp(name, email, password);
+    if (r.ok) router.push('/privacy');
+    else setError({ code: r.error, field: r.field });
+  };
+  const provider = () => {
+    signInWithProvider();
+    router.replace('/home');
   };
   return (
     <Screen header={<TopBar title={s.register.header} />}>
@@ -45,6 +50,7 @@ export default function Register() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
+        error={error?.field === 'email' ? s.errors[error.code] : undefined}
       />
       <TextField
         label={s.register.password}
@@ -53,7 +59,7 @@ export default function Register() {
         onChangeText={setPassword}
         secureTextEntry
         autoComplete="new-password"
-        error={weak ? s.errors.AUTH_WEAK_PASSWORD : undefined}
+        error={error?.field === 'password' ? s.errors[error.code] : undefined}
       />
       <Checkbox
         checked={accepted}
@@ -79,8 +85,8 @@ export default function Register() {
         </Text>
         <View style={[styles.line, { backgroundColor: c.border }]} />
       </View>
-      <Button label={s.common.google} variant="secondary" />
-      <Button label={s.common.apple} variant="secondary" />
+      <Button label={s.common.google} variant="secondary" onPress={provider} />
+      <Button label={s.common.apple} variant="secondary" onPress={provider} />
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">
           {s.register.haveAccount}

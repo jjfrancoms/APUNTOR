@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import {
+  Button,
   Card,
   Chip,
   EmptyState,
@@ -12,6 +13,14 @@ import {
   TopBar,
 } from '@/components/ui';
 import { plans } from '@/data/mock';
+import {
+  choosePlan,
+  FREE_DAILY_QUESTIONS,
+  questionsToday,
+  quotaMb,
+  usedMb,
+  useStore,
+} from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
@@ -20,6 +29,10 @@ export default function Subscription() {
   const s = useStrings();
   const sub = s.subscription;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const plan = useStore((st) => st.plan);
+  const used = useStore(usedMb);
+  const quota = useStore(quotaMb);
+  const asked = useStore(questionsToday);
   if (demo === 'restore-failed') {
     return (
       <Screen>
@@ -36,6 +49,36 @@ export default function Subscription() {
             onPress: () => router.push('/profile/contact'),
           }}
         />
+      </Screen>
+    );
+  }
+  // Sin plan pago: la tabla de estados indica mostrar Planes (26).
+  if (plan === 'free') {
+    return (
+      <Screen
+        header={<TopBar title={sub.header} />}
+        footer={<Button label={s.demo.upgrade} onPress={() => router.push('/plans')} />}
+      >
+        <Card>
+          <View style={styles.row}>
+            <Text variant="heading" style={styles.flex}>
+              {s.plans.free}
+            </Text>
+            <Chip label={sub.active} tone="primary" icon="check" />
+          </View>
+          <Text variant="caption" color="textMuted">
+            {s.demo.freePlanBody}
+          </Text>
+          <Text variant="caption">{`${used} / ${quota} MB · ${asked} / ${FREE_DAILY_QUESTIONS}`}</Text>
+        </Card>
+        <Card style={styles.list}>
+          <ListRow
+            icon="refresh-cw"
+            title={sub.restore}
+            divider={false}
+            onPress={() => router.push('/profile/subscription?demo=restore-failed')}
+          />
+        </Card>
       </Screen>
     );
   }
@@ -86,7 +129,7 @@ export default function Subscription() {
           title={sub.cancel}
           danger
           divider={false}
-          onPress={() => undefined}
+          onPress={() => choosePlan('free')}
         />
       </Card>
       <Card style={styles.note}>

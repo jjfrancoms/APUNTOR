@@ -13,7 +13,7 @@ import {
   TextLink,
   TopBar,
 } from '@/components/ui';
-import { topics } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -27,6 +27,8 @@ export default function TopicDetail() {
   const [share, setShare] = useState<ShareStep>(
     sheet === 'share' ? 'create' : sheet === 'created' ? 'created' : 'closed',
   );
+  const topics = useStore((st) => st.topics);
+  const showExternal = useStore((st) => st.settings.external);
   const topic = topics[topicId] ?? topics['definicion-limite'];
   const [tab, setTab] = useState<Tab>('compare');
   if (!topic) return null;
@@ -42,27 +44,29 @@ export default function TopicDetail() {
       <Text variant="small">{topic.own.text}</Text>
     </Card>
   );
-  const external = topic.external ? (
-    <Card tone="external">
-      <View style={styles.row}>
-        <Chip label={s.topic.externalContext} tone="external" icon="globe" />
-        <Text variant="caption" color="textMuted" style={styles.flex}>
-          {topic.external.source}
+  // Si el usuario apagó el contexto externo en Perfil, no se muestra.
+  const external =
+    showExternal && topic.external ? (
+      <Card tone="external">
+        <View style={styles.row}>
+          <Chip label={s.topic.externalContext} tone="external" icon="globe" />
+          <Text variant="caption" color="textMuted" style={styles.flex}>
+            {topic.external.source}
+          </Text>
+        </View>
+        <Text variant="small">{topic.external.text}</Text>
+        <View style={styles.row}>
+          <TextLink label={s.topic.seeSource} color="external" />
+          <Icon name="external-link" size={12} color="external" />
+        </View>
+      </Card>
+    ) : (
+      <Card>
+        <Text variant="small" color="textMuted">
+          {s.topic.externalEmpty}
         </Text>
-      </View>
-      <Text variant="small">{topic.external.text}</Text>
-      <View style={styles.row}>
-        <TextLink label={s.topic.seeSource} color="external" />
-        <Icon name="external-link" size={12} color="external" />
-      </View>
-    </Card>
-  ) : (
-    <Card>
-      <Text variant="small" color="textMuted">
-        {s.topic.externalEmpty}
-      </Text>
-    </Card>
-  );
+      </Card>
+    );
 
   return (
     <Screen
@@ -115,7 +119,7 @@ export default function TopicDetail() {
           </View>
         </Card>
       ) : null}
-      <ShareSheets step={share} onStep={setShare} />
+      <ShareSheets step={share} onStep={setShare} topicId={topic.id} />
     </Screen>
   );
 }

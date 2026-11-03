@@ -12,7 +12,8 @@ import {
   TextLink,
   TopBar,
 } from '@/components/ui';
-import { documents } from '@/data/mock';
+import { extLabel } from '@/lib/upload-rules';
+import { deleteDocument, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -21,9 +22,17 @@ export default function DocumentDetail() {
   const s = useStrings();
   const { c } = useTheme();
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
-  const doc = documents[documentId] ?? documents['limites-continuidad'];
+  const record = useStore((st) => st.documents.find((d) => d.id === documentId) ?? st.documents[0]);
   const [confirming, setConfirming] = useState(confirm === '1');
-  if (!doc) return null;
+  if (!record) return null;
+  const doc = {
+    ...record,
+    type: extLabel(record.name),
+    size: `${record.sizeMb} MB`,
+    uploaded: record.uploadedLabel,
+    currentPage: Math.min(12, record.pages),
+    classification: record.path,
+  };
   return (
     <Screen
       header={
@@ -76,7 +85,11 @@ export default function DocumentDetail() {
         ))}
       </View>
       <View style={styles.actions}>
-        <ActionButton icon="share-2" label={s.document.share} />
+        <ActionButton
+          icon="share-2"
+          label={s.document.share}
+          onPress={() => router.push('/courses/topics/definicion-limite?sheet=share')}
+        />
         <ActionButton icon="edit-2" label={s.document.rename} />
         <ActionButton
           icon="trash-2"
@@ -110,7 +123,9 @@ export default function DocumentDetail() {
                 variant="danger"
                 onPress={() => {
                   setConfirming(false);
-                  router.back();
+                  deleteDocument(record.id);
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/courses');
                 }}
               />
               <Button

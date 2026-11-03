@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
-import { conversations } from '@/data/mock';
+import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -9,6 +9,23 @@ import { layout, radius, space, useTheme } from '@/theme';
 export default function Conversations() {
   const s = useStrings();
   const { c } = useTheme();
+  const all = useStore((st) => st.conversations);
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const conversations = all
+    .filter((cv) => cv.messages.length > 0)
+    .map((cv) => ({
+      ...cv,
+      group: cv.updatedAt >= startOfToday ? 'today' : 'week',
+      time:
+        cv.updatedAt >= startOfToday
+          ? new Date(cv.updatedAt).toLocaleTimeString('es-PE', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : new Date(cv.updatedAt).toLocaleDateString('es-PE', { weekday: 'short' }),
+      preview: cv.messages.at(-1)?.text || cv.title,
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
   const groups = [
     { key: 'today', label: s.conversations.today },
     { key: 'week', label: s.conversations.week },
@@ -46,7 +63,7 @@ export default function Conversations() {
                 key={cv.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${cv.title}, ${cv.time}`}
-                onPress={() => router.push('/conversation')}
+                onPress={() => router.push({ pathname: '/conversation', params: { id: cv.id } })}
               >
                 <Card>
                   <View style={styles.row}>
@@ -60,7 +77,7 @@ export default function Conversations() {
                   <Text variant="caption" color="textMuted" numberOfLines={1}>
                     {cv.preview}
                   </Text>
-                  <Chip label={cv.course} tone="primary" />
+                  <Chip label={cv.course || s.tabs.chat} tone="primary" />
                 </Card>
               </Pressable>
             ))}

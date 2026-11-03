@@ -404,6 +404,7 @@ export const es = {
     check: 'Comprobar',
     next: 'Siguiente pregunta',
     finish: 'Terminar quiz',
+    toFlashcards: 'Repasar con flashcards',
     source: (klass: number, page: number) => `Tus apuntes · Clase ${klass}, p. ${page}`,
     correct: 'Respuesta correcta',
     incorrect: 'Respuesta incorrecta',
@@ -563,6 +564,27 @@ export const es = {
     downloaded: 'Ver cursos descargados',
     loading: 'Cargando…',
   },
+  demo: {
+    account: (email: string, password: string) => `Cuenta de prueba: ${email} · ${password}`,
+    sampleFiles: 'Usar archivos de ejemplo',
+    reset: 'Restablecer datos de prueba',
+    resetDone: 'Datos de prueba restablecidos',
+    signOut: 'Cerrar sesión',
+    contactSent: 'Mensaje enviado. Te respondemos en 1 a 2 días hábiles.',
+    pickCourse: 'Elige un curso',
+    newCourseName: 'Nuevo curso',
+    reviewNow: 'Revisar clasificación',
+    seeProblems: 'Ver archivos con problemas',
+    noUploads: 'Todavía no elegiste archivos.',
+    uploadsDone: 'Todo listo. Revisa cómo los organicé.',
+    quizResult: (score: number, total: number) => `Acertaste ${score} de ${total}`,
+    quizDone: '¡Terminaste el quiz!',
+    cardsResult: (known: number, total: number) => `Sabes ${known} de ${total} tarjetas`,
+    cardsDone: '¡Terminaste el repaso!',
+    upgrade: 'Mejorar mi plan',
+    freePlanBody: 'Estás en el plan gratis.',
+    renamed: 'Documento renombrado',
+  },
   map: {
     title: 'Mapa de pantallas',
     intro: 'Vista previa con datos de ejemplo. Toca una pantalla para abrirla.',
@@ -571,6 +593,7 @@ export const es = {
 } as const;
 
 export type Strings = typeof es;
+export type ErrorCode = keyof typeof es.errors;
 
 export function useStrings(): Strings {
   return es;

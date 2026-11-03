@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Icon, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { updateSettings } from '@/store/store';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 33 · Permiso de notificaciones */
@@ -9,14 +10,22 @@ export default function NotificationsPermission() {
   const s = useStrings();
   const { c } = useTheme();
   const done = () => router.replace('/home');
+  const enable = () => {
+    updateSettings({ notifProcessed: true, notifReview: true });
+    done();
+  };
+  const skip = () => {
+    updateSettings({ notifProcessed: false, notifReview: false, notifLimit: false });
+    done();
+  };
   return (
     <Screen
       header={<TopBar icon="x" onBack={done} />}
       footer={
         <>
-          <Button label={s.notificationsPermission.enable} onPress={done} />
+          <Button label={s.notificationsPermission.enable} onPress={enable} />
           <View style={styles.center}>
-            <TextLink label={s.notificationsPermission.notNow} color="textMuted" onPress={done} />
+            <TextLink label={s.notificationsPermission.notNow} color="textMuted" onPress={skip} />
           </View>
         </>
       }

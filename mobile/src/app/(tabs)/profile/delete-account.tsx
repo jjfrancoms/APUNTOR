@@ -12,7 +12,7 @@ import {
   TextField,
   TopBar,
 } from '@/components/ui';
-import { accountTotals } from '@/data/mock';
+import { deleteAccount, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
@@ -26,6 +26,10 @@ export default function DeleteAccount() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const [confirm, setConfirm] = useState(demo === 'wrong' ? 'borrar' : '');
   const [deleting, setDeleting] = useState(false);
+  const documents = useStore((st) => st.documents.length);
+  const courses = useStore((st) => st.courses.length);
+  const conversations = useStore((st) => st.conversations.length);
+  const accountTotals = { documents, courses, conversations };
   const ok = confirm === d.confirmWord;
   const wrong = confirm.length > 0 && !ok;
   return (
@@ -40,7 +44,10 @@ export default function DeleteAccount() {
             disabled={!ok}
             onPress={() => {
               setDeleting(true);
-              setTimeout(() => router.replace('/login'), 900);
+              setTimeout(() => {
+                deleteAccount();
+                router.replace('/login');
+              }, 900);
             }}
           />
           <Button label={s.common.cancel} variant="secondary" onPress={() => router.back()} />
