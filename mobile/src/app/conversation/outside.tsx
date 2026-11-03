@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import {
   ChatScreen,
   Composer,
@@ -11,6 +11,7 @@ import { Button, Card, Icon, Text } from '@/components/ui';
 import { chatOutside } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 30 · Fuera de tus documentos: lo externo va aparte, en violeta y con fuente. */
 export default function ChatOutside() {
@@ -25,7 +26,7 @@ export default function ChatOutside() {
       <MascotBubble>
         <Text variant="small">{s.chat.notFound}</Text>
         <View style={styles.actions}>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() =>
               router.replace({ pathname: '/conversation', params: { q: chatOutside.question } })
@@ -36,7 +37,7 @@ export default function ChatOutside() {
             <Text variant="smallStrong" color="onPrimary">
               {s.chat.searchOutside}
             </Text>
-          </Pressable>
+          </Tap>
           <Button
             label={s.chat.uploadMaterial}
             variant="secondary"
@@ -54,7 +55,7 @@ export default function ChatOutside() {
           </Text>
         </View>
         <Text variant="small">{chatOutside.answer}</Text>
-        <Pressable
+        <Tap
           accessibilityRole="link"
           accessibilityLabel={`${chatOutside.sourceTitle}, ${chatOutside.sourceHost}`}
           onPress={() => void Linking.openURL(`https://${chatOutside.sourceHost}`)}
@@ -67,7 +68,7 @@ export default function ChatOutside() {
             </Text>
           </View>
           <Icon name="external-link" size={14} color="external" />
-        </Pressable>
+        </Tap>
         <Text variant="caption" color="textMuted">
           {s.chat.externalDisclaimer}
         </Text>

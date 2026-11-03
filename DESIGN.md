@@ -25,27 +25,30 @@ no inventes paletas, tipografías ni estilos nuevos. Los valores salen de
 Significado fijo: **verde = material propio**, **violeta = contexto externo (siempre con
 fuente)**, **ámbar = avisos y mascota (nunca texto)**, **rojo = errores y acciones destructivas**.
 
-| Token          | Claro     | Oscuro    | Uso                                          |
-| -------------- | --------- | --------- | -------------------------------------------- |
-| `bg`           | `#FAF9F6` | `#121413` | Fondo de pantalla                            |
-| `surface`      | `#FFFFFF` | `#1C1F1E` | Tarjetas, campos, barras                     |
-| `surfaceAlt`   | `#F2F0EB` | `#262A29` | Segmentados, esqueletos, campos bloqueados   |
-| `border`       | `#E7E4DD` | `#363B3A` | Bordes y separadores                         |
-| `text`         | `#1C1C1E` | `#F2F2F0` | Texto principal                              |
-| `textMuted`    | `#6B6B72` | `#A9AEAC` | Texto secundario                             |
-| `primary`      | `#1D7568` | `#4DB6A6` | Marca, acciones principales, material propio |
-| `onPrimary`    | `#FFFFFF` | `#0B1F1C` | Texto sobre `primary`                        |
-| `primarySoft`  | `#E3F1EE` | `#1B3A36` | Fondos de selección y tarjetas destacadas    |
-| `external`     | `#5B4FC7` | `#B3A8F7` | Contexto externo                             |
-| `externalSoft` | `#ECEAFB` | `#2A2650` | Fondo del contexto externo                   |
-| `danger`       | `#C0392B` | `#F28B80` | Errores, eliminar                            |
-| `dangerSoft`   | `#FBEAE8` | `#3D1F1C` | Fondo de errores                             |
-| `accent`       | `#F2A93B` | `#F2A93B` | Avisos, mascota. **Prohibido como texto**    |
-| `accentSoft`   | `#FDF1DC` | `#3A2E17` | Fondo de avisos                              |
+| Token          | Claro       | Oscuro      | Uso                                          |
+| -------------- | ----------- | ----------- | -------------------------------------------- |
+| `bg`           | `#FAF9F6`   | `#121413`   | Fondo de pantalla                            |
+| `surface`      | `#FFFFFF`   | `#1C1F1E`   | Tarjetas, campos, barras                     |
+| `surfaceAlt`   | `#F2F0EB`   | `#262A29`   | Segmentados, esqueletos, campos bloqueados   |
+| `border`       | `#E7E4DD`   | `#363B3A`   | Bordes y separadores                         |
+| `text`         | `#1C1C1E`   | `#F2F2F0`   | Texto principal                              |
+| `textMuted`    | `#6B6B72`   | `#A9AEAC`   | Texto secundario                             |
+| `primary`      | `#1D7568`   | `#4DB6A6`   | Marca, acciones principales, material propio |
+| `onPrimary`    | `#FFFFFF`   | `#0B1F1C`   | Texto sobre `primary`                        |
+| `primarySoft`  | `#E3F1EE`   | `#1B3A36`   | Fondos de selección y tarjetas destacadas    |
+| `external`     | `#5B4FC7`   | `#B3A8F7`   | Contexto externo                             |
+| `externalSoft` | `#ECEAFB`   | `#2A2650`   | Fondo del contexto externo                   |
+| `danger`       | `#C0392B`   | `#F28B80`   | Errores, eliminar                            |
+| `dangerSoft`   | `#FBEAE8`   | `#3D1F1C`   | Fondo de errores                             |
+| `accent`       | `#F2A93B`   | `#F2A93B`   | Avisos, mascota. **Prohibido como texto**    |
+| `accentSoft`   | `#FDF1DC`   | `#3A2E17`   | Fondo de avisos                              |
+| `scrim`        | `#1C1C1E66` | `#000000A3` | Velo detrás de hojas y diálogos. Nunca texto |
 
 - Todo par texto/fondo cumple WCAG AA (≥ 4,5:1); lo prueba `TEXT_PAIRS` en `tokens.ts`.
 - Nunca hex sueltos en pantallas: siempre `useTheme().c.<token>`.
 - Sin degradados, sin sombras marcadas, sin glassmorphism.
+- La mascota usa su propia paleta de ilustración (`mascotPalette` en `tokens.ts`): es parte
+  del dibujo, no cambia con el tema y no se usa en la interfaz.
 
 ## Tipografía
 

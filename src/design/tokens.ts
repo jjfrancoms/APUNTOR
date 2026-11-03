@@ -26,6 +26,8 @@ export interface ColorTokens {
   /** Solo para fondos, íconos y mascota. Prohibido como color de texto. */
   accent: string;
   accentSoft: string;
+  /** Velo detrás de hojas y diálogos (con transparencia). Nunca texto. */
+  scrim: string;
 }
 
 export const colors: Readonly<Record<ColorMode, Readonly<ColorTokens>>> = {
@@ -45,6 +47,7 @@ export const colors: Readonly<Record<ColorMode, Readonly<ColorTokens>>> = {
     dangerSoft: '#FBEAE8',
     accent: '#F2A93B',
     accentSoft: '#FDF1DC',
+    scrim: '#1C1C1E66',
   },
   dark: {
     bg: '#121413',
@@ -62,8 +65,26 @@ export const colors: Readonly<Record<ColorMode, Readonly<ColorTokens>>> = {
     dangerSoft: '#3D1F1C',
     accent: '#F2A93B',
     accentSoft: '#3A2E17',
+    scrim: '#000000A3',
   },
 };
+
+/**
+ * Colores de la ilustración de la mascota. Son parte del dibujo (no cambian con el tema),
+ * por eso no son tokens de interfaz y no se usan fuera de `Mascot`.
+ */
+export const mascotPalette = {
+  fur: '#EAD9BD',
+  furLight: '#F6ECDC',
+  inner: '#F2B8B5',
+  nose: '#5B3A2E',
+  ink: '#2B2B2E',
+  shine: '#FFFFFF',
+  tear: '#8FB8E8',
+  scarf: '#1D7568',
+  sparkle: '#F2A93B',
+  sleep: '#B5ADA2',
+} as const;
 
 export const layout = {
   /** Área táctil mínima (px). */

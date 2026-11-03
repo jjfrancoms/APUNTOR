@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
 import { pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 3 · Cursos y temas, con su estado vacío (pantalla 8). `?demo=empty` muestra el vacío. */
 export default function Courses() {
@@ -67,7 +68,7 @@ export default function Courses() {
       <Text variant="display" accessibilityRole="header">
         {s.courses.title}
       </Text>
-      <Pressable
+      <Tap
         accessibilityRole="search"
         accessibilityLabel={s.courses.search}
         onPress={() => router.push('/courses/search')}
@@ -77,9 +78,9 @@ export default function Courses() {
         <Text variant="body" color="textMuted">
           {s.courses.search}
         </Text>
-      </Pressable>
+      </Tap>
       {pendingReviewCount > 0 ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => router.push('/upload/review')}
           style={[styles.banner, { backgroundColor: c.accentSoft }]}
@@ -89,7 +90,7 @@ export default function Courses() {
             {s.courses.pendingReview(pendingReviewCount)}
           </Text>
           <Icon name="chevron-right" size={16} />
-        </Pressable>
+        </Tap>
       ) : null}
       {courses.map((course) => (
         <CourseCard
@@ -121,7 +122,7 @@ function CourseCard({
   );
   return (
     <Card style={styles.course}>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={course.title}
@@ -136,7 +137,7 @@ function CourseCard({
           </Text>
         </View>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} color="textMuted" />
-      </Pressable>
+      </Tap>
       {open
         ? course.classes.map((klass) => {
             const classItems = items.filter((i) => i.classId === klass.id);
@@ -150,7 +151,7 @@ function CourseCard({
             const expanded = openClass === klass.id;
             return (
               <View key={klass.id} style={styles.klass}>
-                <Pressable
+                <Tap
                   accessibilityRole="button"
                   accessibilityState={{ expanded }}
                   accessibilityLabel={klass.title}
@@ -168,7 +169,7 @@ function CourseCard({
                   <Text variant="caption" color="textMuted">
                     {s.courses.sections(sections.length)}
                   </Text>
-                </Pressable>
+                </Tap>
                 {expanded ? (
                   <>
                     {sections.map((section) => (
@@ -179,7 +180,7 @@ function CourseCard({
                         {section.list.map((topic, t) => {
                           const active = t === 0 && section === sections[0];
                           return (
-                            <Pressable
+                            <Tap
                               key={topic.id}
                               accessibilityRole="link"
                               accessibilityLabel={topic.title}
@@ -195,13 +196,13 @@ function CourseCard({
                               <Text variant="small" color={active ? 'primary' : 'text'}>
                                 {topic.title}
                               </Text>
-                            </Pressable>
+                            </Tap>
                           );
                         })}
                       </View>
                     ))}
                     <View style={styles.section}>
-                      <Pressable
+                      <Tap
                         accessibilityRole="link"
                         onPress={() => router.push(`/courses/class/${klass.id}`)}
                         style={styles.openClass}
@@ -210,7 +211,7 @@ function CourseCard({
                           {s.classView.open}
                         </Text>
                         <Icon name="arrow-right" size={14} color="primary" />
-                      </Pressable>
+                      </Tap>
                     </View>
                   </>
                 ) : null}

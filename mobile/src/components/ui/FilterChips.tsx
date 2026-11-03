@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 /** Filtros en chips desplazables: no se parten en dos líneas aunque haya muchas opciones. */
 export function FilterChips<T extends string>({
@@ -25,7 +26,7 @@ export function FilterChips<T extends string>({
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable
+          <Tap
             key={o.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
@@ -41,7 +42,7 @@ export function FilterChips<T extends string>({
             <Text variant="smallStrong" color={active ? 'onPrimary' : 'text'} numberOfLines={1}>
               {o.label}
             </Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </ScrollView>

@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Modal, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStrings } from '@/i18n/es';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 /**
  * Hoja modal (pantallas 27, 35, 36). En móvil sube desde abajo; desde tablet (≥ 600 px) se
@@ -25,15 +27,19 @@ export function Sheet({
   const s = useStrings();
   const insets = useSafeAreaInsets();
   const dialog = useWindowDimensions().width >= layout.breakpoints.tablet;
+  // Con “reducir movimiento”, la hoja aparece con un fundido en lugar de subir.
+  const reducedMotion = useReducedMotion();
   return (
     <Modal
       visible={visible}
       transparent
-      animationType={dialog ? 'fade' : 'slide'}
+      animationType={dialog || reducedMotion ? 'fade' : 'slide'}
       onRequestClose={onClose}
     >
-      <View style={[styles.backdrop, dialog && styles.backdropCenter]}>
-        <Pressable
+      <View
+        style={[styles.backdrop, { backgroundColor: c.scrim }, dialog && styles.backdropCenter]}
+      >
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={s.common.close}
           style={StyleSheet.absoluteFill}
@@ -53,14 +59,14 @@ export function Sheet({
               <Text variant="heading" style={styles.flex} accessibilityRole="header">
                 {title}
               </Text>
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 accessibilityLabel={s.common.close}
                 onPress={onClose}
                 hitSlop={12}
               >
                 <Icon name="x" color="textMuted" />
-              </Pressable>
+              </Tap>
             </View>
           ) : null}
           {children}
@@ -71,7 +77,7 @@ export function Sheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

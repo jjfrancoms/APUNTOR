@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import {
   ChatScreen,
   Composer,
@@ -31,6 +31,7 @@ import {
   type Message,
 } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 const THINK_MS = 900;
 
@@ -93,13 +94,13 @@ export default function Conversation() {
             sources={
               <>
                 {(m.sources ?? []).map((src) => (
-                  <Pressable
+                  <Tap
                     key={`${src.documentId}-${src.page}`}
                     accessibilityRole="link"
                     onPress={() => router.push(`/documents/${src.documentId}`)}
                   >
                     <Chip label={s.chat.ownSource(src.page)} tone="primary" icon="file-text" />
-                  </Pressable>
+                  </Tap>
                 ))}
                 {m.external ? (
                   <Chip label={s.chat.externalCount(1)} tone="external" icon="globe" />
@@ -116,7 +117,7 @@ export default function Conversation() {
             <Text variant="small">{s.chat.notFound}</Text>
             {isLast ? (
               <View style={styles.actions}>
-                <Pressable
+                <Tap
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !externalOn }}
                   disabled={!externalOn || !id}
@@ -130,7 +131,7 @@ export default function Conversation() {
                   <Text variant="smallStrong" color="onPrimary">
                     {s.chat.searchOutside}
                   </Text>
-                </Pressable>
+                </Tap>
                 <Button
                   label={s.chat.uploadMaterial}
                   variant="secondary"
@@ -153,7 +154,7 @@ export default function Conversation() {
             </View>
             <Text variant="small">{m.text}</Text>
             {m.external ? (
-              <Pressable
+              <Tap
                 accessibilityRole="link"
                 accessibilityLabel={`${m.external.title}, ${m.external.host}`}
                 onPress={() => m.external && void Linking.openURL(`https://${m.external.host}`)}
@@ -166,7 +167,7 @@ export default function Conversation() {
                   </Text>
                 </View>
                 <Icon name="external-link" size={14} color="external" />
-              </Pressable>
+              </Tap>
             ) : null}
             <Text variant="caption" color="textMuted">
               {s.chat.externalDisclaimer}
@@ -208,7 +209,7 @@ export default function Conversation() {
           {messages.length === 0 ? (
             <View style={styles.suggestions}>
               {suggestions.map((sg) => (
-                <Pressable
+                <Tap
                   key={sg.label}
                   accessibilityRole="button"
                   onPress={sg.run}
@@ -217,7 +218,7 @@ export default function Conversation() {
                   <Text variant="smallStrong" color="primary">
                     {sg.label}
                   </Text>
-                </Pressable>
+                </Tap>
               ))}
             </View>
           ) : null}

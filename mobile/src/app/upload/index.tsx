@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
@@ -24,6 +24,7 @@ import {
   type UploadJob,
 } from '@/store/store';
 import { radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 2 · Subir documentos. Valida al elegir; la subida sigue en segundo plano. */
 export default function Upload() {
@@ -65,7 +66,7 @@ export default function Upload() {
         </>
       }
     >
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={`${s.upload.dropTitle}. ${s.upload.dropDetail}`}
         onPress={() => void pickFiles().then(add)}
@@ -78,7 +79,7 @@ export default function Upload() {
         <Text variant="caption" color="textMuted" align="center">
           {s.upload.dropDetail}
         </Text>
-      </Pressable>
+      </Tap>
       <View style={styles.center}>
         <TextLink label={s.demo.sampleFiles} onPress={() => add(SAMPLE_FILES)} />
       </View>

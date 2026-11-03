@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Icon } from './Icon';
+import { Tap } from './Tap';
 
 export function Checkbox({
   checked,
@@ -16,7 +17,7 @@ export function Checkbox({
 }) {
   const { c } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="checkbox"
       accessibilityLabel={label}
       accessibilityState={{ checked }}
@@ -35,7 +36,7 @@ export function Checkbox({
         {checked ? <Icon name="check" size={14} color="onPrimary" /> : null}
       </View>
       <View style={styles.label}>{children}</View>
-    </Pressable>
+    </Tap>
   );
 }
 

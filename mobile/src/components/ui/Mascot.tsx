@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
-import { useTheme } from '@/theme';
+import { useStrings } from '@/i18n/es';
+import { mascotPalette, useTheme } from '@/theme';
 
 export type MascotMood = 'happy' | 'curious' | 'surprised' | 'sleepy' | 'worried' | 'sparkle';
 
@@ -18,16 +19,15 @@ export function Mascot({
   halo?: boolean;
 }) {
   const { c } = useTheme();
-  const fur = '#EAD9BD';
-  const furLight = '#F6ECDC';
-  const inner = '#F2B8B5';
+  const s = useStrings();
+  const { fur, furLight, inner, nose, ink, shine, tear, scarf, sparkle, sleep } = mascotPalette;
   const mouth =
     mood === 'surprised' ? (
-      <Ellipse cx="50" cy="66" rx="3" ry="3.6" fill="#5B3A2E" />
+      <Ellipse cx="50" cy="66" rx="3" ry="3.6" fill={nose} />
     ) : (
       <Path
         d="M46 63 Q50 67 54 63"
-        stroke="#5B3A2E"
+        stroke={nose}
         strokeWidth="2"
         fill="none"
         strokeLinecap="round"
@@ -38,7 +38,7 @@ export function Mascot({
       width={size}
       height={size}
       viewBox="0 0 100 100"
-      accessibilityLabel="Illari, tu mascota"
+      accessibilityLabel={s.mascot.label}
       accessibilityRole="image"
     >
       <Ellipse cx="34" cy="22" rx="7" ry="16" fill={fur} transform="rotate(-12 34 22)" />
@@ -52,14 +52,14 @@ export function Mascot({
         <>
           <Path
             d="M36 52 Q40 55 44 52"
-            stroke="#2B2B2E"
+            stroke={ink}
             strokeWidth="2"
             fill="none"
             strokeLinecap="round"
           />
           <Path
             d="M56 52 Q60 55 64 52"
-            stroke="#2B2B2E"
+            stroke={ink}
             strokeWidth="2"
             fill="none"
             strokeLinecap="round"
@@ -67,28 +67,28 @@ export function Mascot({
         </>
       ) : (
         <>
-          <Circle cx="40" cy="52" r={mood === 'surprised' ? 3.6 : 3.2} fill="#2B2B2E" />
-          <Circle cx="60" cy="52" r={mood === 'surprised' ? 3.6 : 3.2} fill="#2B2B2E" />
-          <Circle cx="41" cy="51" r="1" fill="#FFFFFF" />
-          <Circle cx="61" cy="51" r="1" fill="#FFFFFF" />
+          <Circle cx="40" cy="52" r={mood === 'surprised' ? 3.6 : 3.2} fill={ink} />
+          <Circle cx="60" cy="52" r={mood === 'surprised' ? 3.6 : 3.2} fill={ink} />
+          <Circle cx="41" cy="51" r="1" fill={shine} />
+          <Circle cx="61" cy="51" r="1" fill={shine} />
         </>
       )}
       {mood === 'worried' ? (
         <>
-          <Path d="M35 47 L44 44" stroke="#5B3A2E" strokeWidth="1.6" strokeLinecap="round" />
-          <Path d="M65 47 L56 44" stroke="#5B3A2E" strokeWidth="1.6" strokeLinecap="round" />
-          <Path d="M79 30 Q76 36 79 38 Q82 36 79 30 Z" fill="#8FB8E8" />
+          <Path d="M35 47 L44 44" stroke={nose} strokeWidth="1.6" strokeLinecap="round" />
+          <Path d="M65 47 L56 44" stroke={nose} strokeWidth="1.6" strokeLinecap="round" />
+          <Path d="M79 30 Q76 36 79 38 Q82 36 79 30 Z" fill={tear} />
         </>
       ) : null}
       <Ellipse cx="33" cy="61" rx="4" ry="2.6" fill={inner} opacity={0.8} />
       <Ellipse cx="67" cy="61" rx="4" ry="2.6" fill={inner} opacity={0.8} />
-      <Ellipse cx="50" cy="58.5" rx="2.6" ry="1.8" fill="#5B3A2E" />
+      <Ellipse cx="50" cy="58.5" rx="2.6" ry="1.8" fill={nose} />
       {mouth}
-      <Rect x="30" y="78" width="40" height="9" rx="4.5" fill="#1D7568" />
+      <Rect x="30" y="78" width="40" height="9" rx="4.5" fill={scarf} />
       {mood === 'sleepy' ? (
         <Path
           d="M74 14 h7 l-7 8 h7 M84 6 h5 l-5 6 h5"
-          stroke="#1D7568"
+          stroke={scarf}
           strokeWidth="2"
           fill="none"
           strokeLinecap="round"
@@ -97,15 +97,15 @@ export function Mascot({
       ) : null}
       {mood === 'sparkle' ? (
         <>
-          <Path d="M14 30 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 Z" fill="#F2A93B" />
-          <Path d="M86 22 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 Z" fill="#F2A93B" />
-          <Path d="M84 62 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1 Z" fill="#F2A93B" />
+          <Path d="M14 30 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 Z" fill={sparkle} />
+          <Path d="M86 22 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 Z" fill={sparkle} />
+          <Path d="M84 62 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1 Z" fill={sparkle} />
         </>
       ) : null}
       {mood === 'curious' ? (
         <>
-          <Circle cx="80" cy="18" r="3" fill="#B5ADA2" />
-          <Circle cx="87" cy="11" r="2" fill="#B5ADA2" />
+          <Circle cx="80" cy="18" r="3" fill={sleep} />
+          <Circle cx="87" cy="11" r="2" fill={sleep} />
         </>
       ) : null}
     </Svg>

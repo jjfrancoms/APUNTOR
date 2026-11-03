@@ -1,3 +1,4 @@
+export { Tap } from './Tap';
 export { Button, type ButtonVariant } from './Button';
 export { Card, type CardTone } from './Card';
 export { Checkbox } from './Checkbox';

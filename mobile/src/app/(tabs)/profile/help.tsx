@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { Card, Icon, Screen, Text, TextLink, TopBar, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { normalize } from '@/lib/text-search';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 const CATEGORY_ICONS: IconName[] = ['upload', 'shield', 'layers', 'credit-card'];
 
@@ -40,7 +41,7 @@ export default function Help() {
         {s.help.categories.map((label, i) => {
           const active = category === i;
           return (
-            <Pressable
+            <Tap
               key={label}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
@@ -60,7 +61,7 @@ export default function Help() {
                 <Icon name={CATEGORY_ICONS[i] ?? 'help-circle'} size={18} color="primary" />
               </View>
               <Text variant="smallStrong">{label}</Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -85,7 +86,7 @@ export default function Help() {
           visible.map((f, idx) => {
             const expanded = open === f.i;
             return (
-              <Pressable
+              <Tap
                 key={f.q}
                 accessibilityRole="button"
                 accessibilityState={{ expanded }}
@@ -110,12 +111,12 @@ export default function Help() {
                     {f.a}
                   </Text>
                 ) : null}
-              </Pressable>
+              </Tap>
             );
           })
         )}
       </Card>
-      <Pressable accessibilityRole="button" onPress={() => router.push('/profile/contact')}>
+      <Tap accessibilityRole="button" onPress={() => router.push('/profile/contact')}>
         <Card tone="primary" style={styles.row}>
           <View style={styles.flex}>
             <Text variant="bodyStrong" color="primary">
@@ -127,7 +128,7 @@ export default function Help() {
           </View>
           <Icon name="chevron-right" color="primary" />
         </Card>
-      </Pressable>
+      </Tap>
     </Screen>
   );
 }

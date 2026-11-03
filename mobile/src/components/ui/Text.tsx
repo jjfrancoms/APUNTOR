@@ -1,7 +1,7 @@
 import { Text as RNText, type TextProps } from 'react-native';
 import { typeScale, useTheme, type ColorTokens, type TypeVariant } from '@/theme';
 
-type TextColor = Exclude<keyof ColorTokens, 'accent' | 'accentSoft'>;
+type TextColor = Exclude<keyof ColorTokens, 'accent' | 'accentSoft' | 'scrim'>;
 
 export interface AppTextProps extends TextProps {
   variant?: TypeVariant;

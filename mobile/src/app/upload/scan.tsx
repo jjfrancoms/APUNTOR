@@ -2,11 +2,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { pickFiles } from '@/lib/pick-files';
 import { enqueueUploads } from '@/store/store';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { Chip, EmptyState, Icon, IconButton, Screen, Text, TopBar } from '@/components/ui';
 import { scanReading } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { palettes, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 28 · Escanear apunte. Visor simulado: la cámara real llega con expo-camera. */
 export default function Scan() {
@@ -49,14 +50,14 @@ export default function Scan() {
           title={s.scanner.header}
           subtitle={s.scanner.page(pages)}
           right={
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityLabel={s.scanner.done}
               onPress={() => router.push('/upload/scan-review')}
               hitSlop={8}
             >
               <Chip label={s.scanner.done} tone="primary" />
-            </Pressable>
+            </Tap>
           }
         />
       }
@@ -74,14 +75,14 @@ export default function Scan() {
       </View>
       <View style={styles.controls}>
         <IconButton icon="image" label={s.scanner.gallery} onPress={fromGallery} />
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={s.scanner.shutter}
           onPress={() => setPages((n) => n + 1)}
           style={[styles.shutter, { borderColor: c.primary }]}
         >
           <View style={[styles.shutterInner, { backgroundColor: c.primary }]} />
-        </Pressable>
+        </Tap>
         <IconButton
           icon={flash ? 'zap' : 'zap-off'}
           label={flash ? s.sheets.flashOn : s.sheets.flashOff}

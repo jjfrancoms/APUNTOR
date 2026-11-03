@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'dangerOutline' | 'soft';
 
@@ -36,7 +37,7 @@ export function Button({
   const p = palette[variant];
   const inactive = disabled === true || loading === true;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy: loading === true }}
@@ -63,7 +64,7 @@ export function Button({
           </Text>
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 

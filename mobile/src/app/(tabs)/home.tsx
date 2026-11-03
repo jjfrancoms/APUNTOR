@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import {
   Button,
@@ -17,6 +17,7 @@ import { FREE_DAILY_QUESTIONS, questionsToday, quotaMb, usedMb, useStore } from 
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { layout, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 6 · Inicio */
 export default function Home() {
@@ -87,15 +88,14 @@ export default function Home() {
           </View>
         </View>
       </Card>
-      <Pressable
+      {/* Encabezado de sección como "Mis cursos" (sin etiqueta en mayúsculas sobre el título). */}
+      <Text variant="heading">{s.home.continue}</Text>
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={`${s.home.continue}: ${continueLearning.title}`}
         onPress={() => router.push(`/courses/topics/${continueLearning.topicId}`)}
       >
         <Card>
-          <Text variant="overline" color="textMuted">
-            {s.home.continue.toUpperCase()}
-          </Text>
           <View style={styles.row}>
             <View style={styles.flex}>
               <Text variant="bodyStrong">{continueLearning.title}</Text>
@@ -107,7 +107,7 @@ export default function Home() {
           </View>
           <ProgressBar value={continueLearning.progress} label={continueLearning.title} />
         </Card>
-      </Pressable>
+      </Tap>
       <View style={styles.row}>
         <Text variant="heading" style={styles.flex}>
           {s.home.myCourses}
@@ -116,7 +116,7 @@ export default function Home() {
       </View>
       <Card style={styles.list}>
         {courses.map((course, i) => (
-          <Pressable
+          <Tap
             key={course.id}
             accessibilityRole="button"
             accessibilityLabel={`${course.title}, ${formatPercent(course.progress)}`}
@@ -138,7 +138,7 @@ export default function Home() {
               </View>
               <ProgressBar value={course.progress} label={course.title} />
             </View>
-          </Pressable>
+          </Tap>
         ))}
       </Card>
     </>

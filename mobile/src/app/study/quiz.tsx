@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
@@ -18,6 +18,7 @@ import { buildQuiz, type QuizQuestion } from '@/lib/quiz';
 import { classOf, recordQuiz, useStore } from '@/store/store';
 import { useMemo } from 'react';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -130,7 +131,7 @@ export default function Quiz() {
           const bg = right ? c.primarySoft : wrong ? c.dangerSoft : c.surface;
           const label = right ? s.quiz.correct : wrong ? s.quiz.incorrect : '';
           return (
-            <Pressable
+            <Tap
               key={opt}
               accessibilityRole="radio"
               accessibilityLabel={`${LETTERS[i] ?? ''}. ${opt}${label ? `. ${label}` : ''}`}
@@ -160,7 +161,7 @@ export default function Quiz() {
               >
                 {opt}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

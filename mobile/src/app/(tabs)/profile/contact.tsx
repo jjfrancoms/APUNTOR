@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   Banner,
@@ -15,6 +15,7 @@ import {
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 43 · Contactar soporte. Si falla el envío, el texto se conserva (tabla de estados). */
 export default function Contact() {
@@ -62,7 +63,7 @@ export default function Contact() {
         onChangeText={setMessage}
         multiline
       />
-      <Pressable
+      <Tap
         accessibilityRole="button"
         onPress={() => void attach()}
         style={[styles.select, { backgroundColor: c.surface, borderColor: c.border }]}
@@ -71,7 +72,7 @@ export default function Contact() {
         <Text variant="smallStrong" color="primary">
           {attachment ? s.sheets.attachDone(attachment) : s.contact.attach}
         </Text>
-      </Pressable>
+      </Tap>
       <Checkbox checked={technical} onChange={setTechnical} label={s.contact.technical}>
         <Text variant="caption" color="textMuted">
           {s.contact.technical}

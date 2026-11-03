@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { layout, radius, useTheme } from '@/theme';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 export function Segmented<T extends string>({
   options,
@@ -17,7 +18,7 @@ export function Segmented<T extends string>({
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable
+          <Tap
             key={o.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
@@ -27,7 +28,7 @@ export function Segmented<T extends string>({
             <Text variant="smallStrong" color={active ? 'text' : 'textMuted'}>
               {o.label}
             </Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

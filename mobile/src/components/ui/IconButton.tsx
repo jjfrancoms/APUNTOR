@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { layout, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
+import { Tap } from './Tap';
 
 /** Botón circular de 44 px; `label` es obligatorio para lectores de pantalla. */
 export function IconButton({
@@ -14,7 +15,7 @@ export function IconButton({
 }) {
   const { c } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}
@@ -25,7 +26,7 @@ export function IconButton({
       ]}
     >
       <Icon name={icon} size={18} />
-    </Pressable>
+    </Tap>
   );
 }
 

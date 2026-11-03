@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { layout, space, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 export interface ListRowProps {
   title: string;
@@ -49,14 +50,14 @@ export function ListRow({
   );
   if (!onPress) return content;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={title}
       onPress={onPress}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       {content}
-    </Pressable>
+    </Tap>
   );
 }
 

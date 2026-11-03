@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
+import { Tap } from './Tap';
 
 export interface SelectOption {
   value: string;
@@ -40,7 +41,7 @@ export function SelectField({
   return (
     <View style={styles.wrap}>
       {label ? <Text variant="smallStrong">{label}</Text> : null}
-      <Pressable
+      <Tap
         accessibilityRole="combobox"
         accessibilityState={inline ? { expanded: open } : undefined}
         accessibilityLabel={`${label ?? ''} ${shown ?? placeholder ?? ''}`.trim()}
@@ -54,7 +55,7 @@ export function SelectField({
           {shown ?? placeholder ?? ''}
         </Text>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} color="textMuted" />
-      </Pressable>
+      </Tap>
       {inline && open ? (
         <View
           accessibilityRole="list"
@@ -63,7 +64,7 @@ export function SelectField({
           {options.map((o, i) => {
             const active = o.value === selected;
             return (
-              <Pressable
+              <Tap
                 key={o.value}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
@@ -87,7 +88,7 @@ export function SelectField({
                   ) : null}
                 </View>
                 {active ? <Icon name="check" size={16} color="primary" /> : null}
-              </Pressable>
+              </Tap>
             );
           })}
         </View>

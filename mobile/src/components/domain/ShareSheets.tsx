@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Share as NativeShare, StyleSheet, View, Pressable } from 'react-native';
+import { Share as NativeShare, StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -16,6 +16,7 @@ import { sharedSummary } from '@/data/mock';
 import { createShare, stopSharing } from '@/store/store';
 import { es, useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 export type ShareStep = 'closed' | 'create' | 'created';
 
@@ -96,14 +97,14 @@ export function ShareSheets({
           <Text variant="small" selectable style={styles.flex}>
             {link}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityLabel={sh.copyIcon}
             onPress={() => void copy()}
             hitSlop={12}
           >
             <Icon name={copied ? 'check' : 'copy'} size={16} color="textMuted" />
-          </Pressable>
+          </Tap>
         </View>
         <View style={styles.chips}>
           <Chip label={sh.readOnly} icon="lock" />
@@ -118,7 +119,7 @@ export function ShareSheets({
           variant="secondary"
           onPress={() => void copy()}
         />
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => {
             if (token) stopSharing(token);
@@ -130,7 +131,7 @@ export function ShareSheets({
           <Text variant="smallStrong" color="danger">
             {sh.stop}
           </Text>
-        </Pressable>
+        </Tap>
       </Sheet>
     </>
   );

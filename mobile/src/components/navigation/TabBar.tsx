@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Icon, Mascot, Text, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings, useStore } from '@/store/store';
 import { layout, radius, space, useTheme, navigationLayoutFor } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 export const TAB_ROUTES = ['home', 'courses', 'chat', 'profile'] as const;
 type TabRoute = (typeof TAB_ROUTES)[number];
@@ -37,7 +38,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       const focused = state.routes[state.index]?.key === route.key;
       const label = s.tabs[route.name];
       return (
-        <Pressable
+        <Tap
           key={route.key}
           accessibilityRole="tab"
           accessibilityLabel={label}
@@ -56,13 +57,13 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
           >
             {label}
           </Text>
-        </Pressable>
+        </Tap>
       );
     });
 
   const sidebar = mode === 'sidebar';
   const upload = (
-    <Pressable
+    <Tap
       key="upload"
       accessibilityRole="button"
       accessibilityLabel={s.tabs.upload}
@@ -84,14 +85,14 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
           <Icon name="plus" size={24} color="onPrimary" />
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 
   // Cambio rápido de tema; en Perfil › Apariencia también se puede volver a "Automático".
   const nextTheme = colorMode === 'dark' ? 'light' : 'dark';
   const themeLabel = colorMode === 'dark' ? s.tabs.toLight : s.tabs.toDark;
   const themeToggle = (
-    <Pressable
+    <Tap
       key="theme"
       accessibilityRole="button"
       accessibilityLabel={themeLabel}
@@ -104,7 +105,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
           {themeLabel}
         </Text>
       ) : null}
-    </Pressable>
+    </Tap>
   );
 
   if (!vertical) {
@@ -154,7 +155,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       <View style={styles.spacer} />
       {themeToggle}
       {sidebar && fullName ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={`${s.tabs.profile}: ${fullName}`}
           onPress={() => router.navigate('/profile')}
@@ -173,7 +174,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
               {email}
             </Text>
           </View>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

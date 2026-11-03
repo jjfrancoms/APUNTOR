@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useStrings } from '@/i18n/es';
 import { formatDayMonthYear, isAfterDay, monthGrid, yearRange } from '@/lib/calendar';
 import { formatBirthInput, parseBirthDate } from '@/lib/validation';
@@ -7,6 +7,7 @@ import { layout, radius, space, useTheme } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 import { TextField } from './TextField';
+import { Tap } from './Tap';
 
 type Mode = 'days' | 'months' | 'years';
 
@@ -62,7 +63,7 @@ export function DateField({
   const monthName = k.months[view.m] ?? '';
 
   const headButton = (labelText: string, a11y: string, next: Mode) => (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${a11y}: ${labelText}`}
       onPress={() => setMode(mode === next ? 'days' : next)}
@@ -70,7 +71,7 @@ export function DateField({
     >
       <Text variant="bodyStrong">{labelText}</Text>
       <Icon name={mode === next ? 'chevron-up' : 'chevron-down'} size={14} color="textMuted" />
-    </Pressable>
+    </Tap>
   );
 
   return (
@@ -84,7 +85,7 @@ export function DateField({
         autoComplete="birthdate-full"
         error={error}
         trailing={
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityLabel={s.register.openCalendar}
             accessibilityState={{ expanded: open }}
@@ -93,25 +94,25 @@ export function DateField({
             style={[styles.iconButton, open && { backgroundColor: c.primarySoft }]}
           >
             <Icon name="calendar" size={20} color={open ? 'primary' : 'textMuted'} />
-          </Pressable>
+          </Tap>
         }
       />
       {open ? (
         <View style={[styles.panel, { backgroundColor: c.surface, borderColor: c.border }]}>
           <View style={styles.head}>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityLabel={k.prevMonth}
               onPress={() => shift(-1)}
               style={styles.arrow}
             >
               <Icon name="chevron-left" color="text" />
-            </Pressable>
+            </Tap>
             <View style={styles.headCenter}>
               {headButton(monthName, k.chooseMonth, 'months')}
               {headButton(String(view.y), k.chooseYear, 'years')}
             </View>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityLabel={k.nextMonth}
               accessibilityState={{ disabled: atMax }}
@@ -120,7 +121,7 @@ export function DateField({
               style={[styles.arrow, atMax && styles.disabled]}
             >
               <Icon name="chevron-right" color="text" />
-            </Pressable>
+            </Tap>
           </View>
 
           {mode === 'years' ? (
@@ -129,7 +130,7 @@ export function DateField({
                 {yearRange(today.getFullYear()).map((y) => {
                   const active = y === view.y;
                   return (
-                    <Pressable
+                    <Tap
                       key={y}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
@@ -142,7 +143,7 @@ export function DateField({
                       <Text variant="smallStrong" color={active ? 'onPrimary' : 'text'}>
                         {String(y)}
                       </Text>
-                    </Pressable>
+                    </Tap>
                   );
                 })}
               </View>
@@ -153,7 +154,7 @@ export function DateField({
                 const active = m === view.m;
                 const future = view.y === today.getFullYear() && m > today.getMonth();
                 return (
-                  <Pressable
+                  <Tap
                     key={name}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active, disabled: future }}
@@ -172,7 +173,7 @@ export function DateField({
                     <Text variant="smallStrong" color={active ? 'onPrimary' : 'text'}>
                       {name.slice(0, 3)}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </View>
@@ -199,7 +200,7 @@ export function DateField({
                     selected.getDate() === day;
                   return (
                     <View key={day} style={styles.cell7}>
-                      <Pressable
+                      <Tap
                         accessibilityRole="button"
                         accessibilityLabel={k.day(day, monthName, view.y)}
                         accessibilityState={{ selected: active, disabled: future }}
@@ -217,7 +218,7 @@ export function DateField({
                         <Text variant="small" color={active ? 'onPrimary' : 'text'}>
                           {String(day)}
                         </Text>
-                      </Pressable>
+                      </Tap>
                     </View>
                   );
                 })}
@@ -261,9 +262,10 @@ const styles = StyleSheet.create({
   cell4: { width: '25%' },
   cell3: { width: `${100 / 3}%` },
   pill: { alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: radius.md },
+  // Mínimos (no tamaños fijos): con texto grande del sistema, el número no se recorta.
   day: {
-    width: 40,
-    height: 40,
+    minWidth: 40,
+    minHeight: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',

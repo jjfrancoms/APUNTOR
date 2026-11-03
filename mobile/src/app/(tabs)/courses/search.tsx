@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { Card, Chip, EmptyState, Icon, Screen, Text } from '@/components/ui';
 import { searchQuery } from '@/data/mock';
 import { searchAll, useStore, type SearchHit } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { splitMatch } from '@/lib/text';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { Tap } from '@/components/ui/Tap';
 
 type Filter = 'all' | 'document' | 'chat';
 
@@ -63,19 +64,19 @@ export default function Search() {
           style={[styles.input, { color: c.text }]}
         />
         {query.length > 0 ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityLabel={s.search.clear}
             onPress={() => setQuery('')}
             hitSlop={12}
           >
             <Icon name="x" size={18} color="textMuted" />
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
       <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: c.surfaceAlt }]}>
         {filters.map((f, i) => (
-          <Pressable
+          <Tap
             key={f}
             accessibilityRole="tab"
             accessibilityState={{ selected: filter === f }}
@@ -85,7 +86,7 @@ export default function Search() {
             <Text variant="smallStrong" color={filter === f ? 'text' : 'textMuted'}>
               {labels[i] ?? ''}
             </Text>
-          </Pressable>
+          </Tap>
         ))}
       </View>
       {visible.length === 0 && query.trim().length > 0 ? (
@@ -114,7 +115,7 @@ export default function Search() {
 function ResultCard({ result, query }: { result: SearchHit; query: string }) {
   const parts = splitMatch(result.snippet, query);
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${result.title}, ${result.location}`}
       onPress={() =>
@@ -152,7 +153,7 @@ function ResultCard({ result, query }: { result: SearchHit; query: string }) {
         </Text>
         <Chip label={result.tag} tone="primary" />
       </Card>
-    </Pressable>
+    </Tap>
   );
 }
 
