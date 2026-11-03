@@ -76,15 +76,24 @@ export default function Profile() {
         <ListRow
           icon="bell"
           title={s.profile.notifications}
-          onPress={() => router.push('/notifications-permission')}
+          onPress={() => router.push('/profile/notifications')}
         />
-        <ListRow icon="credit-card" title={s.profile.subscription} onPress={() => undefined} />
+        <ListRow
+          icon="credit-card"
+          title={s.profile.subscription}
+          onPress={() => router.push('/profile/subscription')}
+        />
         <ListRow
           icon="help-circle"
           title={s.profile.help}
           onPress={() => router.push('/profile/help')}
         />
-        <ListRow icon="download" title={s.profile.data} divider={false} onPress={() => undefined} />
+        <ListRow
+          icon="download"
+          title={s.profile.data}
+          divider={false}
+          onPress={() => router.push('/profile/delete-account')}
+        />
       </Card>
     </Screen>
   );

@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
-import { Button, Card, Icon, Mascot, Screen, Text } from '@/components/ui';
+import { Button, Card, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import { courses as allCourses, pendingReviewCount, type Course } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -14,6 +14,23 @@ export default function Courses() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
+
+  if (demo === 'offline') {
+    return (
+      <Screen>
+        <Text variant="display" accessibilityRole="header">
+          {s.courses.title}
+        </Text>
+        <EmptyState
+          mood="sleepy"
+          title={s.empty.offlineTitle}
+          body={s.empty.offlineBody}
+          primary={{ label: s.empty.downloaded, onPress: () => router.replace('/courses') }}
+          secondary={{ label: s.empty.retry, onPress: () => router.replace('/courses') }}
+        />
+      </Screen>
+    );
+  }
 
   if (courses.length === 0) {
     return (
@@ -60,6 +77,7 @@ export default function Courses() {
       </Pressable>
       <Pressable
         accessibilityRole="button"
+        onPress={() => router.push('/upload/review')}
         style={[styles.banner, { backgroundColor: c.accentSoft }]}
       >
         <Icon name="star" size={16} />

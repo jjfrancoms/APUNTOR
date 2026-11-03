@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
+import { Card, Chip, EmptyState, Icon, Screen, Text } from '@/components/ui';
 import { searchQuery, searchResults, type SearchResult } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { splitMatch } from '@/lib/text';
@@ -13,7 +13,9 @@ type Filter = 'all' | 'document' | 'chat';
 export default function Search() {
   const s = useStrings();
   const { c } = useTheme();
+  const { demo } = useLocalSearchParams<{ demo?: string }>();
   const [query, setQuery] = useState(searchQuery);
+  const [cleared, setCleared] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const matches = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('es');
@@ -27,6 +29,29 @@ export default function Search() {
   const labels = s.search.tabs(matches.length, docs, chats);
   const filters: Filter[] = ['all', 'document', 'chat'];
 
+  // Pantalla 45 · Búsqueda sin resultados (`?demo=empty` la fuerza con la consulta del diseño).
+  if ((demo === 'empty' && !cleared) || (query.trim().length > 0 && matches.length === 0)) {
+    return (
+      <Screen>
+        <Text variant="display" accessibilityRole="header">
+          {s.empty.searchTitle}
+        </Text>
+        <EmptyState
+          mood="curious"
+          title={s.empty.search(query.trim())}
+          body={s.empty.searchBody}
+          primary={{
+            label: s.empty.clearSearch,
+            onPress: () => {
+              setCleared(true);
+              setQuery('');
+            },
+          }}
+          secondary={{ label: s.empty.uploadOne, onPress: () => router.push('/upload') }}
+        />
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <View style={[styles.field, { borderColor: c.primary, backgroundColor: c.surface }]}>

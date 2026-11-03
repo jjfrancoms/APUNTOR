@@ -1,7 +1,18 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Card, Chip, Icon, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
+import { ShareSheets, type ShareStep } from '@/components/domain/ShareSheets';
+import {
+  Card,
+  Chip,
+  Icon,
+  IconButton,
+  Mascot,
+  Screen,
+  Text,
+  TextLink,
+  TopBar,
+} from '@/components/ui';
 import { topics } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -12,7 +23,10 @@ type Tab = 'mine' | 'external' | 'compare';
 export default function TopicDetail() {
   const s = useStrings();
   const { c } = useTheme();
-  const { topicId } = useLocalSearchParams<{ topicId: string }>();
+  const { topicId, sheet } = useLocalSearchParams<{ topicId: string; sheet?: string }>();
+  const [share, setShare] = useState<ShareStep>(
+    sheet === 'share' ? 'create' : sheet === 'created' ? 'created' : 'closed',
+  );
   const topic = topics[topicId] ?? topics['definicion-limite'];
   const [tab, setTab] = useState<Tab>('compare');
   if (!topic) return null;
@@ -51,7 +65,16 @@ export default function TopicDetail() {
   );
 
   return (
-    <Screen header={<TopBar title={topic.breadcrumb.join(' › ')} />}>
+    <Screen
+      header={
+        <TopBar
+          title={topic.breadcrumb.join(' › ')}
+          right={
+            <IconButton icon="share-2" label={s.share.header} onPress={() => setShare('create')} />
+          }
+        />
+      }
+    >
       <Text variant="title" accessibilityRole="header">
         {topic.title}
       </Text>
@@ -88,10 +111,11 @@ export default function TopicDetail() {
           ))}
           <View style={styles.row}>
             <Icon name="message-circle" size={14} color="primary" />
-            <TextLink label={s.topic.askMascot} />
+            <TextLink label={s.topic.askMascot} onPress={() => router.push('/conversation')} />
           </View>
         </Card>
       ) : null}
+      <ShareSheets step={share} onStep={setShare} />
     </Screen>
   );
 }

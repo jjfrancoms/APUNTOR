@@ -9,6 +9,8 @@ import {
 } from '../../../src/design/tokens';
 
 export { layout, navigationLayoutFor };
+/** Paletas completas, para superficies que no cambian con el tema (p. ej. el visor de cámara). */
+export { colors as palettes };
 export type { ColorTokens };
 
 export const fonts = {

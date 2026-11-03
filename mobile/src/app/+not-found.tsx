@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 
-// Cualquier ruta desconocida (o la URL de una vista previa publicada) lleva al inicio.
+// Ruta desconocida → inicio de sesión. En la vista previa publicada (EXPO_PUBLIC_PREVIEW=1)
+// abre el mapa de pantallas, para revisar todas desde un solo lugar.
 export default function NotFound() {
-  return <Redirect href="/login" />;
+  return <Redirect href={process.env.EXPO_PUBLIC_PREVIEW === '1' ? '/mapa' : '/login'} />;
 }

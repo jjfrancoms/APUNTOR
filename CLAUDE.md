@@ -120,7 +120,9 @@ App móvil (dentro de `mobile/`, con su propio `package.json`):
 | `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
 | `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
 
-Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`); sin
+Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
+en `mobile/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
+se muestran con `?demo=<estado>` sobre la misma ruta; sin
 texto literal fuera de `src/i18n/es.ts`; sin hex sueltos (usa `useTheme()`); el ámbar nunca es
 color de texto (el tipo de `Text` lo impide); íconos sin texto llevan `accessibilityLabel`.
 

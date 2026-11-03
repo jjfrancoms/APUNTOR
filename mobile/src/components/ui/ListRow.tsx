@@ -12,9 +12,19 @@ export interface ListRowProps {
   trailing?: ReactNode;
   onPress?: () => void;
   divider?: boolean;
+  /** Acción destructiva: título e ícono en rojo. */
+  danger?: boolean;
 }
 
-export function ListRow({ title, detail, icon, trailing, onPress, divider = true }: ListRowProps) {
+export function ListRow({
+  title,
+  detail,
+  icon,
+  trailing,
+  onPress,
+  divider = true,
+  danger = false,
+}: ListRowProps) {
   const { c } = useTheme();
   const content = (
     <View
@@ -23,9 +33,11 @@ export function ListRow({ title, detail, icon, trailing, onPress, divider = true
         divider && { borderBottomColor: c.border, borderBottomWidth: StyleSheet.hairlineWidth },
       ]}
     >
-      {icon ? <Icon name={icon} size={18} color="primary" /> : null}
+      {icon ? <Icon name={icon} size={18} color={danger ? 'danger' : 'primary'} /> : null}
       <View style={styles.text}>
-        <Text variant="bodyStrong">{title}</Text>
+        <Text variant="bodyStrong" color={danger ? 'danger' : 'text'}>
+          {title}
+        </Text>
         {detail ? (
           <Text variant="caption" color="textMuted">
             {detail}

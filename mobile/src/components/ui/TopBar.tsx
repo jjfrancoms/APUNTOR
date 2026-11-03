@@ -8,11 +8,13 @@ import { Text } from './Text';
 
 export function TopBar({
   title,
+  subtitle,
   right,
   icon = 'arrow-left',
   onBack,
 }: {
   title?: string;
+  subtitle?: string;
   right?: ReactNode;
   icon?: 'arrow-left' | 'x';
   onBack?: () => void;
@@ -26,15 +28,16 @@ export function TopBar({
         label={icon === 'x' ? s.common.close : s.common.back}
         onPress={back}
       />
-      <Text
-        variant="subheading"
-        align="center"
-        style={styles.title}
-        accessibilityRole="header"
-        numberOfLines={1}
-      >
-        {title ?? ''}
-      </Text>
+      <View style={styles.title}>
+        <Text variant="subheading" align="center" accessibilityRole="header" numberOfLines={1}>
+          {title ?? ''}
+        </Text>
+        {subtitle ? (
+          <Text variant="caption" color="textMuted" align="center" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
       <View style={styles.side}>{right}</View>
     </View>
   );

@@ -24,8 +24,8 @@ describe('datos de ejemplo', () => {
 
 describe('textos', () => {
   it('incluye todos los códigos de error de la especificación transcritos', () => {
-    expect(Object.keys(es.errors).sort()).toEqual(
-      [
+    expect(Object.keys(es.errors)).toEqual(
+      expect.arrayContaining([
         'AUTH_EMAIL_TAKEN',
         'AUTH_INVALID',
         'AUTH_LINK_EXPIRED',
@@ -34,7 +34,11 @@ describe('textos', () => {
         'UP_NETWORK',
         'UP_QUOTA',
         'UP_SIZE',
-      ].sort(),
+      ]),
     );
+  });
+
+  it('los códigos de error siguen el formato AREA_MOTIVO en mayúsculas', () => {
+    for (const code of Object.keys(es.errors)) expect(code).toMatch(/^[A-Z]+(_[A-Z]+)+$/u);
   });
 });

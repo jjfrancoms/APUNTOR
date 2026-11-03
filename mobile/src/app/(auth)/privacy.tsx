@@ -87,9 +87,8 @@ export default function Privacy() {
           <Text variant="smallStrong">{s.privacy.minorTitle}</Text>
         </View>
         <Text variant="caption">{s.privacy.minorBody}</Text>
-        {/* PENDIENTE: la decisión de lanzamiento envía a menores a lista de espera (44);
-            este diseño pide el correo del tutor. Falta definir cuál aplica. */}
-        <TextLink label={s.privacy.minorAction} />
+        {/* Mapa: 15 Privacidad → 44 Lista de espera (menores de 18). */}
+        <TextLink label={s.privacy.minorAction} onPress={() => router.push('/waitlist')} />
       </Card>
     </Screen>
   );

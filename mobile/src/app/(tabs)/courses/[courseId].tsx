@@ -18,21 +18,23 @@ export default function CourseDetail() {
     [course.topicCount, s.course.topics],
     [course.documentCount, s.course.documents],
   ] as const;
-  const firstTopic = course.classes.flatMap((k) => k.sections.flatMap((sec) => sec.topics))[0];
   return (
     <Screen
       header={
         <TopBar
           title={course.title}
-          right={<IconButton icon="more-horizontal" label={s.common.more} />}
+          right={
+            <IconButton
+              icon="more-horizontal"
+              label={s.common.more}
+              onPress={() => router.push('/study/quiz-setup')}
+            />
+          }
         />
       }
       footer={
         <>
-          <Button
-            label={s.course.studyWithMascot}
-            onPress={() => firstTopic && router.push(`/courses/topics/${firstTopic.id}`)}
-          />
+          <Button label={s.course.studyWithMascot} onPress={() => router.push('/conversation')} />
           <Button
             label={s.course.addDocument}
             variant="secondary"

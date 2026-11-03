@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, Icon, Mascot, ProgressBar, Screen, Text, TextLink } from '@/components/ui';
@@ -11,6 +11,40 @@ import { space, useTheme } from '@/theme';
 export default function Home() {
   const s = useStrings();
   const { c } = useTheme();
+  const { demo } = useLocalSearchParams<{ demo?: string }>();
+  // Pantalla 51 · Inicio cargando: esqueleto con la forma de la pantalla.
+  if (demo === 'loading') {
+    return (
+      <Screen>
+        <View
+          accessibilityLabel={s.empty.loading}
+          accessibilityRole="progressbar"
+          style={styles.skeleton}
+        >
+          {[
+            { w: '45%', h: 28 },
+            { w: '65%', h: 14 },
+            { w: '100%', h: 120 },
+            { w: '100%', h: 96 },
+            { w: '35%', h: 18 },
+            { w: '100%', h: 64 },
+            { w: '100%', h: 64 },
+            { w: '100%', h: 64 },
+          ].map((b, i) => (
+            <View
+              key={i}
+              style={{
+                width: b.w as `${number}%`,
+                height: b.h,
+                borderRadius: 12,
+                backgroundColor: c.surfaceAlt,
+              }}
+            />
+          ))}
+        </View>
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <View>
@@ -26,7 +60,7 @@ export default function Home() {
         <View style={styles.flex}>
           <Text variant="bodyStrong">{s.home.review(todayReview.topic)}</Text>
           <View style={styles.start}>
-            <Button label={s.home.reviewNow} compact />
+            <Button label={s.home.reviewNow} compact onPress={() => router.push('/study/review')} />
           </View>
         </View>
       </Card>
@@ -90,6 +124,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   review: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  skeleton: { gap: space.md },
   start: { alignItems: 'flex-start', marginTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1, gap: space.xs },

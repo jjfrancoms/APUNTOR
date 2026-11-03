@@ -3,7 +3,7 @@ import { layout, radius, space, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'soft';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'dangerOutline' | 'soft';
 
 export interface ButtonProps {
   label: string;
@@ -31,6 +31,7 @@ export function Button({
     secondary: { bg: c.surface, fg: 'text', border: c.border },
     danger: { bg: c.danger, fg: 'onPrimary', border: c.danger },
     soft: { bg: c.surface, fg: 'primary', border: c.border },
+    dangerOutline: { bg: c.surface, fg: 'danger', border: c.danger },
   } as const;
   const p = palette[variant];
   const inactive = disabled === true || loading === true;

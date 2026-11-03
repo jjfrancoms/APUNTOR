@@ -168,16 +168,29 @@ pantallas (página Escritorio, fila inferior).
 - **Pendiente** _(por confirmar)_: verificar contraste en las pantallas oscuras no diseñadas y probar
   tablet en horizontal.
 
-## 8. Pantallas ya diseñadas (referencia visual)
+## 8. Pantallas diseñadas e implementadas
 
-| #   | Pantalla                    | Notas de diseño                                                                                                                                                                                              |
-| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Inicio de sesión            | Mascota arriba; "Estudia con tus propios apuntes"; correo, contraseña, "¿Olvidaste tu contraseña?"; Iniciar sesión, Google, Apple; "Crear cuenta"; nota "Tus documentos son privados y solo te ayudan a ti." |
-| 11  | Registro                    | "Empecemos"; nombre, correo, contraseña (mínimo 8); aceptar Términos y Política de privacidad; Google y Apple.                                                                                               |
-| 12  | Recuperar contraseña        | "¿Olvidaste tu contraseña?"; el enlace vence en 30 minutos.                                                                                                                                                  |
-| 13  | Enlace enviado              | "Revisa tu correo"; Abrir correo; "Reenviar en 0:42"; "¿Correo equivocado? Cambiar".                                                                                                                         |
-| 15  | Privacidad y consentimiento | Interruptores: usar mis documentos (necesario), buscar contexto externo, datos anónimos (opcional, apagado). Bloque "¿Tienes menos de 18 años?" → correo del padre, madre o tutor.                           |
-| 33  | Permiso de notificaciones   | "¿Te aviso cuando esté listo?": documentos procesados, repaso del día, límite renovado (opcional, apagado).                                                                                                  |
-| 8   | Cursos vacío                | "Aún no tienes cursos"; Subir mi primer documento; Cómo funciona.                                                                                                                                            |
+Las 52 pantallas están diseñadas (44 del mapa + estados vacío y error 45–52) y construidas en
+`mobile/` con datos de ejemplo. El índice completo, con la ruta de cada una, está en
+`mobile/src/data/screens.ts` y se ve en la app en `/mapa`.
 
-**Barra inferior (móvil):** Inicio · Cursos · botón central "+" (subir) · Chat · Perfil.
+| #   | Estado vacío / error                    | Ruta de vista previa                        |
+| --- | --------------------------------------- | ------------------------------------------- |
+| 45  | Búsqueda sin resultados                 | `/courses/search?demo=empty`                |
+| 46  | Repaso sin tarjetas                     | `/study/review?demo=empty`                  |
+| 47  | Cámara denegada                         | `/upload/scan?demo=denied`                  |
+| 48  | Enlace caducado                         | `/s/expired`                                |
+| 49  | Restaurar compras fallido               | `/profile/subscription?demo=restore-failed` |
+| 50  | Cursos sin conexión                     | `/courses?demo=offline`                     |
+| 51  | Inicio cargando (esqueleto)             | `/home?demo=loading`                        |
+| 52  | Borrar cuenta · confirmación incorrecta | `/profile/delete-account?demo=wrong`        |
+
+**Barra inferior (móvil):** Inicio · Cursos · botón central "+" (subir) · Chat · Perfil. La pestaña
+Chat abre Conversaciones (23); una conversación (5) se abre a pantalla completa.
+
+**Pendientes de definición detectados al implementar:**
+
+- Pantalla 15 pide el correo del tutor a menores de 18, mientras el mapa y la decisión de
+  lanzamiento los llevan a la lista de espera (44). Se implementó 15 → 44.
+- Códigos de error provisionales (la tabla §4 está incompleta): `UP_LANGUAGE`, `UP_UNREADABLE`,
+  `CHAT_FAILED`, `CHAT_DAILY_LIMIT`.

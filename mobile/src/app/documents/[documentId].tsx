@@ -20,9 +20,9 @@ import { layout, radius, space, useTheme } from '@/theme';
 export default function DocumentDetail() {
   const s = useStrings();
   const { c } = useTheme();
-  const { documentId } = useLocalSearchParams<{ documentId: string }>();
+  const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
   const doc = documents[documentId] ?? documents['limites-continuidad'];
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState(confirm === '1');
   if (!doc) return null;
   return (
     <Screen
@@ -32,7 +32,7 @@ export default function DocumentDetail() {
           right={<IconButton icon="more-horizontal" label={s.common.more} />}
         />
       }
-      footer={<Button label={s.document.ask} onPress={() => router.navigate('/chat')} />}
+      footer={<Button label={s.document.ask} onPress={() => router.push('/conversation')} />}
     >
       <View>
         <Text variant="title" accessibilityRole="header">
