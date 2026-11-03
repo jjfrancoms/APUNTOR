@@ -46,6 +46,9 @@ búsqueda RAG con citación exacta por página. Lee también `README.md` (produc
 - `SUPABASE_SERVICE_ROLE_KEY` y `LLM_API_KEY` solo en servidor/worker; nunca en componentes cliente.
 - Las migraciones son SQL versionado en `drizzle/`. No edites una migración ya aplicada: genera
   otra.
+- El árbol de temas (`topics`) se deriva de los encabezados (`sectionPath`) en el worker, tras los
+  embeddings. `source_pages` solo contiene páginas donde realmente aparece el tema o sus subtemas.
+  `summary` queda en `null` hasta que exista el cliente de generación.
 - Con pgvector ≥ 0.8 y filtros muy selectivos, considera `SET hnsw.iterative_scan = relaxed_order`.
 
 ## Estructura
@@ -61,6 +64,7 @@ src/
 │   │   ├── queue-worker.ts      # productor/consumidor BullMQ, batching de embeddings
 │   │   └── document-repository.ts
 │   ├── rag/retriever.ts         # búsqueda coseno, prompt y validación de citas
+│   ├── topics/topic-tree.ts     # árbol de temas desde sectionPath de los chunks
 │   ├── llm/                     # contrato EmbeddingProvider (implementación pendiente)
 │   └── storage/file-storage.ts  # Supabase Storage
 └── worker.ts                    # entrada del proceso worker

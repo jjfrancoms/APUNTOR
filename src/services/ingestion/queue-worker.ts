@@ -2,6 +2,7 @@ import { Queue, UnrecoverableError, Worker, type ConnectionOptions, type Job } f
 import { EMBEDDING_DIMENSIONS } from '../../db/schema';
 import { assertEmbeddingDimensions, type EmbeddingProvider } from '../llm/embedding-provider';
 import type { FileStorage } from '../storage/file-storage';
+import { buildTopicTree, flattenTopicTree } from '../topics/topic-tree';
 import type { EmbeddedChunk, IngestionRepository } from './document-repository';
 import {
   chunkPages,
@@ -21,11 +22,12 @@ export interface IngestionJobResult {
   documentId: string;
   totalPages: number;
   chunkCount: number;
+  topicCount: number;
   skipped: boolean;
 }
 
 export interface IngestionProgress {
-  stage: 'parsing' | 'embedding' | 'done';
+  stage: 'parsing' | 'embedding' | 'topics' | 'done';
   processedChunks: number;
   totalChunks: number;
 }
@@ -114,7 +116,7 @@ export async function processDocument(
   const document = await repository.getDocument(documentId);
   if (!document) throw new DocumentNotFoundError(documentId);
   if (document.status === 'completed') {
-    return { documentId, totalPages: 0, chunkCount: 0, skipped: true };
+    return { documentId, totalPages: 0, chunkCount: 0, topicCount: 0, skipped: true };
   }
 
   try {
@@ -161,9 +163,19 @@ export async function processDocument(
       });
     }
 
+    await onProgress({ stage: 'topics', processedChunks: processed, totalChunks: chunks.length });
+    const topicRows = flattenTopicTree(buildTopicTree(chunks));
+    await repository.replaceTopics(documentId, topicRows);
+
     await repository.markCompleted(documentId, parsed.totalPages);
     await onProgress({ stage: 'done', processedChunks: processed, totalChunks: chunks.length });
-    return { documentId, totalPages: parsed.totalPages, chunkCount: chunks.length, skipped: false };
+    return {
+      documentId,
+      totalPages: parsed.totalPages,
+      chunkCount: chunks.length,
+      topicCount: topicRows.length,
+      skipped: false,
+    };
   } catch (error) {
     if (markFailedOnError || error instanceof PermanentIngestionError) {
       await repository.markFailed(documentId, toErrorMessage(error));
