@@ -13,11 +13,13 @@ import {
   type IngestionDeps,
 } from '../src/services/ingestion/queue-worker';
 import type { EmbeddingProvider } from '../src/services/llm/embedding-provider';
+import type { FlatTopic } from '../src/services/topics/topic-tree';
 
 const DOC_ID = '00000000-0000-4000-8000-000000000001';
 
 class InMemoryRepository implements IngestionRepository {
   chunks: EmbeddedChunk[] = [];
+  topics: FlatTopic[] = [];
   events: string[] = [];
   constructor(public doc: IngestionDocument | null) {}
   getDocument(): Promise<IngestionDocument | null> {
@@ -34,6 +36,11 @@ class InMemoryRepository implements IngestionRepository {
   insertChunks(chunks: readonly EmbeddedChunk[]): Promise<void> {
     this.events.push(`insert:${chunks.length}`);
     this.chunks.push(...chunks);
+    return Promise.resolve();
+  }
+  replaceTopics(_id: string, topics: readonly FlatTopic[]): Promise<void> {
+    this.events.push(`topics:${topics.length}`);
+    this.topics = [...topics];
     return Promise.resolve();
   }
   markCompleted(_id: string, totalPages: number): Promise<void> {
@@ -97,6 +104,24 @@ describe('processDocument', () => {
     expect(repo.events.at(-1)).toBe('completed:150');
     expect(new Set(repo.chunks.map((c) => c.pageNumber)).size).toBe(150);
     expect(repo.chunks.every((c) => c.documentId === DOC_ID)).toBe(true);
+  });
+
+  it('guarda el árbol de temas detectado antes de marcar completed', async () => {
+    const pages = [
+      { pageNumber: 1, text: '1. La célula\nLa célula es la unidad básica de la vida.' },
+      { pageNumber: 2, text: '1.1 Mitocondria\nProduce ATP.' },
+      { pageNumber: 3, text: '2. Genética\nEl ADN guarda información.' },
+    ];
+    const repo = new InMemoryRepository(pendingDoc);
+    const result = await processDocument(DOC_ID, makeDeps({ totalPages: 3, pages }, repo));
+
+    expect(result.topicCount).toBe(3);
+    expect(repo.topics).toEqual([
+      { parentIndex: null, title: '1. La célula', level: 1, sourcePages: [1, 2] },
+      { parentIndex: 0, title: '1.1 Mitocondria', level: 2, sourcePages: [2] },
+      { parentIndex: null, title: '2. Genética', level: 1, sourcePages: [3] },
+    ]);
+    expect(repo.events.slice(-2)).toEqual(['topics:3', 'completed:3']);
   });
 
   it('marca failed si el PDF no tiene texto extraíble', async () => {
