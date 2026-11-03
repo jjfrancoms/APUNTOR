@@ -1,14 +1,20 @@
 # CLAUDE.md — Reglas del proyecto APUNTOR
 
 Sistema de estudio e inteligencia documental: ingesta asíncrona de PDFs, árbol de temas y
-búsqueda RAG con citación exacta por página. Lee también `README.md` (producto y principios).
+búsqueda RAG con citación exacta por página. Lee también `README.md` (producto y principios) y
+`docs/producto/mvp-ux.md` (alcance del MVP, mapa de 44 pantallas, estados por pantalla y textos de
+error). Lo marcado **Por confirmar** en esa especificación no es una decisión cerrada.
 
 ## Stack principal
 
 - **TypeScript estricto** (`strict: true`, `noUncheckedIndexedAccess`). **Prohibido `any`**
   (explícito o implícito): ESLint lo trata como error (`no-explicit-any`, `no-unsafe-*`). Usa
   `unknown` + validación (zod) en los bordes del sistema.
-- **Node.js ≥ 22.13 / Next.js (App Router)** en `src/app/`.
+- **App cliente: Expo/React Native** (decisión cerrada del 30 oct 2026): una sola base para Android,
+  iOS y web, con variantes móvil, tablet, escritorio y modo oscuro. Colores, breakpoints y tamaños
+  táctiles salen de `src/design/tokens.ts`; no uses hex sueltos en las pantallas.
+- **Backend: Node.js ≥ 22.13.** `src/app/` (Next.js) es provisional y solo sirve hoy como
+  contenedor del servidor; la capa de UI va en la app Expo.
 - **PostgreSQL / Supabase con `pgvector`** y **Drizzle ORM** (`src/db/schema.ts`).
 - **Cola**: BullMQ sobre Redis (`REDIS_URL`). El worker es un proceso aparte (`src/worker.ts`).
 
@@ -51,6 +57,16 @@ búsqueda RAG con citación exacta por página. Lee también `README.md` (produc
   `summary` queda en `null` hasta que exista el cliente de generación.
 - Con pgvector ≥ 0.8 y filtros muy selectivos, considera `SET hnsw.iterative_scan = relaxed_order`.
 
+### Reglas de producto (de `docs/producto/mvp-ux.md`)
+
+- Todo error visible al usuario se expresa con un **código estable** (`AUTH_INVALID`, `UP_FORMAT`,
+  `UP_SIZE`…) que sirve de clave de traducción; el texto vive en la tabla de la especificación.
+  Mensajes sin culpar al usuario y siempre con una acción. Nada de texto incrustado en imágenes.
+- Material propio en verde, contexto externo en violeta y **siempre con fuente**; el usuario puede
+  apagar el contexto externo en Perfil.
+- Cada pantalla define sus estados cargando / vacío / error / sin conexión según la tabla de estados.
+- Límite de subida de 50 MB (por confirmar) y formatos PDF, Word, PowerPoint, texto y fotos con OCR.
+
 ## Estructura
 
 ```
@@ -69,6 +85,13 @@ src/
 │   └── storage/file-storage.ts  # Supabase Storage
 └── worker.ts                    # entrada del proceso worker
 drizzle/                         # migraciones SQL (0000 habilita `vector`)
+mobile/                          # app Expo/React Native (Expo Router, SDK 58), paquete npm propio
+├── src/app/                     # rutas: (auth)/ acceso, (tabs)/ navegación principal, documents/
+├── src/components/ui/           # componentes base (Button, TextField, Card, Chip, Mascot…)
+├── src/theme/                   # tema claro/oscuro desde src/design/tokens.ts (compartido)
+├── src/i18n/es.ts               # todos los textos visibles (listos para traducir)
+├── src/store/                   # backend simulado: estado, acciones y datos de prueba (seed.ts)
+└── src/data/mock.ts             # contenido estático de ejemplo para las pantallas
 tests/                           # Vitest
 ```
 
@@ -87,6 +110,28 @@ tests/                           # Vitest
 | `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`   |
 | `npm run db:push`     | Sincroniza el esquema sin migración (solo local) |
 | `npm run db:studio`   | Drizzle Studio                                   |
+
+App móvil (dentro de `mobile/`, con su propio `package.json`):
+
+| Comando                  | Qué hace                                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `npm start`              | Servidor de desarrollo de Expo (`w` abre la versión web)                                        |
+| `npm run typecheck`      | `tsc --noEmit`                                                                                  |
+| `npm test`               | Vitest (lógica de `src/lib`, datos y textos)                                                    |
+| `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
+| `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
+
+Datos de prueba: la app usa `mobile/src/store/` como backend simulado (persistido en el dispositivo)
+con la misma semántica que tendrá la API: validación con códigos de error, ingesta asíncrona, respuestas
+que solo citan fragmentos propios por página, límite diario y cuotas. Cuenta de prueba:
+`ana@correo.com` / `apuntor123`. "Restablecer datos de prueba" (Perfil) vuelve al estado inicial. Al
+conectar la API, se reemplazan las acciones del store; las pantallas no cambian.
+
+Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
+en `mobile/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
+se muestran con `?demo=<estado>` sobre la misma ruta; sin
+texto literal fuera de `src/i18n/es.ts`; sin hex sueltos (usa `useTheme()`); el ámbar nunca es
+color de texto (el tipo de `Text` lo impide); íconos sin texto llevan `accessibilityLabel`.
 
 Migración SQL manual (p. ej. extensiones o funciones):
 `npx drizzle-kit generate --custom --name <nombre>`.

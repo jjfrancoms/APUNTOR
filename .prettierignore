@@ -4,3 +4,8 @@ drizzle/meta
 package-lock.json
 coverage
 README.md
+mobile/.expo
+mobile/dist
+mobile/package-lock.json
+mobile/AGENTS.md
+mobile/dist-preview
