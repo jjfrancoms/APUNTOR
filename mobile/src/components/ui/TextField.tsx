@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     fontFamily: fonts.regular,
     fontSize: 15,
+    // En web, WebChrome quita el anillo del navegador (con outline 'auto' Chrome lo dibuja igual).
     outlineWidth: 0,
     outlineColor: 'transparent',
   },

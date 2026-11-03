@@ -1,19 +1,17 @@
 import { Linking, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
 import {
   Banner,
   Card,
-  Icon,
   ListRow,
   Screen,
-  Sheet,
+  SelectField,
   Text,
   TextLink,
   Toggle,
   TopBar,
 } from '@/components/ui';
 import { setReviewTime, updateSettings, useStore } from '@/store/store';
-import { useStrings } from '@/i18n/es';
+import { es, useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
 /** Pantalla 34 · Ajustes de notificaciones (incluye el estado de permiso denegado). */
@@ -21,7 +19,6 @@ export default function NotificationSettings() {
   const s = useStrings();
   const n = s.notificationSettings;
   const st = useStore((x) => x.settings);
-  const [choosing, setChoosing] = useState(false);
   const [processed, review, limit] = [st.notifProcessed, st.notifReview, st.notifLimit];
   const setProcessed = (v: boolean) => updateSettings({ notifProcessed: v });
   const setReview = (v: boolean) => updateSettings({ notifReview: v });
@@ -50,39 +47,17 @@ export default function NotificationSettings() {
         />
       </Card>
       {review ? (
-        <Card style={styles.list}>
-          <ListRow
-            icon="clock"
-            title={n.reviewTime}
-            divider={false}
-            onPress={() => setChoosing(true)}
-            trailing={
-              <View style={styles.row}>
-                <Text variant="smallStrong" color="primary">
-                  {st.reviewTime}
-                </Text>
-              </View>
-            }
-          />
-        </Card>
+        <SelectField
+          label={n.reviewTime}
+          // El valor guardado es el de es.ts; la etiqueta, la del idioma elegido.
+          options={es.sheets.times.map((t, i) => ({ value: t, label: s.sheets.times[i] ?? t }))}
+          selected={st.reviewTime}
+          onSelect={setReviewTime}
+        />
       ) : null}
       <Text variant="caption" color="textMuted">
         {n.note}
       </Text>
-      <Sheet visible={choosing} onClose={() => setChoosing(false)} title={s.sheets.chooseTime}>
-        {s.sheets.times.map((t, idx) => (
-          <ListRow
-            key={t}
-            title={t}
-            divider={idx < s.sheets.times.length - 1}
-            trailing={t === st.reviewTime ? <Icon name="check" color="primary" /> : undefined}
-            onPress={() => {
-              setReviewTime(t);
-              setChoosing(false);
-            }}
-          />
-        ))}
-      </Sheet>
     </Screen>
   );
 }

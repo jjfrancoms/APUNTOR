@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   Chip,
@@ -69,9 +69,15 @@ export function Composer({
   const s = useStrings();
   const { c } = useTheme();
   const canSend = !busy && !disabled && (value === undefined || value.trim().length > 0);
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.composer}>
-      <View style={[styles.input, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <View
+        style={[
+          styles.input,
+          { backgroundColor: c.surface, borderColor: focused ? c.primary : c.border },
+        ]}
+      >
         <TextInput
           accessibilityLabel={placeholder}
           placeholder={placeholder}
@@ -81,6 +87,8 @@ export function Composer({
           onChangeText={onChangeText}
           onSubmitEditing={() => canSend && onSend?.()}
           returnKeyType="send"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           style={[styles.field, { color: c.text }]}
         />
         <Icon name="mic" size={18} color="textMuted" />
@@ -207,6 +215,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 15,
     paddingVertical: space.sm,
+    // En web, WebChrome quita el anillo del navegador (con outline 'auto' Chrome lo dibuja igual).
     outlineWidth: 0,
     outlineColor: 'transparent',
   },

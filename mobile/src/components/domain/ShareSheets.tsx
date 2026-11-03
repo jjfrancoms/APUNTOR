@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { sharedSummary } from '@/data/mock';
 import { createShare, stopSharing } from '@/store/store';
-import { useStrings } from '@/i18n/es';
+import { es, useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 
 export type ShareStep = 'closed' | 'create' | 'created';
@@ -32,7 +32,8 @@ export function ShareSheets({
   const s = useStrings();
   const { c } = useTheme();
   const sh = s.share;
-  const [expiry, setExpiry] = useState<string>(sh.expiryOptions[1]);
+  // Valor canónico (es.ts, el que entiende el store); la etiqueta va en el idioma elegido.
+  const [expiry, setExpiry] = useState<string>(es.share.expiryOptions[1]);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -47,7 +48,8 @@ export function ShareSheets({
       setCopied(false);
     }
   };
-  const expiryLabel = expiry === sh.expiryOptions[2] ? sh.never : sh.expires(sharedSummary.expires);
+  const expiryLabel =
+    expiry === es.share.expiryOptions[2] ? sh.never : sh.expires(sharedSummary.expires);
   return (
     <>
       <Sheet visible={step === 'create'} onClose={close} title={sh.header}>
@@ -62,7 +64,10 @@ export function ShareSheets({
           {sh.expiresIn}
         </Text>
         <Segmented
-          options={sh.expiryOptions.map((o) => ({ value: o, label: o }))}
+          options={es.share.expiryOptions.map((o, i) => ({
+            value: o,
+            label: sh.expiryOptions[i] ?? o,
+          }))}
           value={expiry}
           onChange={setExpiry}
         />

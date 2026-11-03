@@ -1,33 +1,50 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Button, Chip, Icon, Mascot, ProgressBar, Screen, Text, TopBar } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Chip,
+  Icon,
+  Mascot,
+  ProgressBar,
+  Screen,
+  Text,
+  TextLink,
+  TopBar,
+} from '@/components/ui';
+import { answerCard, knownFirstTry, learnedCount, startSession } from '@/lib/flashcards';
 import { flashcards, flashcardSession } from '@/data/mock';
 import { gradeCard } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 
-/** Pantalla 22 · Flashcards con repetición espaciada: "Aún no lo sé" vuelve antes; "Lo sé", después. */
+/**
+ * Pantalla 22 · Flashcards con repetición espaciada (lib/flashcards.ts).
+ * Primero piensas la respuesta y giras la tarjeta; solo entonces te calificas:
+ * "Aún no lo sé" la devuelve al final de este repaso y a mañana; "Lo sé" la saca del repaso
+ * y la agenda dentro de más días.
+ */
 export default function Flashcards() {
   const s = useStrings();
   const { c } = useTheme();
   const f = s.flashcards;
-  const [index, setIndex] = useState(0);
+  const [session, setSession] = useState(() => startSession(flashcards.map((x) => x.id)));
   const [flipped, setFlipped] = useState(false);
-  const [known, setKnown] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const card = flashcards[index];
-  if (!card) return null;
-  const total = flashcards.length;
-  const n = index + 1;
+  const [showHow, setShowHow] = useState(false);
+  const currentId = session.queue[0];
+  const card = flashcards.find((x) => x.id === currentId);
+  const total = session.total;
+  const learned = learnedCount(session);
+  // Si ya se respondió antes en esta sesión, es una tarjeta que volvió por "Aún no lo sé".
+  const repeated = currentId !== undefined && currentId in session.firstTry;
   const grade = (isKnown: boolean) => {
+    if (!card) return;
     gradeCard(card.id, isKnown);
-    if (isKnown) setKnown((v) => v + 1);
-    if (index === total - 1) return setFinished(true);
-    setIndex(index + 1);
+    setSession((prev) => answerCard(prev, isKnown));
     setFlipped(false);
   };
-  if (finished) {
+  if (!card) {
     return (
       <Screen
         header={<TopBar icon="x" title={f.header} onBack={() => router.replace('/home')} />}
@@ -39,7 +56,10 @@ export default function Flashcards() {
             {s.demo.cardsDone}
           </Text>
           <Text variant="heading" color="primary" align="center">
-            {s.demo.cardsResult(known, total)}
+            {s.demo.cardsResult(knownFirstTry(session), total)}
+          </Text>
+          <Text variant="small" color="textMuted" align="center">
+            {f.doneDetail}
           </Text>
         </View>
       </Screen>
@@ -52,36 +72,55 @@ export default function Flashcards() {
           icon="x"
           title={f.header}
           subtitle={flashcardSession.location}
-          right={<Chip label={f.counter(n, total)} tone="primary" />}
+          right={<Chip label={f.counter(learned, total)} tone="primary" />}
         />
       }
       footer={
-        <View style={styles.grades}>
-          <View style={styles.flex}>
-            <Button
-              label={f.notYet}
-              variant="dangerOutline"
-              icon="x"
-              onPress={() => grade(false)}
-            />
+        flipped ? (
+          <View style={styles.grades}>
+            <View style={styles.flex}>
+              <Button
+                label={f.notYet}
+                variant="dangerOutline"
+                icon="x"
+                onPress={() => grade(false)}
+              />
+            </View>
+            <View style={styles.flex}>
+              <Button label={f.know} icon="check" onPress={() => grade(true)} />
+            </View>
           </View>
-          <View style={styles.flex}>
-            <Button label={f.know} icon="check" onPress={() => grade(true)} />
-          </View>
-        </View>
+        ) : (
+          <Button label={f.reveal} icon="refresh-cw" onPress={() => setFlipped(true)} />
+        )
       }
     >
-      <ProgressBar value={n / total} label={f.counter(n, total)} />
+      <ProgressBar value={learned / total} label={f.learned(learned, total)} />
+      <View style={styles.row}>
+        {repeated ? <Chip label={f.again} tone="warning" icon="rotate-ccw" /> : <View />}
+        <TextLink label={f.howTitle} onPress={() => setShowHow((v) => !v)} />
+      </View>
+      {showHow ? <Banner tone="info" icon="info" title={f.how} /> : null}
       <Pressable
         accessibilityRole="button"
         accessibilityHint={flipped ? f.tapToReturn : f.tapToFlip}
         onPress={() => setFlipped(!flipped)}
         style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
       >
-        <Chip label={flipped ? f.answer : f.term} tone="primary" />
-        <Text variant={flipped ? 'body' : 'title'} align="center">
-          {flipped ? card.back : card.front}
-        </Text>
+        {flipped ? (
+          <>
+            <Text variant="smallStrong" color="textMuted" align="center">
+              {card.front}
+            </Text>
+            <Text variant="subheading" align="center">
+              {card.back}
+            </Text>
+          </>
+        ) : (
+          <Text variant="title" align="center">
+            {card.front}
+          </Text>
+        )}
         <View style={styles.hint}>
           <Icon name="refresh-cw" size={12} color="textMuted" />
           <Text variant="caption" color="textMuted">
@@ -107,6 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.md,
   },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   hint: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   grades: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },

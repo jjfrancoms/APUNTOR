@@ -10,6 +10,7 @@ import {
   type TopicDetail,
 } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
+import type { Language } from '@/i18n/language';
 import { chunksFromContent, contentItems, extraDocuments, type ContentItem } from './content';
 
 export const DEMO_EMAIL = 'ana@correo.com';
@@ -36,6 +37,7 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 
 export interface Settings {
   theme: ThemePreference;
+  language: Language;
   useDocs: boolean;
   external: boolean;
   analytics: boolean;
@@ -131,7 +133,13 @@ export interface AppState {
   usage: { day: string; questions: number };
   shares: ShareLink[];
   waitlist: string[];
-  study: { known: string[]; unknown: string[]; lastQuiz: { score: number; total: number } | null };
+  study: {
+    known: string[];
+    unknown: string[];
+    lastQuiz: { score: number; total: number } | null;
+    /** Caja de repetición espaciada y próxima fecha (AAAA-MM-DD) de cada tarjeta. */
+    boxes?: Record<string, { box: number; due: string }>;
+  };
   payments: { id: string; date: string; amount: string; plan: string }[];
   notices: { languages: boolean; reported: string[] };
   /** Espacio ocupado por archivos que no son documentos de estudio (MB). */
@@ -162,6 +170,7 @@ export function createSeed(): AppState {
       analytics: false,
       saveProgress: true,
       theme: 'system',
+      language: 'es',
       lightMode: false,
       voice: false,
       notifProcessed: true,

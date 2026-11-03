@@ -1,3 +1,6 @@
+import { en } from './en';
+import { useLanguage, type Language } from './language';
+
 /**
  * Textos de la app en español (Perú). Toda cadena visible vive aquí para poder
  * traducirla; las pantallas no deben tener texto literal.
@@ -229,6 +232,10 @@ export const es = {
       dark: 'Oscuro',
       detail: 'Automático usa el mismo modo que tu dispositivo.',
     },
+    language: {
+      header: 'IDIOMA',
+      detail: 'Cambia los textos de la app. Tus documentos y apuntes no se traducen.',
+    },
     lightMode: { title: 'Modo ligero (sin 3D)', detail: 'Menos batería y datos' },
     voice: { title: 'Voz de la mascota', detail: '' },
     notifications: 'Notificaciones',
@@ -445,9 +452,15 @@ export const es = {
     term: 'Término',
     answer: 'Respuesta',
     tapToFlip: 'Toca para ver la respuesta',
-    tapToReturn: 'Toca para volver al término',
+    tapToReturn: 'Toca para volver a la pregunta',
     notYet: 'Aún no lo sé',
     know: 'Lo sé',
+    reveal: 'Ver respuesta',
+    howTitle: '¿Cómo funciona?',
+    how: 'Piensa la respuesta y luego gira la tarjeta. Si la sabías, toca «Lo sé» y volverá en unos días. Si no, toca «Aún no lo sé»: la verás otra vez al final de este repaso y mañana.',
+    again: 'Vuelve al final del repaso',
+    learned: (n: number, total: number) => `${n} de ${total} aprendidas`,
+    doneDetail: 'Las que no sabías vuelven mañana; las que sabías, dentro de unos días.',
   },
   dailyReview: {
     header: 'Repaso de hoy',
@@ -467,6 +480,9 @@ export const es = {
     free: 'Gratis',
     forever: 'para siempre',
     perMonth: 'al mes',
+    billedYearly: (total: string) => `${total} al año, en un solo pago`,
+    billedMonthly: 'Se cobra cada mes',
+    save: (amount: string) => `Ahorras ${amount} al año`,
     student: 'Estudiante',
     recommended: 'Recomendado',
     school: 'Colegio o institución',
@@ -609,7 +625,7 @@ export const es = {
     uploadsDone: 'Todo listo. Revisa cómo los organicé.',
     quizResult: (score: number, total: number) => `Acertaste ${score} de ${total}`,
     quizDone: '¡Terminaste el quiz!',
-    cardsResult: (known: number, total: number) => `Sabes ${known} de ${total} tarjetas`,
+    cardsResult: (known: number, total: number) => `Sabías ${known} de ${total} a la primera`,
     cardsDone: '¡Terminaste el repaso!',
     upgrade: 'Mejorar mi plan',
     freePlanBody: 'Estás en el plan gratis.',
@@ -723,9 +739,23 @@ export const es = {
   },
 } as const;
 
-export type Strings = typeof es;
+/** Convierte los literales de `as const` en `string` para que otros idiomas encajen en el tipo. */
+type Widen<T> = T extends string
+  ? string
+  : T extends (...args: infer A) => infer R
+    ? (...args: A) => Widen<R>
+    : T extends readonly (infer U)[]
+      ? readonly Widen<U>[]
+      : T extends object
+        ? { readonly [K in keyof T]: Widen<T[K]> }
+        : T;
+
+export type Strings = Widen<typeof es>;
 export type ErrorCode = keyof typeof es.errors;
 
+const dictionaries: Record<Language, Strings> = { es, en };
+
+/** Textos del idioma elegido en Perfil › Idioma (español por defecto). */
 export function useStrings(): Strings {
-  return es;
+  return dictionaries[useLanguage()];
 }

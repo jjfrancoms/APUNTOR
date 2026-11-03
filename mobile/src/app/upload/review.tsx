@@ -6,10 +6,8 @@ import {
   Chip,
   FileRow,
   Icon,
-  ListRow,
   Screen,
   SelectField,
-  Sheet,
   Text,
   TextLink,
   TopBar,
@@ -26,7 +24,13 @@ export default function ReviewClassification() {
   const courses = useStore((st) => st.courses);
   const items = uploads.filter((u) => u.status === 'review');
   const confirmed = items.filter((r) => r.courseId).length;
-  const [choosing, setChoosing] = useState<string | null>(null);
+  // Fila cuyo curso se está cambiando (las de alta confianza muestran el selector al tocar "Cambiar").
+  const [editing, setEditing] = useState<string | null>(null);
+  const options = courses.map((c) => ({
+    value: c.id,
+    label: c.title,
+    detail: s.courses.classesTopics(c.classes.length, c.topicCount),
+  }));
   return (
     <Screen
       header={<TopBar title={s.review.header} />}
@@ -52,7 +56,7 @@ export default function ReviewClassification() {
         {s.review.intro(items.length)}
       </Text>
       {items.map((r) =>
-        r.courseId ? (
+        r.courseId && editing !== r.id ? (
           <FileRow key={r.id} ext={extLabel(r.name)} name={r.name} detail="">
             <Chip label={s.review.high} tone="primary" icon="check" />
             <View style={styles.row}>
@@ -62,16 +66,30 @@ export default function ReviewClassification() {
                   {r.path.at(-1) ?? ''}
                 </Text>
               </Text>
-              <TextLink label={s.common.change} onPress={() => setChoosing(r.id)} />
+              <TextLink label={s.common.change} onPress={() => setEditing(r.id)} />
             </View>
           </FileRow>
         ) : (
-          <FileRow key={r.id} tone="warning" ext={extLabel(r.name)} name={r.name} detail="">
-            <Chip label={s.review.needs} tone="warning" icon="alert-triangle" />
+          <FileRow
+            key={r.id}
+            tone={r.courseId ? 'default' : 'warning'}
+            ext={extLabel(r.name)}
+            name={r.name}
+            detail=""
+          >
+            {r.courseId ? null : (
+              <Chip label={s.review.needs} tone="warning" icon="alert-triangle" />
+            )}
             <SelectField
               label={s.review.question}
               placeholder={s.review.choose}
-              onPress={() => setChoosing(r.id)}
+              options={options}
+              selected={r.courseId}
+              defaultOpen={editing === r.id}
+              onSelect={(courseId) => {
+                assignUploadCourse(r.id, courseId);
+                setEditing(null);
+              }}
             />
             <Pressable
               accessibilityRole="button"
@@ -86,24 +104,6 @@ export default function ReviewClassification() {
           </FileRow>
         ),
       )}
-      <Sheet
-        visible={choosing !== null}
-        onClose={() => setChoosing(null)}
-        title={s.demo.pickCourse}
-      >
-        {courses.map((c, i) => (
-          <ListRow
-            key={c.id}
-            title={c.title}
-            detail={s.courses.classesTopics(c.classes.length, c.topicCount)}
-            divider={i < courses.length - 1}
-            onPress={() => {
-              if (choosing) assignUploadCourse(choosing, c.id);
-              setChoosing(null);
-            }}
-          />
-        ))}
-      </Sheet>
     </Screen>
   );
 }

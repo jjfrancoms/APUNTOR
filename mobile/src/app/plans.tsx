@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button, Chip, Icon, IconButton, Screen, Segmented, Text } from '@/components/ui';
 import { plans } from '@/data/mock';
+import { formatSoles, studentPrice } from '@/lib/pricing';
 import { choosePlan } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
@@ -18,6 +19,9 @@ export default function Plans() {
   const [billing, setBilling] = useState<Billing>('monthly');
   const [plan, setPlan] = useState<Plan>('student');
   const names: Record<Plan, string> = { free: p.free, student: p.student, school: p.school };
+  // Tres columnas cuando hay espacio (tablet ancha y escritorio); en móvil, una debajo de otra.
+  const columns = useWindowDimensions().width >= 840;
+  const student = studentPrice(billing);
 
   const card = (
     key: Plan,
@@ -25,6 +29,7 @@ export default function Plans() {
     unit: string,
     items: readonly string[],
     badge?: string,
+    extra?: { before?: string; note?: string; save?: string },
   ) => {
     const active = plan === key;
     return (
@@ -36,6 +41,7 @@ export default function Plans() {
         onPress={() => setPlan(key)}
         style={[
           styles.card,
+          columns && styles.column,
           {
             backgroundColor: active ? c.primarySoft : c.surface,
             borderColor: active ? c.primary : c.border,
@@ -53,6 +59,11 @@ export default function Plans() {
           ) : null}
         </View>
         <View style={styles.price}>
+          {extra?.before ? (
+            <Text variant="bodyStrong" color="textMuted" style={styles.strike}>
+              {extra.before}
+            </Text>
+          ) : null}
           <Text variant="title" color={key === 'student' ? 'primary' : 'text'}>
             {price}
           </Text>
@@ -62,6 +73,16 @@ export default function Plans() {
             </Text>
           ) : null}
         </View>
+        {extra?.note ? (
+          <Text variant="caption" color="textMuted">
+            {extra.note}
+          </Text>
+        ) : null}
+        {extra?.save ? (
+          <View style={styles.start}>
+            <Chip label={extra.save} tone="primary" icon="tag" />
+          </View>
+        ) : null}
         {items.map((item) => (
           <View key={item} style={styles.row}>
             <Icon name="check" size={14} color="primary" />
@@ -74,6 +95,7 @@ export default function Plans() {
 
   return (
     <Screen
+      wide={columns}
       footer={
         <Button
           label={p.continueWith(names[plan])}
@@ -105,9 +127,15 @@ export default function Plans() {
         value={billing}
         onChange={setBilling}
       />
-      <View accessibilityRole="radiogroup" style={styles.cards}>
+      <View accessibilityRole="radiogroup" style={[styles.cards, columns && styles.cardsRow]}>
         {card('free', plans.freePrice, p.forever, p.freeItems)}
-        {card('student', plans.studentPrice, p.perMonth, p.studentItems, p.recommended)}
+        {card('student', formatSoles(student.perMonth), p.perMonth, p.studentItems, p.recommended, {
+          ...(student.before !== undefined ? { before: formatSoles(student.before) } : {}),
+          note: billing === 'yearly' ? p.billedYearly(formatSoles(student.total)) : p.billedMonthly,
+          ...(student.savedPerYear !== undefined
+            ? { save: p.save(formatSoles(student.savedPerYear)) }
+            : {}),
+        })}
         {card('school', p.custom, '', p.schoolItems)}
       </View>
       <Text variant="caption" color="textMuted">
@@ -121,6 +149,10 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
   cards: { gap: space.md },
+  cardsRow: { flexDirection: 'row', alignItems: 'stretch' },
+  column: { flex: 1, minWidth: 0, gap: space.sm },
+  strike: { textDecorationLine: 'line-through' },
+  start: { alignItems: 'flex-start' },
   card: { borderWidth: 1.5, borderRadius: radius.lg, padding: space.lg, gap: space.xs + 2 },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
 });

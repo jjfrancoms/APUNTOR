@@ -155,6 +155,16 @@ describe('subida e ingesta simulada', () => {
     ]);
   });
 
+  it('no duplica un archivo que ya está en la cola', () => {
+    store.enqueueUploads([{ name: 'Ensayo final.docx', sizeMb: 2 }]);
+    const again = store.enqueueUploads([
+      { name: 'Ensayo final.docx', sizeMb: 2 },
+      { name: 'Otro.pdf', sizeMb: 1 },
+    ]);
+    expect(again.map((j) => j.name)).toEqual(['Otro.pdf']);
+    expect(store.getState().uploads.filter((u) => u.name === 'Ensayo final.docx')).toHaveLength(1);
+  });
+
   it('rechaza por espacio lleno (UP_QUOTA)', () => {
     const [job] = store.enqueueUploads(
       [

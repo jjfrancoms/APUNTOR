@@ -8,6 +8,7 @@ import { useSyncExternalStore } from 'react';
 import type { ErrorCode } from '@/i18n/es';
 import { normalize, overlapScore } from '@/lib/text-search';
 import { extensionOf, suggestCourse, validateUpload } from '@/lib/upload-rules';
+import { daysUntilNext, nextBox } from '@/lib/flashcards';
 import { ADULT_AGE, ageOn, isValidEmail, isWeakPassword, parseBirthDate } from '@/lib/validation';
 import type { TopicDetail } from '@/data/mock';
 import {
@@ -232,7 +233,17 @@ export interface PickedFile {
 export function enqueueUploads(files: readonly PickedFile[]): UploadJob[] {
   let used = usedMb(state);
   const quota = quotaMb(state);
-  const jobs: UploadJob[] = files.map((f) => {
+  // El mismo archivo (nombre y tamaño) que ya está en la cola no se vuelve a agregar.
+  const queued = new Set(
+    state.uploads.filter((u) => u.status !== 'done').map((u) => `${u.name}|${u.sizeMb}`),
+  );
+  const fresh = files.filter((f) => {
+    const key = `${f.name}|${f.sizeMb}`;
+    if (queued.has(key)) return false;
+    queued.add(key);
+    return true;
+  });
+  const jobs: UploadJob[] = fresh.map((f) => {
     const error = validateUpload(f, used, quota);
     if (!error) used += f.sizeMb;
     return {
@@ -573,7 +584,11 @@ export function recordQuiz(score: number, total: number): void {
   setState((s) => ({ ...s, study: { ...s.study, lastQuiz: { score, total } } }));
 }
 
-export function gradeCard(cardId: string, known: boolean): void {
+/** Califica una tarjeta y agenda su próximo repaso. Devuelve en cuántos días vuelve. */
+export function gradeCard(cardId: string, known: boolean, today: Date = new Date()): number {
+  const box = nextBox(state.study.boxes?.[cardId]?.box ?? 0, known);
+  const days = daysUntilNext(box);
+  const due = new Date(today.getTime() + days * 86_400_000).toISOString().slice(0, 10);
   setState((s) => ({
     ...s,
     study: {
@@ -584,8 +599,10 @@ export function gradeCard(cardId: string, known: boolean): void {
       unknown: known
         ? s.study.unknown.filter((k) => k !== cardId)
         : [...new Set([...s.study.unknown, cardId])],
+      boxes: { ...s.study.boxes, [cardId]: { box, due } },
     },
   }));
+  return days;
 }
 
 // --- Planes y compartir ----------------------------------------------------------

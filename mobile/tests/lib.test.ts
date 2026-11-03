@@ -65,3 +65,39 @@ describe('fecha de nacimiento', async () => {
     expect(ageOn(new Date(2008, 10, 4), today)).toBe(17);
   });
 });
+
+describe('precios', () => {
+  it('el anual baja el precio mensual un 20 %', async () => {
+    const { studentPrice, formatSoles } = await import('../src/lib/pricing');
+    expect(formatSoles(studentPrice('monthly').perMonth)).toBe('S/ 14');
+    const y = studentPrice('yearly');
+    expect(formatSoles(y.perMonth)).toBe('S/ 11.20');
+    expect(formatSoles(y.total)).toBe('S/ 134.40');
+    expect(formatSoles(y.savedPerYear ?? 0)).toBe('S/ 33.60');
+  });
+});
+
+describe('idiomas', () => {
+  it('inglés tiene las mismas claves que español, sin textos vacíos', async () => {
+    const { es } = await import('../src/i18n/es');
+    const { en } = await import('../src/i18n/en');
+    const walk = (a: unknown, b: unknown, path: string): string[] => {
+      if (typeof a === 'string')
+        return typeof b === 'string' && (b.length > 0 || a.length === 0) ? [] : [path];
+      if (typeof a === 'function') return typeof b === 'function' ? [] : [path];
+      if (a && typeof a === 'object') {
+        if (!b || typeof b !== 'object') return [path];
+        const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+        return [...keys].flatMap((k) =>
+          walk(
+            (a as Record<string, unknown>)[k],
+            (b as Record<string, unknown>)[k],
+            `${path}.${k}`,
+          ),
+        );
+      }
+      return a === b || typeof a === typeof b ? [] : [path];
+    };
+    expect(walk(es, en, 'es')).toEqual([]);
+  });
+});

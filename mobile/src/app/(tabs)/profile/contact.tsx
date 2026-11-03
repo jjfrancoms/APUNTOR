@@ -6,9 +6,8 @@ import {
   Button,
   Checkbox,
   Icon,
-  ListRow,
   Screen,
-  Sheet,
+  SelectField,
   Text,
   TextField,
   TopBar,
@@ -24,8 +23,7 @@ export default function Contact() {
   const [message, setMessage] = useState('');
   const [technical, setTechnical] = useState(true);
   const [sent, setSent] = useState(false);
-  const [topic, setTopic] = useState<string>(s.sheets.topics[0]);
-  const [choosing, setChoosing] = useState(false);
+  const [topic, setTopic] = useState<string>(s.sheets.topics[0] ?? '');
   const [attachment, setAttachment] = useState<string | null>(null);
   const attach = async () => {
     const r = await DocumentPicker.getDocumentAsync({
@@ -51,20 +49,12 @@ export default function Contact() {
       }
     >
       {sent ? <Banner tone="info" icon="check" title={s.demo.contactSent} /> : null}
-      <View style={styles.gap}>
-        <Text variant="smallStrong">{s.contact.topic}</Text>
-        <Pressable
-          accessibilityRole="combobox"
-          accessibilityLabel={`${s.contact.topic}: ${topic}`}
-          onPress={() => setChoosing(true)}
-          style={[styles.select, { backgroundColor: c.surface, borderColor: c.border }]}
-        >
-          <Text variant="body" style={styles.flex}>
-            {topic}
-          </Text>
-          <Icon name="chevron-down" color="textMuted" />
-        </Pressable>
-      </View>
+      <SelectField
+        label={s.contact.topic}
+        options={s.sheets.topics.map((t) => ({ value: t, label: t }))}
+        selected={topic}
+        onSelect={setTopic}
+      />
       <TextField
         label={s.contact.message}
         placeholder={s.contact.messagePlaceholder}
@@ -90,20 +80,6 @@ export default function Contact() {
       <Text variant="caption" color="textMuted">
         {s.contact.replyIn(email)}
       </Text>
-      <Sheet visible={choosing} onClose={() => setChoosing(false)} title={s.sheets.chooseTopic}>
-        {s.sheets.topics.map((t, idx) => (
-          <ListRow
-            key={t}
-            title={t}
-            divider={idx < s.sheets.topics.length - 1}
-            trailing={t === topic ? <Icon name="check" color="primary" /> : undefined}
-            onPress={() => {
-              setTopic(t);
-              setChoosing(false);
-            }}
-          />
-        ))}
-      </Sheet>
     </Screen>
   );
 }

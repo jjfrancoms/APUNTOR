@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
 import { resetDemo, signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
+import { LANGUAGES } from '@/i18n/language';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 7 · Perfil y ajustes */
@@ -85,6 +86,19 @@ export default function Profile() {
         />
         <Text variant="caption" color="textMuted">
           {s.profile.appearance.detail}
+        </Text>
+      </Card>
+      <Text variant="overline" color="textMuted">
+        {s.profile.language.header}
+      </Text>
+      <Card>
+        <Segmented
+          options={LANGUAGES}
+          value={st.language}
+          onChange={(language) => updateSettings({ language })}
+        />
+        <Text variant="caption" color="textMuted">
+          {s.profile.language.detail}
         </Text>
       </Card>
       <Text variant="overline" color="textMuted">

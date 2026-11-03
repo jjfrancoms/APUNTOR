@@ -9,16 +9,21 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { WebChrome } from '@/components/web/WebChrome';
+import { LanguageProvider } from '@/i18n/language';
 import { hydrate, useStore } from '@/store/store';
 import { ThemeProvider, useTheme } from '@/theme';
 
 /** Aplica la apariencia elegida en Perfil (automática, clara u oscura). */
 function ThemedApp() {
   const pref = useStore((st) => st.settings.theme);
+  const language = useStore((st) => st.settings.language);
   return (
-    <ThemeProvider mode={pref === 'system' ? undefined : pref}>
-      <Root />
-    </ThemeProvider>
+    <LanguageProvider language={language}>
+      <ThemeProvider mode={pref === 'system' ? undefined : pref}>
+        <Root />
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 
@@ -27,6 +32,7 @@ function Root() {
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <WebChrome />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
     </>
   );
