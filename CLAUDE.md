@@ -86,6 +86,10 @@ Migración SQL manual (p. ej. extensiones o funciones):
 
 **Antes de cada commit:** `npm run typecheck && npm run lint && npm test` deben pasar sin errores.
 
+**CI** (`.github/workflows/ci.yml`, en cada PR y push a `main`): typecheck, lint, formato, tests y
+build; además aplica las migraciones sobre Postgres 16 + pgvector, verifica el índice HNSW y falla
+si `src/db/schema.ts` tiene cambios sin migración generada.
+
 ## Pendiente
 
 - Implementación real de `EmbeddingProvider` y del cliente de generación

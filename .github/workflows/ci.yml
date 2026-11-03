@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, lint, tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formato
+        run: npm run format:check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+  migrations:
+    name: Migraciones (Postgres + pgvector)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: apuntor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/apuntor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Aplicar migraciones
+        run: npm run db:migrate
+
+      - name: Verificar extensión vector e índice HNSW
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tA -c \
+            "SELECT 1 FROM pg_extension WHERE extname = 'vector'" | grep -qx 1
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tA -c \
+            "SELECT indexdef FROM pg_indexes WHERE indexname = 'document_chunks_embedding_hnsw_idx'" \
+            | grep -q 'USING hnsw (embedding vector_cosine_ops)'
+
+      - name: Esquema sin cambios pendientes
+        run: |
+          npx drizzle-kit generate --name ci_check
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::src/db/schema.ts tiene cambios sin migración. Ejecuta npm run db:generate."
+            git status --porcelain drizzle
+            exit 1
+          fi
