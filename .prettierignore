@@ -9,3 +9,5 @@ mobile/dist
 mobile/package-lock.json
 mobile/AGENTS.md
 mobile/dist-preview
+# Skills de terceros (se mantienen tal cual vienen de su repositorio)
+.claude/skills

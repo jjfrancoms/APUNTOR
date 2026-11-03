@@ -67,7 +67,19 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - Cada pantalla define sus estados cargando / vacío / error / sin conexión según la tabla de estados.
 - Límite de subida de 50 MB (por confirmar) y formatos PDF, Word, PowerPoint, texto y fotos con OCR.
 
-## Estructura
+## Diseño y skills
+
+- **`DESIGN.md`** (raíz) es la identidad visual: paleta, tipografía, espacios, patrones y qué
+  evitar. Manda sobre cualquier propuesta de una skill. Si cambias `src/design/tokens.ts`,
+  actualiza `DESIGN.md` (lo verifica `tests/design-md.test.ts`).
+- Skills de diseño en `.claude/skills/` (se cargan solas al trabajar en vistas; ver
+  `.claude/skills/README.md`):
+  - `frontend-design` (Anthropic): planificar el sistema y la dirección antes de codificar.
+  - `impeccable` (pbakaus): `/impeccable critique`, `audit`, `polish`, `harden`… Para esta app
+    usa las guías nativas (`audit.native.md`, `ios.md`, `android.md`).
+  - `ui-ux-pro-max` (nextlevelbuilder): reglas de UX y accesibilidad; consulta el stack
+    `react-native`, no los de Tailwind/shadcn.
+- Las skills de terceros se copian tal cual (no se formatean ni se lintean) y no instalan hooks.
 
 ```
 src/
