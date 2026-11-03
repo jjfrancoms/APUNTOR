@@ -1,6 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Button, Card, Icon, IconButton, ProgressBar, Screen, Text, TopBar } from '@/components/ui';
+import {
+  Button,
+  Card,
+  Icon,
+  IconButton,
+  ListRow,
+  ProgressBar,
+  Screen,
+  Sheet,
+  Text,
+  TopBar,
+} from '@/components/ui';
+import { useState } from 'react';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
@@ -11,6 +23,7 @@ export default function CourseDetail() {
   const s = useStrings();
   const { c } = useTheme();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const [menu, setMenu] = useState(false);
   const course = useStore((st) => st.courses.find((k) => k.id === courseId));
   const documentCount = useStore(
     (st) => st.documents.filter((d) => d.courseId === courseId).length,
@@ -30,7 +43,7 @@ export default function CourseDetail() {
             <IconButton
               icon="more-horizontal"
               label={s.common.more}
-              onPress={() => router.push('/study/quiz-setup')}
+              onPress={() => setMenu(true)}
             />
           }
         />
@@ -85,6 +98,7 @@ export default function CourseDetail() {
               key={klass.id}
               accessibilityRole="button"
               accessibilityLabel={`${klass.title}, ${status}`}
+              onPress={() => router.push(`/courses/class/${klass.id}`)}
               style={[
                 styles.klass,
                 i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
@@ -102,6 +116,33 @@ export default function CourseDetail() {
           );
         })}
       </Card>
+      <Sheet visible={menu} onClose={() => setMenu(false)} title={s.courseMenu.title}>
+        <ListRow
+          icon="layers"
+          title={s.courseMenu.quiz}
+          onPress={() => {
+            setMenu(false);
+            router.push('/study/quiz-setup');
+          }}
+        />
+        <ListRow
+          icon="upload"
+          title={s.courseMenu.add}
+          onPress={() => {
+            setMenu(false);
+            router.push('/upload');
+          }}
+        />
+        <ListRow
+          icon="file-text"
+          title={s.courseMenu.documents}
+          divider={false}
+          onPress={() => {
+            setMenu(false);
+            router.push({ pathname: '/courses/search', params: { q: course.title } });
+          }}
+        />
+      </Sheet>
     </Screen>
   );
 }

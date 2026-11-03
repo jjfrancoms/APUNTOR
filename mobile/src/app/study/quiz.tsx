@@ -14,7 +14,9 @@ import {
 } from '@/components/ui';
 import { quizQuestions, quizSession } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
-import { recordQuiz } from '@/store/store';
+import { buildQuiz } from '@/lib/quiz';
+import { classOf, recordQuiz, useStore } from '@/store/store';
+import { useMemo } from 'react';
 import { layout, radius, space, useTheme } from '@/theme';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -23,14 +25,25 @@ const LETTERS = ['A', 'B', 'C', 'D'];
 export default function Quiz() {
   const s = useStrings();
   const { c } = useTheme();
-  const { n } = useLocalSearchParams<{ n?: string }>();
+  const { n, classId = 'c3' } = useLocalSearchParams<{ n?: string; classId?: string }>();
+  const state = useStore((st) => st);
+  // La Clase 3 de Cálculo I tiene un banco curado; las demás se arman con su contenido.
+  const bank = useMemo(
+    () => (classId === 'c3' ? quizQuestions : buildQuiz(state.items, classId)),
+    [state.items, classId],
+  );
+  const found = classOf(state, classId);
+  const topic = found?.klass.title.split(' · ')[1] ?? quizSession.topic;
+  const location = found
+    ? `${found.course.title} · ${found.klass.title.split(' · ')[0] ?? ''}`
+    : quizSession.location;
   const total = [5, 10, 20].includes(Number(n)) ? Number(n) : 10;
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   // Banco de ejemplo: se recorre en orden; con más preguntas que el banco, se repite.
-  const q = quizQuestions[index % quizQuestions.length];
+  const q = bank[index % Math.max(bank.length, 1)];
   if (!q) return null;
   const answered = selected !== null;
   const last = index === total - 1;
@@ -53,11 +66,7 @@ export default function Quiz() {
     return (
       <Screen
         header={
-          <TopBar
-            icon="x"
-            title={s.quiz.header(quizSession.topic)}
-            onBack={() => router.replace('/home')}
-          />
+          <TopBar icon="x" title={s.quiz.header(topic)} onBack={() => router.replace('/home')} />
         }
         footer={
           <>
@@ -92,8 +101,8 @@ export default function Quiz() {
       header={
         <TopBar
           icon="x"
-          title={s.quiz.header(quizSession.topic)}
-          subtitle={quizSession.location}
+          title={s.quiz.header(topic)}
+          subtitle={location}
           right={<Chip label={s.quiz.counter(index + 1, total)} tone="primary" />}
         />
       }

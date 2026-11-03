@@ -12,7 +12,7 @@ import {
   TextLink,
 } from '@/components/ui';
 import { sharedSummary } from '@/data/mock';
-import { useStore } from '@/store/store';
+import { reportContent, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 
@@ -24,6 +24,7 @@ export default function PublicSummary() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const share = useStore((st) => st.shares.find((sh) => sh.token === token));
   const owner = useStore((st) => st.session?.name ?? 'Ana');
+  const reported = useStore((st) => st.notices.reported.includes(token));
   // 'Xk3m9' es el enlace de ejemplo del diseño; los demás deben existir y estar activos.
   const available = token === 'Xk3m9' || share?.active === true;
   if (!available) {
@@ -43,7 +44,12 @@ export default function PublicSummary() {
       footer={
         <View style={styles.center}>
           <Icon name="flag" size={12} color="textMuted" />
-          <TextLink label={p.report} color="textMuted" variant="caption" />
+          <TextLink
+            label={reported ? s.sheets.reportDone : p.report}
+            color="textMuted"
+            variant="caption"
+            onPress={() => reportContent(token)}
+          />
         </View>
       }
     >

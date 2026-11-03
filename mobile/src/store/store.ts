@@ -9,6 +9,7 @@ import type { ErrorCode } from '@/i18n/es';
 import { normalize, overlapScore } from '@/lib/text-search';
 import { extensionOf, suggestCourse, validateUpload } from '@/lib/upload-rules';
 import { isValidEmail, isWeakPassword } from '@/lib/validation';
+import type { TopicDetail } from '@/data/mock';
 import {
   createSeed,
   todayKey,
@@ -19,12 +20,14 @@ import {
   type Message,
   type Plan,
   type Settings,
+  type StoreCourse,
   type UploadJob,
 } from './seed';
 
 export * from './seed';
+export * from './content';
 
-const STORAGE_KEY = 'apuntor:state:v1';
+const STORAGE_KEY = 'apuntor:state:v2';
 export const FREE_DAILY_QUESTIONS = 20;
 export const QUOTA_MB: Record<Plan, number> = { free: 500, student: 5000 };
 /** Similitud mínima para considerar que un fragmento responde la pregunta. */
@@ -63,7 +66,7 @@ export async function hydrate(): Promise<void> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AppState>;
-      if (parsed.version === 1) state = { ...createSeed(), ...parsed } as AppState;
+      if (parsed.version === 2) state = { ...createSeed(), ...parsed } as AppState;
     }
   } catch {
     state = createSeed();
@@ -566,7 +569,22 @@ export function gradeCard(cardId: string, known: boolean): void {
 // --- Planes y compartir ----------------------------------------------------------
 
 export function choosePlan(plan: Plan): void {
-  setState((s) => ({ ...s, plan }));
+  setState((s) => ({
+    ...s,
+    plan,
+    payments:
+      plan === 'student' && s.plan !== 'student'
+        ? [
+            {
+              id: newId('pay'),
+              date: new Date().toLocaleDateString('es-PE'),
+              amount: 'S/ 14',
+              plan: 'Estudiante',
+            },
+            ...s.payments,
+          ]
+        : s.payments,
+  }));
 }
 
 export function createShare(topicId: string, expiresLabel: string): string {
@@ -660,4 +678,135 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
     }
   }
   return hits;
+}
+
+// --- Perfil y ajustes ----------------------------------------------------------------
+
+export function updateProfile(patch: {
+  fullName: string;
+  email: string;
+  level: Level;
+}): AuthResult {
+  const email = patch.email.trim();
+  if (!isValidEmail(email)) return { ok: false, error: 'AUTH_INVALID', field: 'email' };
+  const current = state.session?.email ?? '';
+  if (
+    email.toLowerCase() !== current.toLowerCase() &&
+    state.accounts.some((a) => a.email.toLowerCase() === email.toLowerCase())
+  ) {
+    return { ok: false, error: 'AUTH_EMAIL_TAKEN', field: 'email' };
+  }
+  const fullName = patch.fullName.trim() || state.session?.fullName || 'Estudiante';
+  setState((s) => ({
+    ...s,
+    accounts: s.accounts.map((a) => (a.email === current ? { ...a, email, fullName } : a)),
+    session: { name: fullName.split(' ')[0] ?? fullName, fullName, email, level: patch.level },
+  }));
+  return { ok: true };
+}
+
+export function changePassword(currentPassword: string, next: string): AuthResult {
+  const account = state.accounts.find((a) => a.email === state.session?.email);
+  if (!account || account.password !== currentPassword)
+    return { ok: false, error: 'AUTH_INVALID', field: 'password' };
+  if (isWeakPassword(next)) return { ok: false, error: 'AUTH_WEAK_PASSWORD', field: 'password' };
+  setState((s) => ({
+    ...s,
+    accounts: s.accounts.map((a) => (a.email === account.email ? { ...a, password: next } : a)),
+  }));
+  return { ok: true };
+}
+
+export function moveDocument(id: string, courseId: string): void {
+  const course = state.courses.find((c) => c.id === courseId);
+  if (!course) return;
+  setState((s) => ({
+    ...s,
+    documents: s.documents.map((d) =>
+      d.id === id
+        ? {
+            ...d,
+            courseId,
+            path: [
+              course.title,
+              course.classes[0]?.title.split(' · ')[0] ?? 'Clase 1',
+              d.path.at(-1) ?? 'General',
+            ],
+          }
+        : d,
+    ),
+  }));
+}
+
+export function setReviewTime(time: string): void {
+  updateSettings({ reviewTime: time });
+}
+
+export function notifyMoreLanguages(): void {
+  setState((s) => ({ ...s, notices: { ...s.notices, languages: true } }));
+}
+
+export function reportContent(token: string): void {
+  setState((s) => ({
+    ...s,
+    notices: { ...s.notices, reported: [...new Set([...s.notices.reported, token])] },
+  }));
+}
+
+/** Exporta los datos del usuario (documentos, cursos, chats) como JSON legible. */
+export function exportUserData(s: AppState = state): string {
+  return JSON.stringify(
+    {
+      usuario: s.session,
+      ajustes: s.settings,
+      plan: s.plan,
+      cursos: s.courses.map((c) => c.title),
+      documentos: s.documents.map((d) => ({ nombre: d.name, curso: d.path[0], paginas: d.pages })),
+      conversaciones: s.conversations.map((c) => ({
+        titulo: c.title,
+        mensajes: c.messages.length,
+      })),
+    },
+    null,
+    2,
+  );
+}
+
+// --- Contenido por clase y temas ----------------------------------------------------
+
+export function classOf(
+  s: AppState,
+  classId: string,
+): { course: StoreCourse; klass: StoreCourse['classes'][number] } | null {
+  for (const course of s.courses) {
+    const klass = course.classes.find((k) => k.id === classId);
+    if (klass) return { course, klass };
+  }
+  return null;
+}
+
+/** Detalle de tema: el curado (si existe) o uno construido desde el contenido de la clase. */
+export function topicDetail(s: AppState, topicId: string): TopicDetail | null {
+  const curated = s.topics[topicId];
+  if (curated) return curated;
+  const item = s.items.find((i) => i.id === topicId);
+  if (!item) return null;
+  const found = classOf(s, item.classId);
+  const doc = s.documents.find((d) => d.id === item.documentId);
+  return {
+    id: item.id,
+    courseId: item.courseId,
+    breadcrumb: [
+      found?.course.title ?? '',
+      `Clase ${item.klass}`,
+      item.kind === 'ejercicio' ? 'Ejercicios' : 'Teoría',
+    ],
+    title: item.title,
+    own: {
+      source: `${doc?.name.replace(/\.[^.]+$/u, '') ?? 'Tus apuntes'} · p. ${item.page}`,
+      text: item.text,
+    },
+    external: item.external ? { source: item.external.host, text: item.external.text } : null,
+    notes: [],
+  };
 }

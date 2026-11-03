@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { Linking } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Icon, Screen, Text, TextLink, TopBar } from '@/components/ui';
@@ -24,7 +25,10 @@ export default function LinkSent() {
       header={<TopBar />}
       footer={
         <>
-          <Button label={s.linkSent.openMail} />
+          <Button
+            label={s.linkSent.openMail}
+            onPress={() => void Linking.openURL('mailto:').catch(() => undefined)}
+          />
           <Button
             label={left > 0 ? s.linkSent.resendIn(formatCountdown(left)) : s.linkSent.resend}
             variant="secondary"

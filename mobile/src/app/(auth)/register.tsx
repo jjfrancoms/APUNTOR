@@ -68,11 +68,21 @@ export default function Register() {
       >
         <Text variant="caption" color="textMuted">
           {s.register.accept}{' '}
-          <Text variant="caption" color="primary">
+          <Text
+            variant="caption"
+            color="primary"
+            accessibilityRole="link"
+            onPress={() => router.push('/legal/terms')}
+          >
             {s.common.terms}
           </Text>{' '}
           {s.common.and}{' '}
-          <Text variant="caption" color="primary">
+          <Text
+            variant="caption"
+            color="primary"
+            accessibilityRole="link"
+            onPress={() => router.push('/legal/privacy')}
+          >
             {s.common.privacyPolicy}
           </Text>
         </Text>

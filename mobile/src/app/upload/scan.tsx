@@ -1,4 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { pickFiles } from '@/lib/pick-files';
+import { enqueueUploads } from '@/store/store';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Chip, EmptyState, Icon, IconButton, Screen, Text, TopBar } from '@/components/ui';
 import { scanReading } from '@/data/mock';
@@ -10,6 +13,14 @@ export default function Scan() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const [flash, setFlash] = useState(false);
+  const [pages, setPages] = useState(1);
+  const fromGallery = () =>
+    void pickFiles().then((files) => {
+      if (files.length === 0) return;
+      enqueueUploads(files);
+      router.replace('/upload/progress');
+    });
   // Pantalla 47 · Cámara denegada.
   if (demo === 'denied') {
     return (
@@ -24,7 +35,7 @@ export default function Scan() {
           primary={{ label: s.empty.openSettings, onPress: () => void Linking.openSettings() }}
           secondary={{
             label: s.empty.pickGallery,
-            onPress: () => router.push('/upload/scan-review'),
+            onPress: fromGallery,
           }}
         />
       </Screen>
@@ -36,7 +47,7 @@ export default function Scan() {
         <TopBar
           icon="x"
           title={s.scanner.header}
-          subtitle={s.scanner.page(2)}
+          subtitle={s.scanner.page(pages)}
           right={
             <Pressable
               accessibilityRole="button"
@@ -62,21 +73,26 @@ export default function Scan() {
         </View>
       </View>
       <View style={styles.controls}>
-        <IconButton icon="image" label={s.scanner.gallery} />
+        <IconButton icon="image" label={s.scanner.gallery} onPress={fromGallery} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={s.scanner.shutter}
+          onPress={() => setPages((n) => n + 1)}
           style={[styles.shutter, { borderColor: c.primary }]}
         >
           <View style={[styles.shutterInner, { backgroundColor: c.primary }]} />
         </Pressable>
-        <IconButton icon="zap" label={s.scanner.flash} />
+        <IconButton
+          icon={flash ? 'zap' : 'zap-off'}
+          label={flash ? s.sheets.flashOn : s.sheets.flashOff}
+          onPress={() => setFlash(!flash)}
+        />
       </View>
       <Text variant="caption" color="textMuted" align="center">
         {s.scanner.hint}
       </Text>
       <View style={styles.chips}>
-        <Chip label={s.scanner.pages(scanReading.pages)} tone="primary" icon="file-text" />
+        <Chip label={s.scanner.pages(pages)} tone="primary" icon="file-text" />
         <Chip label={s.scanner.language} icon="globe" />
       </View>
     </Screen>

@@ -1,4 +1,4 @@
-/** Las 52 pantallas diseñadas (mapa §2 + estados vacío y error 45–52) y su ruta en la app. */
+/** Las 52 pantallas diseñadas (mapa §2 + estados 45–52), más las agregadas en revisión (53+). */
 export interface ScreenEntry {
   n: number;
   name: string;
@@ -138,6 +138,19 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
         href: '/profile/delete-account?demo=wrong',
         designed: true,
       },
+    ],
+  },
+  {
+    title: 'Agregadas a partir de la revisión',
+    screens: [
+      {
+        n: 53,
+        name: 'Vista de clase (definiciones, conceptos, ejercicios)',
+        href: '/courses/class/c4',
+        designed: false,
+      },
+      { n: 54, name: 'Editar perfil', href: '/profile/edit', designed: false },
+      { n: 55, name: 'Términos y privacidad', href: '/legal/terms', designed: false },
     ],
   },
 ];

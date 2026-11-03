@@ -40,11 +40,21 @@ export default function Privacy() {
           >
             <Text variant="caption" color="textMuted">
               {s.privacy.readAndAccept}{' '}
-              <Text variant="caption" color="primary">
+              <Text
+                variant="caption"
+                color="primary"
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/terms')}
+              >
                 {s.common.terms}
               </Text>{' '}
               {s.common.and}{' '}
-              <Text variant="caption" color="primary">
+              <Text
+                variant="caption"
+                color="primary"
+                accessibilityRole="link"
+                onPress={() => router.push('/legal/privacy')}
+              >
                 {s.common.privacyPolicy}
               </Text>
             </Text>
@@ -55,7 +65,11 @@ export default function Privacy() {
             disabled={!accepted || !useDocs}
             onPress={() => router.push('/onboarding')}
           />
-          <Button label={s.privacy.fullPolicy} variant="secondary" />
+          <Button
+            label={s.privacy.fullPolicy}
+            variant="secondary"
+            onPress={() => router.push('/legal/privacy')}
+          />
         </>
       }
     >

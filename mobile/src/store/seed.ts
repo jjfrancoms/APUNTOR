@@ -10,6 +10,7 @@ import {
   type TopicDetail,
 } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
+import { chunksFromContent, contentItems, extraDocuments, type ContentItem } from './content';
 
 export const DEMO_EMAIL = 'ana@correo.com';
 export const DEMO_PASSWORD = 'apuntor123';
@@ -110,7 +111,7 @@ export interface ShareLink {
 }
 
 export interface AppState {
-  version: 1;
+  version: 2;
   accounts: Account[];
   session: SessionUser | null;
   settings: Settings;
@@ -118,6 +119,8 @@ export interface AppState {
   courses: StoreCourse[];
   topics: Record<string, TopicDetail>;
   documents: DocRecord[];
+  /** Definiciones, conceptos y ejercicios por clase, con página de origen. */
+  items: ContentItem[];
   chunks: Chunk[];
   uploads: UploadJob[];
   conversations: Conversation[];
@@ -125,6 +128,8 @@ export interface AppState {
   shares: ShareLink[];
   waitlist: string[];
   study: { known: string[]; unknown: string[]; lastQuiz: { score: number; total: number } | null };
+  payments: { id: string; date: string; amount: string; plan: string }[];
+  notices: { languages: boolean; reported: string[] };
   /** Espacio ocupado por archivos que no son documentos de estudio (MB). */
   baseUsedMb: number;
 }
@@ -144,7 +149,7 @@ export function todayKey(date = new Date()): string {
 
 export function createSeed(): AppState {
   return {
-    version: 1,
+    version: 2,
     accounts: [{ email: DEMO_EMAIL, password: DEMO_PASSWORD, fullName: 'Ana Torres' }],
     session: null,
     settings: {
@@ -160,7 +165,15 @@ export function createSeed(): AppState {
       reviewTime: '8:00 p. m.',
     },
     plan: 'free',
-    courses: baseCourses.map((c) => ({ ...c, keywords: KEYWORDS[c.id] ?? [] })),
+    courses: baseCourses.map((c) => ({
+      ...c,
+      keywords: KEYWORDS[c.id] ?? [],
+      topicCount: contentItems.filter((i) => i.courseId === c.id).length,
+      classes: c.classes.map((k) => ({
+        ...k,
+        topicCount: contentItems.filter((i) => i.classId === k.id).length,
+      })),
+    })),
     topics: { ...baseTopics },
     documents: [
       {
@@ -203,62 +216,10 @@ export function createSeed(): AppState {
         topics: ['Chavín', 'Paracas', 'Moche'],
         uploadedLabel: 'la semana pasada',
       },
+      ...extraDocuments,
     ],
-    chunks: [
-      {
-        id: 'k1',
-        documentId: 'limites-continuidad',
-        page: 12,
-        klass: 3,
-        section: 'Definición de límite',
-        text: 'El límite de f(x) cuando x tiende a a es L si, para cada épsilon > 0, existe un delta > 0 tal que |x − a| < delta implica |f(x) − L| < épsilon. Épsilon dice qué tan cerca de L queremos estar; delta, qué tan cerca de a debe estar x.',
-        external: {
-          title: 'Límite de una función',
-          host: 'es.wikipedia.org',
-          text: 'Gráficamente, f(x) queda dentro de un "túnel" de ancho 2ε alrededor de L cuando x está a menos de δ de a.',
-        },
-      },
-      {
-        id: 'k2',
-        documentId: 'limites-continuidad',
-        page: 14,
-        klass: 3,
-        section: 'Límites laterales',
-        text: 'El límite lateral por la derecha es el valor al que se acerca f(x) cuando x se acerca a a con valores mayores que a; por la izquierda, con valores menores. El límite existe solo si ambos límites laterales existen y coinciden.',
-      },
-      {
-        id: 'k3',
-        documentId: 'limites-continuidad',
-        page: 16,
-        klass: 3,
-        section: 'Continuidad',
-        text: 'Una función es continua en a si f(a) está definida, el límite de f(x) cuando x tiende a a existe y ambos valores coinciden.',
-      },
-      {
-        id: 'k4',
-        documentId: 'calculo-problemas',
-        page: 3,
-        klass: 3,
-        section: 'Práctica guiada 3',
-        text: 'Ejercicio 4: halla el límite lateral izquierdo de f en x = 2 para f(x) = (x² − 4)/(x − 2). Factoriza el numerador y simplifica antes de evaluar: el resultado es 4.',
-      },
-      {
-        id: 'k5',
-        documentId: 'fisica-dinamica',
-        page: 5,
-        klass: 2,
-        section: 'Leyes de Newton',
-        text: 'La segunda ley de Newton dice que la fuerza neta sobre un cuerpo es igual a su masa por su aceleración: F = m · a. La tercera ley: a toda acción corresponde una reacción igual y opuesta.',
-      },
-      {
-        id: 'k6',
-        documentId: 'historia-preincas',
-        page: 2,
-        klass: 1,
-        section: 'Chavín',
-        text: 'La cultura Chavín se desarrolló en los Andes centrales entre 1200 y 200 a. C. Su centro ceremonial principal fue Chavín de Huántar, famoso por el Lanzón monolítico.',
-      },
-    ],
+    items: contentItems,
+    chunks: chunksFromContent(contentItems),
     uploads: [
       {
         id: 'up-r3',
@@ -338,6 +299,8 @@ export function createSeed(): AppState {
     ],
     usage: { day: todayKey(), questions: 7 },
     shares: [],
+    payments: [],
+    notices: { languages: false, reported: [] },
     waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null },
     baseUsedMb: 120,

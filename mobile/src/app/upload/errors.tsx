@@ -43,7 +43,12 @@ export default function ProcessErrors() {
             compact
             onPress={() => router.push('/upload/scan')}
           />
-          <Button label={s.uploadProblems.dismiss} variant="secondary" compact />
+          <Button
+            label={s.uploadProblems.dismiss}
+            variant="secondary"
+            compact
+            onPress={() => router.push('/upload/review')}
+          />
         </View>
       </Banner>
       <Card style={styles.row}>

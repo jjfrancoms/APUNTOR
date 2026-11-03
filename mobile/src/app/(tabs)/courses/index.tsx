@@ -114,6 +114,11 @@ function CourseCard({
 }) {
   const s = useStrings();
   const { c } = useTheme();
+  const items = useStore((st) => st.items);
+  // Por defecto se abre la primera clase sin terminar.
+  const [openClass, setOpenClass] = useState<string | null>(
+    course.classes.find((k) => k.progress < 1)?.id ?? null,
+  );
   return (
     <Card style={styles.course}>
       <Pressable
@@ -133,18 +138,27 @@ function CourseCard({
         <Icon name={open ? 'chevron-down' : 'chevron-right'} color="textMuted" />
       </Pressable>
       {open
-        ? course.classes
-            .filter((k) => k.sections.length > 0 || k.progress < 1)
-            .slice(0, 2)
-            .map((klass, idx) => (
+        ? course.classes.map((klass) => {
+            const classItems = items.filter((i) => i.classId === klass.id);
+            const sections = [
+              { title: s.classView.theory, list: classItems.filter((i) => i.kind !== 'ejercicio') },
+              {
+                title: s.classView.exercises,
+                list: classItems.filter((i) => i.kind === 'ejercicio'),
+              },
+            ].filter((sec) => sec.list.length > 0);
+            const expanded = openClass === klass.id;
+            return (
               <View key={klass.id} style={styles.klass}>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => router.push(`/courses/${course.id}`)}
+                  accessibilityState={{ expanded }}
+                  accessibilityLabel={klass.title}
+                  onPress={() => setOpenClass(expanded ? null : klass.id)}
                   style={styles.klassHead}
                 >
                   <Icon
-                    name={idx === 0 ? 'chevron-down' : 'chevron-right'}
+                    name={expanded ? 'chevron-down' : 'chevron-right'}
                     size={16}
                     color="textMuted"
                   />
@@ -152,17 +166,18 @@ function CourseCard({
                     {klass.title}
                   </Text>
                   <Text variant="caption" color="textMuted">
-                    {s.courses.sections(Math.max(klass.sections.length, 2))}
+                    {s.courses.sections(sections.length)}
                   </Text>
                 </Pressable>
-                {idx === 0
-                  ? klass.sections.map((section) => (
+                {expanded ? (
+                  <>
+                    {sections.map((section) => (
                       <View key={section.title} style={styles.section}>
                         <Text variant="overline" color="textMuted">
                           {section.title}
                         </Text>
-                        {section.topics.map((topic, t) => {
-                          const active = t === 0 && section === klass.sections[0];
+                        {section.list.map((topic, t) => {
+                          const active = t === 0 && section === sections[0];
                           return (
                             <Pressable
                               key={topic.id}
@@ -184,10 +199,24 @@ function CourseCard({
                           );
                         })}
                       </View>
-                    ))
-                  : null}
+                    ))}
+                    <View style={styles.section}>
+                      <Pressable
+                        accessibilityRole="link"
+                        onPress={() => router.push(`/courses/class/${klass.id}`)}
+                        style={styles.openClass}
+                      >
+                        <Text variant="smallStrong" color="primary">
+                          {s.classView.open}
+                        </Text>
+                        <Icon name="arrow-right" size={14} color="primary" />
+                      </Pressable>
+                    </View>
+                  </>
+                ) : null}
               </View>
-            ))
+            );
+          })
         : null}
     </Card>
   );
@@ -243,5 +272,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   dot: { width: 5, height: 5, borderRadius: 3 },
+  openClass: { flexDirection: 'row', alignItems: 'center', gap: space.xs, minHeight: 40 },
   flex: { flex: 1 },
 });

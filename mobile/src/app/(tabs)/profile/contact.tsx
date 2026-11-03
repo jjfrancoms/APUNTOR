@@ -1,6 +1,18 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Banner, Button, Checkbox, Icon, Screen, Text, TextField, TopBar } from '@/components/ui';
+import * as DocumentPicker from 'expo-document-picker';
+import {
+  Banner,
+  Button,
+  Checkbox,
+  Icon,
+  ListRow,
+  Screen,
+  Sheet,
+  Text,
+  TextField,
+  TopBar,
+} from '@/components/ui';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -12,6 +24,16 @@ export default function Contact() {
   const [message, setMessage] = useState('');
   const [technical, setTechnical] = useState(true);
   const [sent, setSent] = useState(false);
+  const [topic, setTopic] = useState<string>(s.sheets.topics[0]);
+  const [choosing, setChoosing] = useState(false);
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const attach = async () => {
+    const r = await DocumentPicker.getDocumentAsync({
+      type: 'image/*',
+      copyToCacheDirectory: false,
+    });
+    if (!r.canceled && r.assets[0]) setAttachment(r.assets[0].name);
+  };
   const email = useStore((st) => st.session?.email ?? 'ana@correo.com');
   return (
     <Screen
@@ -23,6 +45,7 @@ export default function Contact() {
           onPress={() => {
             setSent(true);
             setMessage('');
+            setAttachment(null);
           }}
         />
       }
@@ -32,11 +55,12 @@ export default function Contact() {
         <Text variant="smallStrong">{s.contact.topic}</Text>
         <Pressable
           accessibilityRole="combobox"
-          accessibilityLabel={`${s.contact.topic}: ${s.contact.topicValue}`}
+          accessibilityLabel={`${s.contact.topic}: ${topic}`}
+          onPress={() => setChoosing(true)}
           style={[styles.select, { backgroundColor: c.surface, borderColor: c.border }]}
         >
           <Text variant="body" style={styles.flex}>
-            {s.contact.topicValue}
+            {topic}
           </Text>
           <Icon name="chevron-down" color="textMuted" />
         </Pressable>
@@ -50,11 +74,12 @@ export default function Contact() {
       />
       <Pressable
         accessibilityRole="button"
+        onPress={() => void attach()}
         style={[styles.select, { backgroundColor: c.surface, borderColor: c.border }]}
       >
         <Icon name="image" size={16} color="primary" />
         <Text variant="smallStrong" color="primary">
-          {s.contact.attach}
+          {attachment ? s.sheets.attachDone(attachment) : s.contact.attach}
         </Text>
       </Pressable>
       <Checkbox checked={technical} onChange={setTechnical} label={s.contact.technical}>
@@ -65,6 +90,20 @@ export default function Contact() {
       <Text variant="caption" color="textMuted">
         {s.contact.replyIn(email)}
       </Text>
+      <Sheet visible={choosing} onClose={() => setChoosing(false)} title={s.sheets.chooseTopic}>
+        {s.sheets.topics.map((t, idx) => (
+          <ListRow
+            key={t}
+            title={t}
+            divider={idx < s.sheets.topics.length - 1}
+            trailing={t === topic ? <Icon name="check" color="primary" /> : undefined}
+            onPress={() => {
+              setTopic(t);
+              setChoosing(false);
+            }}
+          />
+        ))}
+      </Sheet>
     </Screen>
   );
 }

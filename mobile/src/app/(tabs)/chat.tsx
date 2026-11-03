@@ -1,18 +1,28 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { normalize } from '@/lib/text-search';
 import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
-import { layout, radius, space, useTheme } from '@/theme';
+import { fonts, layout, radius, space, useTheme } from '@/theme';
 
 /** Pantalla 23 · Conversaciones (el historial se guarda hasta que lo borres). */
 export default function Conversations() {
   const s = useStrings();
   const { c } = useTheme();
   const all = useStore((st) => st.conversations);
+  const [query, setQuery] = useState('');
   const startOfToday = new Date().setHours(0, 0, 0, 0);
   const conversations = all
     .filter((cv) => cv.messages.length > 0)
+    .filter(
+      (cv) =>
+        !query.trim() ||
+        normalize(`${cv.title} ${cv.messages.map((m) => m.text).join(' ')}`).includes(
+          normalize(query.trim()),
+        ),
+    )
     .map((cv) => ({
       ...cv,
       group: cv.updatedAt >= startOfToday ? 'today' : 'week',
@@ -47,9 +57,14 @@ export default function Conversations() {
       </View>
       <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Icon name="search" size={18} color="textMuted" />
-        <Text variant="body" color="textMuted">
-          {s.conversations.search}
-        </Text>
+        <TextInput
+          accessibilityLabel={s.conversations.search}
+          placeholder={s.conversations.search}
+          placeholderTextColor={c.textMuted}
+          value={query}
+          onChangeText={setQuery}
+          style={[styles.input, { color: c.text }]}
+        />
       </View>
       {groups.map((g) => (
         <View key={g.key} style={styles.group}>
@@ -106,6 +121,14 @@ const styles = StyleSheet.create({
     minHeight: layout.minTouchTarget + 4,
   },
   group: { gap: space.sm },
+  input: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    paddingVertical: space.sm,
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
 });

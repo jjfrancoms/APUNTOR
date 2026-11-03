@@ -1,6 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
+  Banner,
+  Sheet,
   Button,
   Card,
   Chip,
@@ -33,6 +36,8 @@ export default function Subscription() {
   const used = useStore(usedMb);
   const quota = useStore(quotaMb);
   const asked = useStore(questionsToday);
+  const payments = useStore((st) => st.payments);
+  const [sheet, setSheet] = useState<'payment' | 'history' | null>(null);
   if (demo === 'restore-failed') {
     return (
       <Screen>
@@ -116,14 +121,14 @@ export default function Subscription() {
               <Icon name="chevron-right" size={18} color="textMuted" />
             </View>
           }
-          onPress={() => undefined}
+          onPress={() => setSheet('payment')}
         />
         <ListRow
           icon="refresh-cw"
           title={sub.restore}
           onPress={() => router.push('/profile/subscription?demo=restore-failed')}
         />
-        <ListRow icon="clock" title={sub.history} onPress={() => undefined} />
+        <ListRow icon="clock" title={sub.history} onPress={() => setSheet('history')} />
         <ListRow
           icon="external-link"
           title={sub.cancel}
@@ -139,9 +144,50 @@ export default function Subscription() {
         </Text>
       </Card>
       <View style={styles.links}>
-        <TextLink label={sub.terms} variant="caption" />
-        <TextLink label={s.common.privacyPolicy} variant="caption" />
+        <TextLink
+          label={sub.terms}
+          variant="caption"
+          onPress={() => router.push('/legal/subscription')}
+        />
+        <TextLink
+          label={s.common.privacyPolicy}
+          variant="caption"
+          onPress={() => router.push('/legal/privacy')}
+        />
       </View>
+      <Sheet
+        visible={sheet === 'payment'}
+        onClose={() => setSheet(null)}
+        title={s.sheets.paymentTitle}
+      >
+        <Banner
+          tone="info"
+          icon="credit-card"
+          title={plans.paymentMethod}
+          body={s.sheets.paymentBody}
+        />
+      </Sheet>
+      <Sheet
+        visible={sheet === 'history'}
+        onClose={() => setSheet(null)}
+        title={s.sheets.historyTitle}
+      >
+        {payments.length === 0 ? (
+          <Text variant="small" color="textMuted">
+            {s.sheets.historyEmpty}
+          </Text>
+        ) : (
+          payments.map((pay, idx) => (
+            <ListRow
+              key={pay.id}
+              icon="check-circle"
+              title={`${pay.plan} · ${pay.amount}`}
+              detail={pay.date}
+              divider={idx < payments.length - 1}
+            />
+          ))
+        )}
+      </Sheet>
     </Screen>
   );
 }

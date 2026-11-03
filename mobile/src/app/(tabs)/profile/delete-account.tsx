@@ -12,7 +12,8 @@ import {
   TextField,
   TopBar,
 } from '@/components/ui';
-import { deleteAccount, useStore } from '@/store/store';
+import * as Clipboard from 'expo-clipboard';
+import { deleteAccount, exportUserData, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
@@ -26,6 +27,7 @@ export default function DeleteAccount() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const [confirm, setConfirm] = useState(demo === 'wrong' ? 'borrar' : '');
   const [deleting, setDeleting] = useState(false);
+  const [exported, setExported] = useState(false);
   const documents = useStore((st) => st.documents.length);
   const courses = useStore((st) => st.courses.length);
   const conversations = useStore((st) => st.conversations.length);
@@ -66,8 +68,19 @@ export default function DeleteAccount() {
       </Banner>
       <Banner tone="warning" icon="credit-card" title={d.subscription} />
       <Card style={styles.flat}>
-        <ListRow icon="download" title={d.download} divider={false} onPress={() => undefined} />
+        <ListRow
+          icon="download"
+          title={d.download}
+          divider={false}
+          onPress={() => {
+            void Clipboard.setStringAsync(exportUserData()).then(
+              () => setExported(true),
+              () => setExported(false),
+            );
+          }}
+        />
       </Card>
+      {exported ? <Banner tone="info" icon="check" title={s.sheets.exportDone} /> : null}
       <TextField
         label={d.confirmLabel(d.confirmWord)}
         placeholder={d.confirmWord}

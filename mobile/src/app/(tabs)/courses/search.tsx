@@ -14,8 +14,8 @@ type Filter = 'all' | 'document' | 'chat';
 export default function Search() {
   const s = useStrings();
   const { c } = useTheme();
-  const { demo } = useLocalSearchParams<{ demo?: string }>();
-  const [query, setQuery] = useState(searchQuery);
+  const { demo, q } = useLocalSearchParams<{ demo?: string; q?: string }>();
+  const [query, setQuery] = useState(q ?? searchQuery);
   const [cleared, setCleared] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const state = useStore((st) => st);

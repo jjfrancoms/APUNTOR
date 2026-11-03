@@ -14,7 +14,16 @@ export default function ChatError() {
     >
       <UserBubble text="Hazme un resumen de la Clase 3" />
       <Banner tone="danger" title={s.chat.failedTitle} body={s.errors.CHAT_FAILED}>
-        <TextLink label={s.chat.retry} color="danger" />
+        <TextLink
+          label={s.chat.retry}
+          color="danger"
+          onPress={() =>
+            router.replace({
+              pathname: '/conversation',
+              params: { q: 'Hazme un resumen de la Clase 3' },
+            })
+          }
+        />
       </Banner>
       <Banner tone="warning" icon="clock" title={s.errors.CHAT_DAILY_LIMIT}>
         <Text variant="caption">

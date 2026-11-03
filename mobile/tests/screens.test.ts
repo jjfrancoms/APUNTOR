@@ -17,7 +17,7 @@ function routeExists(href: string): boolean {
     if (tail.length === 0 && existsSync(path.join(dir, `${head}.tsx`))) return true;
     if (existsSync(path.join(dir, head)) && walk(path.join(dir, head), tail)) return true;
     // segmento dinámico [param]
-    const dynFile = ['[courseId]', '[topicId]', '[documentId]', '[token]'];
+    const dynFile = ['[courseId]', '[topicId]', '[documentId]', '[token]', '[classId]', '[doc]'];
     for (const d of dynFile) {
       if (tail.length === 0 && existsSync(path.join(dir, `${d}.tsx`))) return true;
     }
@@ -27,9 +27,9 @@ function routeExists(href: string): boolean {
 }
 
 describe('mapa de pantallas', () => {
-  it('tiene las 52 pantallas, sin números repetidos', () => {
+  it('tiene las 52 pantallas diseñadas y las agregadas, sin números repetidos', () => {
     const numbers = allScreens.map((s) => s.n).sort((a, b) => a - b);
-    expect(numbers).toEqual(Array.from({ length: 52 }, (_, i) => i + 1));
+    expect(numbers).toEqual(Array.from({ length: 55 }, (_, i) => i + 1));
   });
 
   it.each(allScreens.map((s) => [s.n, s.href] as const))(

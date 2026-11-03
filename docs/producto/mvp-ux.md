@@ -188,6 +188,14 @@ Las 52 pantallas están diseñadas (44 del mapa + estados vacío y error 45–52
 **Barra inferior (móvil):** Inicio · Cursos · botón central "+" (subir) · Chat · Perfil. La pestaña
 Chat abre Conversaciones (23); una conversación (5) se abre a pantalla completa.
 
+**Agregadas a partir de la revisión del prototipo (sin diseño en Figma todavía):**
+
+| #   | Vista                                                                                              | Ruta                  |
+| --- | -------------------------------------------------------------------------------------------------- | --------------------- |
+| 53  | Vista de clase: definiciones, conceptos y ejercicios del documento, con página de origen y filtros | `/courses/class/<id>` |
+| 54  | Editar perfil (nombre, correo, nivel y contraseña)                                                 | `/profile/edit`       |
+| 55  | Términos, privacidad y términos de suscripción (borradores)                                        | `/legal/<doc>`        |
+
 **Pendientes de definición detectados al implementar:**
 
 - Pantalla 15 pide el correo del tutor a menores de 18, mientras el mapa y la decisión de

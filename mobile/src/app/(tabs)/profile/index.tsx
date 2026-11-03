@@ -48,7 +48,7 @@ export default function Profile() {
             {`${user.email} · ${user.level}`}
           </Text>
         </View>
-        <TextLink label={s.profile.edit} />
+        <TextLink label={s.profile.edit} onPress={() => router.push('/profile/edit')} />
       </Card>
       <Text variant="overline" color="textMuted">
         {s.profile.privacyHeader}

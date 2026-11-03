@@ -34,3 +34,21 @@ describe('text-search', () => {
     expect(overlapScore('penicilina', 'El límite lateral')).toBe(0);
   });
 });
+
+describe('buildQuiz', async () => {
+  const { buildQuiz } = await import('../src/lib/quiz');
+  const { contentItems } = await import('../src/store/content');
+  it('arma una pregunta por definición/concepto con la respuesta correcta entre las opciones', () => {
+    for (const classId of ['c1', 'c4', 'f1', 'h2']) {
+      const qs = buildQuiz(contentItems, classId);
+      expect(qs.length).toBeGreaterThan(0);
+      for (const q of qs) {
+        expect(q.options.length).toBeGreaterThanOrEqual(2);
+        expect(new Set(q.options).size).toBe(q.options.length);
+        expect(q.answer).toBeGreaterThanOrEqual(0);
+        expect(q.answer).toBeLessThan(q.options.length);
+        expect(q.page).toBeGreaterThan(0);
+      }
+    }
+  });
+});

@@ -27,6 +27,9 @@ export default function ChatOutside() {
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
+            onPress={() =>
+              router.replace({ pathname: '/conversation', params: { q: chatOutside.question } })
+            }
             style={[styles.pill, { backgroundColor: c.external }]}
           >
             <Icon name="globe" size={14} color="onPrimary" />

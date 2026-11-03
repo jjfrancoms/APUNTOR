@@ -2,6 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import {
+  ListRow,
+  Sheet,
+  TextField,
   Button,
   Card,
   Chip,
@@ -13,7 +16,7 @@ import {
   TopBar,
 } from '@/components/ui';
 import { extLabel } from '@/lib/upload-rules';
-import { deleteDocument, useStore } from '@/store/store';
+import { deleteDocument, moveDocument, renameDocument, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -24,6 +27,9 @@ export default function DocumentDetail() {
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
   const record = useStore((st) => st.documents.find((d) => d.id === documentId) ?? st.documents[0]);
   const [confirming, setConfirming] = useState(confirm === '1');
+  const [sheet, setSheet] = useState<'menu' | 'rename' | 'move' | null>(null);
+  const [newName, setNewName] = useState('');
+  const courses = useStore((st) => st.courses);
   if (!record) return null;
   const doc = {
     ...record,
@@ -38,7 +44,13 @@ export default function DocumentDetail() {
       header={
         <TopBar
           title={s.document.header}
-          right={<IconButton icon="more-horizontal" label={s.common.more} />}
+          right={
+            <IconButton
+              icon="more-horizontal"
+              label={s.common.more}
+              onPress={() => setSheet('menu')}
+            />
+          }
         />
       }
       footer={<Button label={s.document.ask} onPress={() => router.push('/conversation')} />}
@@ -73,7 +85,7 @@ export default function DocumentDetail() {
               {doc.classification.at(-1) ?? ''}
             </Text>
           </Text>
-          <TextLink label={s.common.change} />
+          <TextLink label={s.common.change} onPress={() => setSheet('move')} />
         </View>
       </Card>
       <Text variant="overline" color="textMuted">
@@ -90,7 +102,14 @@ export default function DocumentDetail() {
           label={s.document.share}
           onPress={() => router.push('/courses/topics/definicion-limite?sheet=share')}
         />
-        <ActionButton icon="edit-2" label={s.document.rename} />
+        <ActionButton
+          icon="edit-2"
+          label={s.document.rename}
+          onPress={() => {
+            setNewName(record.name);
+            setSheet('rename');
+          }}
+        />
         <ActionButton
           icon="trash-2"
           label={s.document.delete}
@@ -99,6 +118,86 @@ export default function DocumentDetail() {
         />
       </View>
 
+      <Sheet visible={sheet === 'menu'} onClose={() => setSheet(null)} title={s.documentMenu.title}>
+        <ListRow
+          icon="message-circle"
+          title={s.document.ask}
+          onPress={() => {
+            setSheet(null);
+            router.push({
+              pathname: '/conversation',
+              params: { q: `Resumen de ${record.name.replace(/\.[^.]+$/u, '')}` },
+            });
+          }}
+        />
+        <ListRow
+          icon="share-2"
+          title={s.document.share}
+          onPress={() => {
+            setSheet(null);
+            router.push('/courses/topics/definicion-limite?sheet=share');
+          }}
+        />
+        <ListRow
+          icon="edit-2"
+          title={s.document.rename}
+          onPress={() => {
+            setNewName(record.name);
+            setSheet('rename');
+          }}
+        />
+        <ListRow icon="folder" title={s.documentMenu.moveTitle} onPress={() => setSheet('move')} />
+        <ListRow
+          icon="trash-2"
+          title={s.document.delete}
+          danger
+          divider={false}
+          onPress={() => {
+            setSheet(null);
+            setConfirming(true);
+          }}
+        />
+      </Sheet>
+      <Sheet
+        visible={sheet === 'rename'}
+        onClose={() => setSheet(null)}
+        title={s.documentMenu.renameTitle}
+      >
+        <TextField
+          label={s.documentMenu.name}
+          value={newName}
+          onChangeText={setNewName}
+          autoFocus
+        />
+        <Button
+          label={s.documentMenu.save}
+          disabled={newName.trim().length === 0}
+          onPress={() => {
+            renameDocument(record.id, newName.trim());
+            setSheet(null);
+          }}
+        />
+      </Sheet>
+      <Sheet
+        visible={sheet === 'move'}
+        onClose={() => setSheet(null)}
+        title={s.documentMenu.moveTitle}
+      >
+        {courses.map((course, idx) => (
+          <ListRow
+            key={course.id}
+            title={course.title}
+            divider={idx < courses.length - 1}
+            trailing={
+              course.id === record.courseId ? <Icon name="check" color="primary" /> : undefined
+            }
+            onPress={() => {
+              moveDocument(record.id, course.id);
+              setSheet(null);
+            }}
+          />
+        ))}
+      </Sheet>
       <Modal
         visible={confirming}
         transparent

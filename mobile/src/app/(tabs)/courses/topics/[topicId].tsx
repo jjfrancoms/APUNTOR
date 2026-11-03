@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { ShareSheets, type ShareStep } from '@/components/domain/ShareSheets';
 import {
   Card,
@@ -13,7 +13,7 @@ import {
   TextLink,
   TopBar,
 } from '@/components/ui';
-import { useStore } from '@/store/store';
+import { topicDetail, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 
@@ -27,9 +27,12 @@ export default function TopicDetail() {
   const [share, setShare] = useState<ShareStep>(
     sheet === 'share' ? 'create' : sheet === 'created' ? 'created' : 'closed',
   );
-  const topics = useStore((st) => st.topics);
-  const showExternal = useStore((st) => st.settings.external);
-  const topic = topics[topicId] ?? topics['definicion-limite'];
+  const state = useStore((st) => st);
+  const showExternal = state.settings.external;
+  const topic = useMemo(
+    () => topicDetail(state, topicId) ?? topicDetail(state, 'definicion-limite'),
+    [state, topicId],
+  );
   const [tab, setTab] = useState<Tab>('compare');
   if (!topic) return null;
 
@@ -56,7 +59,16 @@ export default function TopicDetail() {
         </View>
         <Text variant="small">{topic.external.text}</Text>
         <View style={styles.row}>
-          <TextLink label={s.topic.seeSource} color="external" />
+          <TextLink
+            label={s.topic.seeSource}
+            color="external"
+            onPress={() =>
+              topic.external &&
+              void Linking.openURL(
+                `https://${topic.external.source.includes('.') ? topic.external.source : 'es.wikipedia.org'}`,
+              )
+            }
+          />
           <Icon name="external-link" size={12} color="external" />
         </View>
       </Card>
@@ -102,7 +114,7 @@ export default function TopicDetail() {
       </View>
       {tab !== 'external' ? own : null}
       {tab !== 'mine' ? external : null}
-      {tab === 'compare' ? (
+      {tab === 'compare' && topic.notes.length > 0 ? (
         <Card tone="accent">
           <View style={styles.row}>
             <Mascot size={40} />
