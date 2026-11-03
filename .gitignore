@@ -1,0 +1,29 @@
+# dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# build / cobertura
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# entorno (nunca versionar secretos)
+.env
+.env.*
+!.env.example
+
+# logs y SO
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+*.log
+
+# editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
