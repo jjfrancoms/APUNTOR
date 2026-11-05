@@ -93,7 +93,7 @@ traducción.
 ## 5. Reglas de diseño y responsive
 
 Los valores exactos están en la colección de variables "Tokens" (en código:
-`src/design/tokens.ts`).
+`app/src/theme/tokens.ts`).
 
 - **Color con significado:** verde = material propio. Violeta = contexto externo. Ámbar = solo
   avisos y mascota, nunca texto. Rojo = errores y acciones destructivas.
@@ -171,8 +171,8 @@ pantallas (página Escritorio, fila inferior).
 ## 8. Pantallas diseñadas e implementadas
 
 Las 52 pantallas están diseñadas (44 del mapa + estados vacío y error 45–52) y construidas en
-`mobile/` con datos de ejemplo. El índice completo, con la ruta de cada una, está en
-`mobile/src/data/screens.ts` y se ve en la app en `/mapa`.
+`app/` con datos de ejemplo. El índice completo, con la ruta de cada una, está en
+`app/src/data/screens.ts` y se ve en la app en `/mapa`.
 
 | #   | Estado vacío / error                    | Ruta de vista previa                        |
 | --- | --------------------------------------- | ------------------------------------------- |

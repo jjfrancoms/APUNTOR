@@ -95,7 +95,16 @@ cd apuntor
 cp .env.example .env   # completa las variables
 npm install
 
-Los comandos de ejecución se añadirán cuando existan los paquetes app, api y worker.
+npm install solo instala el backend (api, worker, db y eval). La app tiene su propio paquete: npm --prefix app install.
+
+Comandos:
+
+npm run db:migrate     # aplica las migraciones de db/migrations
+npm run api            # API Fastify
+npm run worker         # worker de ingesta (proceso aparte)
+npm run app            # app Expo
+npm run eval -- run --cases <casos.jsonl> --out <resultados.jsonl>
+npm run eval -- score --results <resultados.jsonl> --grades <notas.jsonl>
 
 Pendientes y riesgos abiertos
 Retención cero en Vertex AI: requiere configuración (caching duradero apagado, logging de solicitudes apagado) y confirmación escrita de Google. No se declara hasta tenerla.

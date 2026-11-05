@@ -14,6 +14,10 @@ FROM documents d;
 INSERT INTO topics (document_id, title, source_pages)
 SELECT id, 'Tema', '{1}' FROM documents;
 
+INSERT INTO usage_quotas (user_id, kind, period_start, used) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'questions', '2026-01-01', 1),
+  ('22222222-2222-4222-8222-222222222222', 'questions', '2026-01-01', 1);
+
 -- Usuario 1 autenticado
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
@@ -23,6 +27,18 @@ BEGIN
   IF (SELECT count(*) FROM documents) <> 1 THEN RAISE EXCEPTION 'RLS documents: ve documentos ajenos'; END IF;
   IF (SELECT count(*) FROM document_chunks) <> 1 THEN RAISE EXCEPTION 'RLS chunks: ve chunks ajenos'; END IF;
   IF (SELECT count(*) FROM topics) <> 1 THEN RAISE EXCEPTION 'RLS topics: ve temas ajenos'; END IF;
+  IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
+  -- Aunque pida los fragmentos de otro usuario, RLS no se los entrega.
+  IF (SELECT count(*) FROM match_user_chunks(
+        '22222222-2222-4222-8222-222222222222',
+        array_fill(0.1::real, ARRAY[768])::vector, -1, 10)) <> 0 THEN
+    RAISE EXCEPTION 'RLS match_user_chunks: devuelve fragmentos ajenos';
+  END IF;
+  BEGIN
+    PERFORM consume_quota('11111111-1111-4111-8111-111111111111', 'questions', '2026-01-01', 1, 100);
+    RAISE EXCEPTION 'authenticated pudo llamar a consume_quota';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 -- No puede borrar documentos de otro usuario (0 filas afectadas)…

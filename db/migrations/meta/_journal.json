@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793719818582,
+      "tag": "0000_enable_pgvector",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793719823054,
+      "tag": "0001_init_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793720995555,
+      "tag": "0002_enable_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793851321209,
+      "tag": "0003_usage_quotas",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793851323625,
+      "tag": "0004_quota_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793851326027,
+      "tag": "0005_match_user_chunks",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793851823867,
+      "tag": "0006_document_size",
+      "breakpoints": true
+    }
+  ]
+}

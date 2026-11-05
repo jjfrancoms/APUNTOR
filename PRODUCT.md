@@ -11,8 +11,8 @@ adaptive
 ## Stack
 
 Expo SDK 58 / React Native 0.88 con Expo Router, una sola base para Android, iOS y web. Estilos
-con `StyleSheet` y tokens de `src/design/tokens.ts` vía `useTheme()`; íconos Feather; textos en
-`mobile/src/i18n/` (español e inglés). Sin CSS, Tailwind ni librería de componentes externa.
+con `StyleSheet` y tokens de `app/src/theme/tokens.ts` vía `useTheme()`; íconos Feather; textos en
+`app/src/i18n/` (español e inglés). Sin CSS, Tailwind ni librería de componentes externa.
 
 ## Users
 
@@ -38,7 +38,7 @@ separa siempre lo propio (verde) de lo externo (violeta, con fuente).
 - Modo por superficie: **Operate** en la app (inicio, cursos, subida, chat, estudio, perfil);
   **Read** en ayuda, términos y resumen compartido; **Persuade** solo en planes y en la llamada
   a crear cuenta del resumen público.
-- Pre-lanzamiento: hoy funciona con un backend simulado (`mobile/src/store/`); la API real
+- Pre-lanzamiento: hoy funciona con un backend simulado (`app/src/store/`); la API real
   reemplazará esas acciones sin cambiar las pantallas.
 
 ## Capabilities and Constraints
