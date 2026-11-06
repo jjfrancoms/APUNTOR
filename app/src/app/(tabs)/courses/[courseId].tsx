@@ -13,6 +13,7 @@ import {
   TopBar,
 } from '@/components/ui';
 import { useState } from 'react';
+import { PREVIEW } from '@/lib/config';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
@@ -99,7 +100,8 @@ export default function CourseDetail() {
               key={klass.id}
               accessibilityRole="button"
               accessibilityLabel={`${klass.title}, ${status}`}
-              onPress={() => router.push(`/courses/class/${klass.id}`)}
+              // Hasta la fase 2, cada clase es un documento.
+              onPress={() => router.push(`/documents/${klass.id}`)}
               style={[
                 styles.klass,
                 i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
@@ -118,14 +120,16 @@ export default function CourseDetail() {
         })}
       </Card>
       <Sheet visible={menu} onClose={() => setMenu(false)} title={s.courseMenu.title}>
-        <ListRow
-          icon="layers"
-          title={s.courseMenu.quiz}
-          onPress={() => {
-            setMenu(false);
-            router.push('/study/quiz-setup');
-          }}
-        />
+        {PREVIEW ? (
+          <ListRow
+            icon="layers"
+            title={s.courseMenu.quiz}
+            onPress={() => {
+              setMenu(false);
+              router.push('/study/quiz-setup');
+            }}
+          />
+        ) : null}
         <ListRow
           icon="upload"
           title={s.courseMenu.add}

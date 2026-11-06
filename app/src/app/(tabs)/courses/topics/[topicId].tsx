@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -21,7 +22,7 @@ import { Tap } from '@/components/ui/Tap';
 type Tab = 'mine' | 'external' | 'compare';
 
 /** Pantalla 4 · Tema con contexto externo. Propio en verde; externo en violeta y siempre con fuente. */
-export default function TopicDetail() {
+function TopicDetail() {
   const s = useStrings();
   const { c } = useTheme();
   const { topicId, sheet } = useLocalSearchParams<{ topicId: string; sheet?: string }>();
@@ -149,3 +150,6 @@ const styles = StyleSheet.create({
     minHeight: layout.minTouchTarget,
   },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(TopicDetail);

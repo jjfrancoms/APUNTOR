@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { StyleSheet, View } from 'react-native';
 import {
   ChatScreen,
@@ -12,7 +13,7 @@ import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 24 · Respondiendo: lo propio carga primero; el bloque externo, aparte. */
-export default function Responding() {
+function Responding() {
   const s = useStrings();
   const { c } = useTheme();
   return (
@@ -54,3 +55,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   skeleton: { height: 8, borderRadius: 4, minWidth: 180 },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Responding);

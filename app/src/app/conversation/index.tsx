@@ -20,10 +20,11 @@ import {
   TextLink,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { PREVIEW } from '@/lib/config';
 import {
   answerQuestion,
   askQuestion,
-  FREE_DAILY_QUESTIONS,
+  dailyQuestionLimit,
   questionsToday,
   searchOutside,
   startConversation,
@@ -32,8 +33,6 @@ import {
 } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
-
-const THINK_MS = 900;
 
 /**
  * Pantalla 5 · Chat con la mascota (con 24 respondiendo, 25 límite y 30 fuera de tus documentos).
@@ -49,27 +48,37 @@ export default function Conversation() {
   const courseCount = useStore((st) => st.courses.length);
   const externalOn = useStore((st) => st.settings.external);
   const asked = useStore(questionsToday);
+  const limit = useStore(dailyQuestionLimit);
   const plan = useStore((st) => st.plan);
   const [draft, setDraft] = useState('');
   const [thinking, setThinking] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mounted = useRef(true);
 
   useEffect(() => {
     if (!id) setId(startConversation());
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
   }, [id]);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
 
   const send = (text: string) => {
     if (!id || thinking || text.trim().length === 0) return;
     setDraft('');
     if (!askQuestion(id, text)) return; // límite diario: el mensaje queda con el aviso
     setThinking(true);
-    timer.current = setTimeout(() => {
-      answerQuestion(id, text);
-      setThinking(false);
-    }, THINK_MS);
+    void answerQuestion(id, text).finally(() => {
+      if (mounted.current) setThinking(false);
+    });
+  };
+  const outside = () => {
+    if (!id || thinking) return;
+    setThinking(true);
+    void searchOutside(id, lastQuestion).finally(() => {
+      if (mounted.current) setThinking(false);
+    });
   };
 
   useEffect(() => {
@@ -80,9 +89,11 @@ export default function Conversation() {
   const messages = conv?.messages ?? [];
   const lastQuestion = [...messages].reverse().find((m) => m.role === 'user')?.text ?? '';
   const suggestions = [
-    { label: s.chat.suggestions[0], run: () => send('Dame un ejemplo de límite lateral') },
-    { label: s.chat.suggestions[1], run: () => router.push('/study/quiz-setup') },
-    { label: s.chat.suggestions[2], run: () => send('Resumen de continuidad') },
+    { label: s.chat.suggestions[0], run: () => send(s.live.prompts[0] ?? '') },
+    ...(PREVIEW
+      ? [{ label: s.chat.suggestions[1], run: () => router.push('/study/quiz-setup') }]
+      : []),
+    { label: s.chat.suggestions[2], run: () => send(s.live.prompts[1] ?? '') },
   ];
 
   const renderMascot = (m: Message, isLast: boolean) => {
@@ -108,7 +119,9 @@ export default function Conversation() {
               </>
             }
           >
-            <Text variant="small">{m.text}</Text>
+            <Text variant="small" selectable>
+              {m.text}
+            </Text>
           </MascotBubble>
         );
       case 'notFound':
@@ -120,8 +133,8 @@ export default function Conversation() {
                 <Tap
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !externalOn }}
-                  disabled={!externalOn || !id}
-                  onPress={() => id && searchOutside(id, lastQuestion)}
+                  disabled={!externalOn || !id || thinking}
+                  onPress={outside}
                   style={[
                     styles.pill,
                     { backgroundColor: c.external, opacity: externalOn ? 1 : 0.5 },
@@ -152,12 +165,14 @@ export default function Conversation() {
                 {s.chat.externalAnswer}
               </Text>
             </View>
-            <Text variant="small">{m.text}</Text>
+            <Text variant="small">{m.text || s.live.externalEmpty}</Text>
             {m.external ? (
               <Tap
                 accessibilityRole="link"
                 accessibilityLabel={`${m.external.title}, ${m.external.host}`}
-                onPress={() => m.external && void Linking.openURL(`https://${m.external.host}`)}
+                onPress={() =>
+                  m.external && void Linking.openURL(m.external.url ?? `https://${m.external.host}`)
+                }
                 style={[styles.source, { backgroundColor: c.surface }]}
               >
                 <View style={styles.flex}>
@@ -177,9 +192,7 @@ export default function Conversation() {
       case 'limit':
         return (
           <Banner key={m.id} tone="warning" icon="clock" title={s.errors.CHAT_DAILY_LIMIT}>
-            <Text variant="caption">
-              {s.chat.limitBody(asked, FREE_DAILY_QUESTIONS, 'la medianoche')}
-            </Text>
+            <Text variant="caption">{s.chat.limitBody(asked, limit, 'la medianoche')}</Text>
             <ProgressBar value={1} tone="accent" label={s.errors.CHAT_DAILY_LIMIT} />
             {plan === 'free' ? (
               <Button label={s.chat.seePlans} onPress={() => router.push('/plans')} />

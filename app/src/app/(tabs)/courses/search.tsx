@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Card, Chip, EmptyState, Icon, IconButton, Screen, Text } from '@/components/ui';
-import { searchQuery } from '@/data/mock';
 import { searchAll, useStore, type SearchHit } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { splitMatch } from '@/lib/text';
@@ -16,7 +15,7 @@ export default function Search() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo, q } = useLocalSearchParams<{ demo?: string; q?: string }>();
-  const [query, setQuery] = useState(q ?? searchQuery);
+  const [query, setQuery] = useState(q ?? '');
   const [cleared, setCleared] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const state = useStore((st) => st);

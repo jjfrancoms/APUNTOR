@@ -33,11 +33,28 @@ export const documentStatusEnum = pgEnum('document_status', [
 
 export type DocumentStatus = (typeof documentStatusEnum.enumValues)[number];
 
+/** Cursos que crea el usuario. La clasificación automática llegará después (fase 2). */
+export const courses = pgTable(
+  'courses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('courses_user_id_idx').on(t.userId),
+    check('courses_title_not_empty', sql`length(trim(${t.title})) > 0`),
+  ],
+);
+
 export const documents = pgTable(
   'documents',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').notNull(),
+    /** Sin curso mientras el usuario no lo confirme; si se borra el curso, el documento queda. */
+    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     filePath: text('file_path').notNull(),
     /** Tamaño declarado y verificado contra R2; se descuenta de la cuota al borrar. */
@@ -50,6 +67,7 @@ export const documents = pgTable(
   },
   (t) => [
     index('documents_user_id_idx').on(t.userId),
+    index('documents_course_id_idx').on(t.courseId),
     index('documents_status_idx').on(t.status),
     check('documents_total_pages_positive', sql`${t.totalPages} IS NULL OR ${t.totalPages} > 0`),
   ],
@@ -139,6 +157,7 @@ export const usageQuotas = pgTable(
   ],
 );
 
+export type Course = typeof courses.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type DocumentChunk = typeof documentChunks.$inferSelect;

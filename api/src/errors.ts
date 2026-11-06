@@ -1,12 +1,15 @@
 /**
  * Códigos estables de docs/producto/mvp-ux.md §4: son la clave de traducción en la app.
- * AUTH_REQUIRED, REQ_INVALID, DOC_NOT_FOUND, DOC_STATE e INTERNAL son provisionales.
+ * AUTH_REQUIRED, REQ_INVALID, DOC_NOT_FOUND, DOC_STATE, COURSE_NOT_FOUND, EXTERNAL_UNAVAILABLE e
+ * INTERNAL son provisionales.
  */
 export type ApiErrorCode =
   | 'AUTH_REQUIRED'
   | 'REQ_INVALID'
   | 'DOC_NOT_FOUND'
   | 'DOC_STATE'
+  | 'COURSE_NOT_FOUND'
+  | 'EXTERNAL_UNAVAILABLE'
   | 'UP_FORMAT'
   | 'UP_SIZE'
   | 'UP_QUOTA'

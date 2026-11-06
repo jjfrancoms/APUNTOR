@@ -13,13 +13,12 @@ import {
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ErrorCode } from '@/i18n/es';
-import { signInWithProvider, signUp, type AuthField } from '@/store/store';
-import { space, useTheme } from '@/theme';
+import { signUp, type AuthField } from '@/store/store';
+import { space } from '@/theme';
 
 /** Pantalla 11 · Registro */
 export default function Register() {
   const s = useStrings();
-  const { c } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,16 +26,19 @@ export default function Register() {
   const [birthDate, setBirthDate] = useState('');
   const [accepted, setAccepted] = useState(true);
   const [error, setError] = useState<{ code: ErrorCode; field: AuthField } | null>(null);
-  const submit = () => {
-    const r = signUp({ fullName: name, email, password, confirm, birthDate });
-    if (r.ok) router.push('/privacy');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    const r = await signUp({ fullName: name, email, password, confirm, birthDate });
+    setBusy(false);
+    // Con la confirmación de correo activada, la cuenta se abre desde el enlace del correo.
+    if (r.ok && r.needsConfirmation) {
+      router.replace({ pathname: '/link-sent', params: { email: email.trim(), mode: 'signup' } });
+    } else if (r.ok) router.push('/privacy');
     // Menores de 18: no se crea la cuenta; la lista de espera explica la versión para colegios.
     else if (r.error === 'AUTH_MINOR') router.replace('/waitlist');
     else setError({ code: r.error, field: r.field });
-  };
-  const provider = () => {
-    signInWithProvider();
-    router.replace('/home');
   };
   return (
     <Screen narrow header={<TopBar title={s.register.header} />}>
@@ -129,7 +131,8 @@ export default function Register() {
       </Checkbox>
       <Button
         label={s.register.submit}
-        onPress={submit}
+        onPress={() => void submit()}
+        loading={busy}
         disabled={
           !accepted ||
           email.length === 0 ||
@@ -138,15 +141,6 @@ export default function Register() {
           birthDate.length < 10
         }
       />
-      <View style={styles.divider}>
-        <View style={[styles.line, { backgroundColor: c.border }]} />
-        <Text variant="caption" color="textMuted">
-          {s.common.or}
-        </Text>
-        <View style={[styles.line, { backgroundColor: c.border }]} />
-      </View>
-      <Button label={s.common.google} variant="secondary" onPress={provider} />
-      <Button label={s.common.apple} variant="secondary" onPress={provider} />
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">
           {s.register.haveAccount}
@@ -159,7 +153,5 @@ export default function Register() {
 
 const styles = StyleSheet.create({
   intro: { gap: space.xs },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  line: { flex: 1, height: StyleSheet.hairlineWidth },
   inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
 });

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
-import { resetDemo, signOut, updateSettings, useStore } from '@/store/store';
+import { signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { LANGUAGES } from '@/i18n/language';
 import { space, useTheme } from '@/theme';
@@ -13,8 +13,8 @@ export default function Profile() {
   const session = useStore((st) => st.session);
   const st = useStore((x) => x.settings);
   const user = {
-    fullName: session?.fullName ?? 'Ana Torres',
-    email: session?.email ?? 'ana@correo.com',
+    fullName: session?.fullName ?? '',
+    email: session?.email ?? '',
     level: s.onboarding.levels[session?.level ?? 'university'].title,
   };
   const [useDocs, external, progress, light, voice] = [
@@ -139,22 +139,12 @@ export default function Profile() {
           onPress={() => router.push('/profile/delete-account')}
         />
       </Card>
-      {/* Fuera del diseño: utilidades para probar con datos de ejemplo. */}
       <View style={styles.demo}>
         <TextLink
           label={s.demo.signOut}
           color="danger"
           onPress={() => {
-            signOut();
-            router.replace('/login');
-          }}
-        />
-        <TextLink
-          label={s.demo.reset}
-          color="textMuted"
-          onPress={() => {
-            resetDemo();
-            router.replace('/login');
+            void signOut().finally(() => router.replace('/login'));
           }}
         />
       </View>

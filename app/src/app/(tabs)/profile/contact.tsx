@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -18,7 +19,7 @@ import { layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 43 · Contactar soporte. Si falla el envío, el texto se conserva (tabla de estados). */
-export default function Contact() {
+function Contact() {
   const s = useStrings();
   const { c } = useTheme();
   const [message, setMessage] = useState('');
@@ -33,7 +34,7 @@ export default function Contact() {
     });
     if (!r.canceled && r.assets[0]) setAttachment(r.assets[0].name);
   };
-  const email = useStore((st) => st.session?.email ?? 'ana@correo.com');
+  const email = useStore((st) => st.session?.email ?? '');
   return (
     <Screen
       header={<TopBar title={s.contact.header} />}
@@ -98,3 +99,6 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Contact);

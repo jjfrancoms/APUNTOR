@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Banner, Button, Card, Chip, FileRow, Mascot, Screen, Text, TopBar } from '@/components/ui';
@@ -6,7 +7,7 @@ import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
 /** Pantalla 9 · Error al procesar archivos */
-export default function ProcessErrors() {
+function ProcessErrors() {
   const s = useStrings();
   const ok = processResults.filter((r) => r.result === 'ready').length;
   const failed = processResults.length - ok;
@@ -66,3 +67,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   flex: { flex: 1 },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(ProcessErrors);

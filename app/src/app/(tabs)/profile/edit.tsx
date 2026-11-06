@@ -25,13 +25,15 @@ export default function EditProfile() {
   const [pwSaved, setPwSaved] = useState(false);
   const level = s.onboarding.levels[session?.level ?? 'university'];
 
-  const save = () => {
-    const r = updateProfile({ fullName, email });
+  const [emailPending, setEmailPending] = useState(false);
+  const save = async () => {
+    const r = await updateProfile({ fullName, email });
     setSaved(r.ok);
+    setEmailPending(r.ok && r.needsConfirmation === true);
     setError(r.ok ? null : r.error);
   };
-  const savePassword = () => {
-    const r = changePassword(current, next, confirm);
+  const savePassword = async () => {
+    const r = await changePassword(current, next, confirm);
     setPwSaved(r.ok);
     setPwError(r.ok ? null : r.error);
     if (r.ok) {
@@ -48,9 +50,21 @@ export default function EditProfile() {
   return (
     <Screen
       header={<TopBar title={e.header} />}
-      footer={<Button label={e.save} onPress={save} disabled={fullName.trim().length === 0} />}
+      footer={
+        <Button
+          label={e.save}
+          onPress={() => void save()}
+          disabled={fullName.trim().length === 0}
+        />
+      }
     >
-      {saved ? <Banner tone="info" icon="check" title={e.saved} /> : null}
+      {saved ? (
+        <Banner
+          tone="info"
+          icon="check"
+          title={emailPending ? s.live.emailChangePending : e.saved}
+        />
+      ) : null}
       <TextField
         label={e.name}
         value={fullName}
@@ -135,7 +149,7 @@ export default function EditProfile() {
           label={e.changePassword}
           variant="secondary"
           disabled={current.length === 0 || next.length === 0 || confirm.length === 0}
-          onPress={savePassword}
+          onPress={() => void savePassword()}
         />
       </Card>
     </Screen>

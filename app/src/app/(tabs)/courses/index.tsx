@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
-import { Button, Card, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
+import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
 import { pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
@@ -16,6 +16,7 @@ export default function Courses() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const allCourses = useStore((st) => st.courses);
   const pendingReviewCount = useStore((st) => pendingReview(st).length);
+  const unassigned = useStore((st) => st.documents.filter((d) => d.courseId === ''));
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
 
@@ -36,7 +37,7 @@ export default function Courses() {
     );
   }
 
-  if (courses.length === 0) {
+  if (courses.length === 0 && unassigned.length === 0) {
     return (
       <Screen>
         <Text variant="display" accessibilityRole="header">
@@ -100,6 +101,33 @@ export default function Courses() {
           onToggle={() => setExpanded(expanded === course.id ? null : course.id)}
         />
       ))}
+      {unassigned.length > 0 ? (
+        <>
+          <Text variant="heading" accessibilityRole="header">
+            {s.live.unassignedTitle}
+          </Text>
+          <Card style={styles.course}>
+            {unassigned.map((doc) => (
+              <Tap
+                key={doc.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${doc.name}, ${s.live.status[doc.status]}`}
+                onPress={() => router.push(`/documents/${doc.id}`)}
+                style={styles.klassHead}
+              >
+                <Icon name="file-text" size={16} color="textMuted" />
+                <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
+                  {doc.name}
+                </Text>
+                <Chip
+                  label={s.live.status[doc.status]}
+                  tone={doc.status === 'failed' ? 'danger' : 'neutral'}
+                />
+              </Tap>
+            ))}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }
@@ -204,7 +232,7 @@ function CourseCard({
                     <View style={styles.section}>
                       <Tap
                         accessibilityRole="link"
-                        onPress={() => router.push(`/courses/class/${klass.id}`)}
+                        onPress={() => router.push(`/documents/${klass.id}`)}
                         style={styles.openClass}
                       >
                         <Text variant="smallStrong" color="primary">

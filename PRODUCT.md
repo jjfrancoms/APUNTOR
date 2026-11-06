@@ -38,8 +38,8 @@ separa siempre lo propio (verde) de lo externo (violeta, con fuente).
 - Modo por superficie: **Operate** en la app (inicio, cursos, subida, chat, estudio, perfil);
   **Read** en ayuda, términos y resumen compartido; **Persuade** solo en planes y en la llamada
   a crear cuenta del resumen público.
-- Pre-lanzamiento: hoy funciona con un backend simulado (`app/src/store/`); la API real
-  reemplazará esas acciones sin cambiar las pantallas.
+- Pre-lanzamiento: la app usa cuentas, documentos y preguntas reales (fase 1). Estudio, planes,
+  escáner y compartir llegan en fases siguientes y hoy dicen "Muy pronto".
 
 ## Capabilities and Constraints
 
@@ -60,7 +60,7 @@ separa siempre lo propio (verde) de lo externo (violeta, con fuente).
 
 - Especificación UX del MVP (`docs/producto/mvp-ux.md`): mapa de pantallas, estados, textos.
 - Diseños de pantallas compartidos por el equipo (no versionados en el repositorio).
-- Prototipo navegable con datos de prueba (cuenta `ana@correo.com` / `apuntor123`).
+- Vista previa del diseño con datos de ejemplo (`EXPO_PUBLIC_PREVIEW=1`, mapa de pantallas en `/mapa`).
 
 ## Product Principles
 

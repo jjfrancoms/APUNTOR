@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import {
@@ -17,7 +18,7 @@ import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 37 · Resumen compartido (web, solo lectura). `expired` muestra el enlace caducado (48). */
-export default function PublicSummary() {
+function PublicSummary() {
   const s = useStrings();
   const { c } = useTheme();
   const p = s.publicSummary;
@@ -101,3 +102,6 @@ const styles = StyleSheet.create({
   cta: { marginTop: 'auto' },
   center: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xs },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(PublicSummary);

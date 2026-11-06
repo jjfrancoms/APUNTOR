@@ -6,6 +6,7 @@ import { Button, Icon, Screen, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
 import { formatCountdown } from '@/lib/format';
+import { requestPasswordReset, resendSignupEmail } from '@/store/store';
 
 const RESEND_SECONDS = 42;
 
@@ -13,7 +14,10 @@ const RESEND_SECONDS = 42;
 export default function LinkSent() {
   const s = useStrings();
   const { c } = useTheme();
-  const { email = 'ana@correo.com' } = useLocalSearchParams<{ email?: string }>();
+  const { email = '', mode = 'reset' } = useLocalSearchParams<{
+    email?: string;
+    mode?: 'reset' | 'signup';
+  }>();
   const [left, setLeft] = useState(RESEND_SECONDS);
   useEffect(() => {
     if (left <= 0) return;
@@ -34,7 +38,10 @@ export default function LinkSent() {
             label={left > 0 ? s.linkSent.resendIn(formatCountdown(left)) : s.linkSent.resend}
             variant="secondary"
             disabled={left > 0}
-            onPress={() => setLeft(RESEND_SECONDS)}
+            onPress={() => {
+              setLeft(RESEND_SECONDS);
+              void (mode === 'signup' ? resendSignupEmail(email) : requestPasswordReset(email));
+            }}
           />
           <View style={styles.inline}>
             <Text variant="small" color="textMuted">

@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Button, Card, EmptyState, Icon, ListRow, Screen, Text, TopBar } from '@/components/ui';
@@ -7,7 +8,7 @@ import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
 /** Pantalla 32 · Repaso del día; `?demo=empty` muestra el estado sin tarjetas (46). */
-export default function DailyReview() {
+function DailyReview() {
   const s = useStrings();
   const r = s.dailyReview;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
@@ -80,3 +81,6 @@ const styles = StyleSheet.create({
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(DailyReview);

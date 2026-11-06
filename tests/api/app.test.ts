@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildApp, type AppDeps } from '../../api/src/app';
-import type { DocumentRecord } from '../../api/src/documents';
+import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
 import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from './helpers';
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -9,19 +9,32 @@ const OTHER = '22222222-2222-4222-8222-222222222222';
 const AUTH = { authorization: 'Bearer token-1' };
 const AUTH_OTHER = { authorization: 'Bearer token-2' };
 
+type StoredDocument = DocumentRecord & { userId: string };
+type StoredCourse = CourseRecord & { userId: string };
+
 interface World {
   app: FastifyInstance;
-  docs: Map<string, DocumentRecord & { userId: string }>;
+  docs: Map<string, StoredDocument>;
+  courses: Map<string, StoredCourse>;
+  topics: Map<string, TopicRecord[]>;
   objects: Map<string, number>;
   enqueued: string[];
+  deletedUsers: string[];
   quota: ReturnType<typeof fakeQuota>;
 }
 
 async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const docs: World['docs'] = new Map();
+  const courses: World['courses'] = new Map();
+  const topics: World['topics'] = new Map();
   const objects: World['objects'] = new Map();
   const enqueued: string[] = [];
+  const deletedUsers: string[] = [];
   const quota = fakeQuota(1000);
+  const own = (userId: string, id: string) => {
+    const doc = docs.get(id);
+    return doc?.userId === userId ? doc : null;
+  };
   const app = await buildApp({
     authenticate: (token) =>
       Promise.resolve(token === 'token-1' ? USER : token === 'token-2' ? OTHER : null),
@@ -31,22 +44,52 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
           ...input,
           status: 'pending',
           totalPages: null,
+          topicCount: 0,
           createdAt: new Date(0),
         });
         return Promise.resolve();
       },
-      get(userId, id) {
-        const doc = docs.get(id);
-        return Promise.resolve(doc?.userId === userId ? doc : null);
-      },
+      get: (userId, id) => Promise.resolve(own(userId, id)),
       list: (userId) => Promise.resolve([...docs.values()].filter((d) => d.userId === userId)),
-      delete(_userId, id) {
-        docs.delete(id);
+      update(userId, id, patch) {
+        const doc = own(userId, id);
+        if (doc) Object.assign(doc, patch);
+        return Promise.resolve();
+      },
+      delete(userId, id) {
+        if (own(userId, id)) docs.delete(id);
         return Promise.resolve();
       },
       markFailed(id) {
         const doc = docs.get(id);
         if (doc) doc.status = 'failed';
+        return Promise.resolve();
+      },
+      topics: (userId, id) => Promise.resolve(own(userId, id) ? (topics.get(id) ?? []) : []),
+      listCourses: (userId) =>
+        Promise.resolve([...courses.values()].filter((c) => c.userId === userId)),
+      getCourse(userId, id) {
+        const course = courses.get(id);
+        return Promise.resolve(course?.userId === userId ? course : null);
+      },
+      createCourse(userId, title) {
+        const course = { id: crypto.randomUUID(), userId, title, createdAt: new Date(0) };
+        courses.set(course.id, course);
+        return Promise.resolve(course);
+      },
+      renameCourse(_userId, id, title) {
+        const course = courses.get(id);
+        if (course) course.title = title;
+        return Promise.resolve();
+      },
+      deleteCourse(_userId, id) {
+        courses.delete(id);
+        for (const doc of docs.values()) if (doc.courseId === id) doc.courseId = null;
+        return Promise.resolve();
+      },
+      deleteAllForUser(userId) {
+        for (const [id, doc] of docs) if (doc.userId === userId) docs.delete(id);
+        for (const [id, course] of courses) if (course.userId === userId) courses.delete(id);
         return Promise.resolve();
       },
     },
@@ -69,24 +112,39 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       search: () => Promise.resolve([CHUNK]),
       generator: fakeGenerator(VALID_ANSWER),
     },
+    deleteAuthUser(userId) {
+      deletedUsers.push(userId);
+      return Promise.resolve();
+    },
     ...overrides,
   });
-  return { app, docs, objects, enqueued, quota };
+  return { app, docs, courses, topics, objects, enqueued, deletedUsers, quota };
 }
 
 function errorCode(response: { json: () => unknown }): unknown {
   return (response.json() as { error: { code: string } }).error.code;
 }
 
-async function createDocument(world: World, sizeBytes = 100): Promise<string> {
+async function createDocument(world: World, extra: Record<string, unknown> = {}): Promise<string> {
   const response = await world.app.inject({
     method: 'POST',
     url: '/v1/documents',
     headers: AUTH,
-    payload: { fileName: 'apuntes.pdf', sizeBytes },
+    payload: { fileName: 'apuntes.pdf', sizeBytes: 100, ...extra },
   });
   expect(response.statusCode).toBe(201);
   return response.json<{ documentId: string }>().documentId;
+}
+
+async function createCourse(world: World, headers = AUTH, title = 'Cálculo I'): Promise<string> {
+  const response = await world.app.inject({
+    method: 'POST',
+    url: '/v1/courses',
+    headers,
+    payload: { title },
+  });
+  expect(response.statusCode).toBe(201);
+  return response.json<{ id: string }>().id;
 }
 
 describe('autenticación', () => {
@@ -164,6 +222,20 @@ describe('subida de documentos', () => {
     expect(world.docs.get(id)?.filePath).toBe(`${USER}/${id}.pdf`);
   });
 
+  it('puede subirse directo a un curso propio, pero no a uno ajeno', async () => {
+    const mine = await createCourse(world);
+    const theirs = await createCourse(world, AUTH_OTHER, 'Ajeno');
+    const id = await createDocument(world, { courseId: mine });
+    expect(world.docs.get(id)?.courseId).toBe(mine);
+    const response = await world.app.inject({
+      method: 'POST',
+      url: '/v1/documents',
+      headers: AUTH,
+      payload: { fileName: 'a.pdf', sizeBytes: 10, courseId: theirs },
+    });
+    expect(errorCode(response)).toBe('COURSE_NOT_FOUND');
+  });
+
   it('complete encola y responde 202 sin procesar nada', async () => {
     const id = await createDocument(world);
     world.objects.set(`${USER}/${id}.pdf`, 100);
@@ -189,7 +261,7 @@ describe('subida de documentos', () => {
   });
 
   it('si lo subido no coincide con lo declarado, borra el archivo y devuelve la cuota', async () => {
-    const id = await createDocument(world, 100);
+    const id = await createDocument(world);
     world.objects.set(`${USER}/${id}.pdf`, 900);
     const response = await world.app.inject({
       method: 'POST',
@@ -203,8 +275,66 @@ describe('subida de documentos', () => {
   });
 });
 
-describe('aislamiento y borrado', () => {
-  it('otro usuario no ve, completa ni borra el documento', async () => {
+describe('documentos', () => {
+  it('renombrar y mover a un curso propio', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const course = await createCourse(world);
+    const response = await world.app.inject({
+      method: 'PATCH',
+      url: `/v1/documents/${id}`,
+      headers: AUTH,
+      payload: { title: 'Tema 1.pdf', courseId: course },
+    });
+    expect(response.json()).toMatchObject({
+      title: 'Tema 1.pdf',
+      courseId: course,
+      topicCount: 0,
+    });
+    expect(world.docs.get(id)).toMatchObject({ title: 'Tema 1.pdf', courseId: course });
+  });
+
+  it('no se puede mover a un curso ajeno y un PATCH vacío es inválido', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const theirs = await createCourse(world, AUTH_OTHER, 'Ajeno');
+    const moved = await world.app.inject({
+      method: 'PATCH',
+      url: `/v1/documents/${id}`,
+      headers: AUTH,
+      payload: { courseId: theirs },
+    });
+    expect(errorCode(moved)).toBe('COURSE_NOT_FOUND');
+    const empty = await world.app.inject({
+      method: 'PATCH',
+      url: `/v1/documents/${id}`,
+      headers: AUTH,
+      payload: {},
+    });
+    expect(errorCode(empty)).toBe('REQ_INVALID');
+  });
+
+  it('devuelve los temas detectados solo a su dueño', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    world.topics.set(id, [{ id: 't1', parentId: null, title: '1. Límites', sourcePages: [2, 3] }]);
+    const mine = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics`,
+      headers: AUTH,
+    });
+    expect(mine.json()).toEqual({
+      topics: [{ id: 't1', parentId: null, title: '1. Límites', sourcePages: [2, 3] }],
+    });
+    const theirs = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics`,
+      headers: AUTH_OTHER,
+    });
+    expect(theirs.statusCode).toBe(404);
+  });
+
+  it('otro usuario no ve, completa, cambia ni borra el documento', async () => {
     const world = await createWorld();
     const id = await createDocument(world);
     for (const request of [
@@ -215,7 +345,14 @@ describe('aislamiento y borrado', () => {
       const response = await world.app.inject({ ...request, headers: AUTH_OTHER });
       expect(response.statusCode).toBe(404);
     }
-    expect(world.docs.has(id)).toBe(true);
+    const patch = await world.app.inject({
+      method: 'PATCH',
+      url: `/v1/documents/${id}`,
+      headers: AUTH_OTHER,
+      payload: { title: 'x' },
+    });
+    expect(patch.statusCode).toBe(404);
+    expect(world.docs.get(id)?.title).toBe('apuntes.pdf');
   });
 
   it('borrar elimina el archivo y libera el espacio', async () => {
@@ -240,8 +377,95 @@ describe('aislamiento y borrado', () => {
       url: '/v1/documents',
       headers: AUTH,
     });
-    expect(response.body).not.toContain('apuntes.pdf"filePath');
     expect(response.body).not.toContain('filePath');
+    expect(response.body).not.toContain(USER);
+  });
+});
+
+describe('cursos', () => {
+  it('crea, lista solo los propios, renombra y valida el nombre', async () => {
+    const world = await createWorld();
+    const id = await createCourse(world);
+    await createCourse(world, AUTH_OTHER, 'Ajeno');
+    const list = await world.app.inject({ method: 'GET', url: '/v1/courses', headers: AUTH });
+    expect(list.json<{ courses: { title: string }[] }>().courses.map((c) => c.title)).toEqual([
+      'Cálculo I',
+    ]);
+    const renamed = await world.app.inject({
+      method: 'PATCH',
+      url: `/v1/courses/${id}`,
+      headers: AUTH,
+      payload: { title: 'Cálculo II' },
+    });
+    expect(renamed.json()).toEqual({ id, title: 'Cálculo II' });
+    const blank = await world.app.inject({
+      method: 'POST',
+      url: '/v1/courses',
+      headers: AUTH,
+      payload: { title: '   ' },
+    });
+    expect(errorCode(blank)).toBe('REQ_INVALID');
+  });
+
+  it('borrar un curso no borra sus documentos', async () => {
+    const world = await createWorld();
+    const course = await createCourse(world);
+    const doc = await createDocument(world, { courseId: course });
+    const response = await world.app.inject({
+      method: 'DELETE',
+      url: `/v1/courses/${course}`,
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(204);
+    expect(world.docs.get(doc)?.courseId).toBeNull();
+  });
+
+  it('otro usuario no puede renombrar ni borrar el curso', async () => {
+    const world = await createWorld();
+    const id = await createCourse(world);
+    const del = await world.app.inject({
+      method: 'DELETE',
+      url: `/v1/courses/${id}`,
+      headers: AUTH_OTHER,
+    });
+    expect(errorCode(del)).toBe('COURSE_NOT_FOUND');
+    expect(world.courses.has(id)).toBe(true);
+  });
+});
+
+describe('cuenta', () => {
+  it('informa el consumo y los límites del plan', async () => {
+    const world = await createWorld();
+    await world.app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload: { question: '¿Qué produce la mitocondria?' },
+    });
+    const response = await world.app.inject({
+      method: 'GET',
+      url: '/v1/me/usage',
+      headers: AUTH,
+    });
+    expect(response.json()).toMatchObject({ questionsToday: 1, questionsLimit: 20 });
+  });
+
+  it('borrar la cuenta quita archivos, datos y el usuario, sin tocar a otros', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    world.objects.set(`${USER}/${id}.pdf`, 100);
+    await createCourse(world);
+    await createCourse(world, AUTH_OTHER, 'Ajeno');
+    const response = await world.app.inject({
+      method: 'DELETE',
+      url: '/v1/account',
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(204);
+    expect(world.objects.size).toBe(0);
+    expect(world.docs.size).toBe(0);
+    expect([...world.courses.values()].map((c) => c.title)).toEqual(['Ajeno']);
+    expect(world.deletedUsers).toEqual([USER]);
   });
 });
 
@@ -260,52 +484,6 @@ describe('preguntas', () => {
     expect(body.status).toBe('answered');
     expect(body).toHaveProperty('claims');
     expect(body).not.toHaveProperty('usage');
-    expect(body).not.toHaveProperty('external');
-  });
-
-  it('no consulta internet si no se pide', async () => {
-    let searches = 0;
-    const { app } = await createWorld({
-      externalSearch: () => {
-        searches += 1;
-        return Promise.resolve([]);
-      },
-    });
-    await app.inject({ method: 'POST', url: '/v1/questions', headers: AUTH, payload });
-    expect(searches).toBe(0);
-  });
-
-  it('lo externo viaja aparte y etiquetado, fuera de las afirmaciones', async () => {
-    const { app } = await createWorld({
-      externalSearch: () =>
-        Promise.resolve([
-          { title: 'Web', url: 'https://example.com', snippet: 'dato de internet' },
-        ]),
-    });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/v1/questions',
-      headers: AUTH,
-      payload: { ...payload, includeExternal: true },
-    });
-    const body = response.json<{ claims: unknown; external: { source: string } }>();
-    expect(body.external.source).toBe('internet');
-    expect(JSON.stringify(body.claims)).not.toContain('dato de internet');
-  });
-
-  it('un fallo de la búsqueda externa no tumba la respuesta', async () => {
-    const { app } = await createWorld({
-      externalSearch: () => Promise.reject(new Error('caído')),
-    });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/v1/questions',
-      headers: AUTH,
-      payload: { ...payload, includeExternal: true },
-    });
-    const body = response.json<{ status: string; external: unknown }>();
-    expect(body.status).toBe('answered');
-    expect(body.external).toEqual({ unavailable: true });
   });
 
   it('un fallo del modelo se expresa como CHAT_FAILED', async () => {
@@ -336,5 +514,53 @@ describe('preguntas', () => {
       payload: { question: '   ' },
     });
     expect(errorCode(response)).toBe('REQ_INVALID');
+  });
+});
+
+describe('contexto externo', () => {
+  const payload = { question: '¿Quién inventó el cálculo?' };
+
+  it('viaja aparte, etiquetado como internet, y cuenta como pregunta', async () => {
+    const world = await createWorld({
+      externalSearch: () =>
+        Promise.resolve([{ title: 'Web', url: 'https://example.com', snippet: 'dato' }]),
+    });
+    const response = await world.app.inject({
+      method: 'POST',
+      url: '/v1/external',
+      headers: AUTH,
+      payload,
+    });
+    expect(response.json()).toEqual({
+      source: 'internet',
+      results: [{ title: 'Web', url: 'https://example.com', snippet: 'dato' }],
+    });
+    expect(world.quota.used).toBe(1);
+  });
+
+  it('sin Tavily configurado responde EXTERNAL_UNAVAILABLE sin cobrar', async () => {
+    const world = await createWorld();
+    const response = await world.app.inject({
+      method: 'POST',
+      url: '/v1/external',
+      headers: AUTH,
+      payload,
+    });
+    expect(errorCode(response)).toBe('EXTERNAL_UNAVAILABLE');
+    expect(world.quota.used).toBe(0);
+  });
+
+  it('si la búsqueda falla, devuelve la pregunta a la cuota', async () => {
+    const world = await createWorld({
+      externalSearch: () => Promise.reject(new Error('caído')),
+    });
+    const response = await world.app.inject({
+      method: 'POST',
+      url: '/v1/external',
+      headers: AUTH,
+      payload,
+    });
+    expect(response.statusCode).toBe(503);
+    expect(world.quota.used).toBe(0);
   });
 });

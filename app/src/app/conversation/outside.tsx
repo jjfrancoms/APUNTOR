@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { Linking, StyleSheet, View } from 'react-native';
 import {
@@ -14,7 +15,7 @@ import { radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 30 · Fuera de tus documentos: lo externo va aparte, en violeta y con fuente. */
-export default function ChatOutside() {
+function ChatOutside() {
   const s = useStrings();
   const { c } = useTheme();
   return (
@@ -97,3 +98,6 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(ChatOutside);

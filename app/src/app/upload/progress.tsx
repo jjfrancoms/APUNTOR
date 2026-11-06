@@ -18,7 +18,7 @@ import { extLabel } from '@/lib/upload-rules';
 import { enqueueUploads, removeUpload, useStore } from '@/store/store';
 import { space } from '@/theme';
 
-/** Pantalla 17 · Subiendo documentos (avance real de la cola simulada). */
+/** Pantalla 17 · Subiendo documentos (avance de cada archivo: subida a R2 y procesamiento en el servidor). */
 export default function Uploading() {
   const s = useStrings();
   const uploads = useStore((st) => st.uploads);

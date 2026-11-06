@@ -4,12 +4,22 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Mascot, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { isValidEmail } from '@/lib/validation';
+import { requestPasswordReset } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 12 · Recuperar contraseña */
 export default function ForgotPassword() {
   const s = useStrings();
   const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const send = async () => {
+    setBusy(true);
+    const ok = await requestPasswordReset(email);
+    setBusy(false);
+    setFailed(!ok);
+    if (ok) router.push({ pathname: '/link-sent', params: { email: email.trim(), mode: 'reset' } });
+  };
   return (
     <Screen
       narrow
@@ -36,17 +46,19 @@ export default function ForgotPassword() {
       </View>
       <TextField
         label={s.forgot.email}
-        placeholder="ana@correo.com"
+        placeholder={s.login.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
+        error={failed ? s.errors.NET_UNAVAILABLE : undefined}
       />
       <Button
         label={s.forgot.submit}
         disabled={!isValidEmail(email)}
-        onPress={() => router.push({ pathname: '/link-sent', params: { email: email.trim() } })}
+        loading={busy}
+        onPress={() => void send()}
       />
     </Screen>
   );

@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -23,7 +24,7 @@ import { Tap } from '@/components/ui/Tap';
 const LETTERS = ['A', 'B', 'C', 'D'];
 
 /** Pantalla 21 · Quiz. Cada respuesta marca la correcta y cita la página de tus apuntes. */
-export default function Quiz() {
+function Quiz() {
   const s = useStrings();
   const { c } = useTheme();
   const { n, classId = 'c3' } = useLocalSearchParams<{ n?: string; classId?: string }>();
@@ -196,3 +197,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   result: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Quiz);

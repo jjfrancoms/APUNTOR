@@ -24,9 +24,15 @@ export interface QuotaService {
   /** Devuelve false, sin sumar nada, si superaría el límite. */
   consume(userId: string, kind: QuotaKind, amount: number): Promise<boolean>;
   release(userId: string, kind: QuotaKind, amount: number): Promise<void>;
+  /** Consumo actual de cada tipo, en el periodo vigente. */
+  usage(userId: string): Promise<Record<QuotaKind, number>>;
 }
 
 const okRowSchema = z.object({ ok: z.boolean() });
+const usedRowSchema = z.object({
+  kind: z.enum(['questions', 'storage_bytes']),
+  used: z.coerce.number(),
+});
 
 export function createQuotaService(db: Database): QuotaService {
   return {
@@ -43,6 +49,20 @@ export function createQuotaService(db: Database): QuotaService {
       await db.execute(sql`
         SELECT release_quota(${userId}::uuid, ${kind}, ${periodFor(kind)}::date, ${amount}::bigint)
       `);
+    },
+    async usage(userId) {
+      const rows = await db.execute(sql`
+        SELECT kind, used FROM usage_quotas
+        WHERE user_id = ${userId}::uuid
+          AND ((kind = 'questions' AND period_start = ${periodFor('questions')}::date)
+            OR (kind = 'storage_bytes' AND period_start = ${periodFor('storage_bytes')}::date))
+      `);
+      const result: Record<QuotaKind, number> = { questions: 0, storage_bytes: 0 };
+      for (const row of rows) {
+        const parsed = usedRowSchema.parse(row);
+        result[parsed.kind] = parsed.used;
+      }
+      return result;
     },
   };
 }

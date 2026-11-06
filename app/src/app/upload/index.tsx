@@ -13,7 +13,8 @@ import {
   TopBar,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { pickFiles, SAMPLE_FILES } from '@/lib/pick-files';
+import { PREVIEW } from '@/lib/config';
+import { pickFiles } from '@/lib/pick-files';
 import { extLabel } from '@/lib/upload-rules';
 import { failureTitle, jobTone } from '@/lib/upload-view';
 import {
@@ -52,12 +53,15 @@ export default function Upload() {
       header={<TopBar title={s.upload.header} />}
       footer={
         <>
-          <Button
-            label={s.upload.scan}
-            variant="secondary"
-            icon="camera"
-            onPress={() => router.push('/upload/scan')}
-          />
+          {/* El escáner llega en otra fase; las fotos ya se suben desde el selector. */}
+          {PREVIEW ? (
+            <Button
+              label={s.upload.scan}
+              variant="secondary"
+              icon="camera"
+              onPress={() => router.push('/upload/scan')}
+            />
+          ) : null}
           <Button
             label={s.upload.confirm}
             disabled={jobs.length === 0}
@@ -80,9 +84,6 @@ export default function Upload() {
           {s.upload.dropDetail}
         </Text>
       </Tap>
-      <View style={styles.center}>
-        <TextLink label={s.demo.sampleFiles} onPress={() => add(SAMPLE_FILES)} />
-      </View>
       {jobs.length === 0 ? (
         <Text variant="small" color="textMuted" align="center">
           {s.demo.noUploads}
@@ -164,5 +165,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   crumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   flex: { flex: 1 },
-  center: { alignItems: 'center', marginTop: -space.sm },
 });

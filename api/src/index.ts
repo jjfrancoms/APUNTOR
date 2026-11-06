@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createSupabaseUserDeleter } from './account';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),
     answer: { embedder, search, generator },
+    deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
     ...(env.TAVILY_API_KEY === undefined
       ? {}
       : { externalSearch: createTavilySearch(env.TAVILY_API_KEY) }),

@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import {
+  Banner,
   ListRow,
   Sheet,
   TextField,
@@ -16,7 +17,13 @@ import {
   TopBar,
 } from '@/components/ui';
 import { extLabel } from '@/lib/upload-rules';
-import { deleteDocument, moveDocument, renameDocument, useStore } from '@/store/store';
+import {
+  deleteDocument,
+  loadDocumentTopics,
+  moveDocument,
+  renameDocument,
+  useStore,
+} from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -28,19 +35,31 @@ export default function DocumentDetail() {
   const { c } = useTheme();
   const reducedMotion = useReducedMotion();
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
-  const record = useStore((st) => st.documents.find((d) => d.id === documentId) ?? st.documents[0]);
+  const record = useStore((st) => st.documents.find((d) => d.id === documentId));
   const [confirming, setConfirming] = useState(confirm === '1');
   const [sheet, setSheet] = useState<'menu' | 'rename' | 'move' | null>(null);
   const [newName, setNewName] = useState('');
   const courses = useStore((st) => st.courses);
-  if (!record) return null;
+  const [failed, setFailed] = useState(false);
+  const status = record?.status;
+  useEffect(() => {
+    if (status === 'completed') void loadDocumentTopics(documentId);
+  }, [documentId, status]);
+  if (!record) return <Screen header={<TopBar title={s.document.header} />}>{null}</Screen>;
   const doc = {
     ...record,
     type: extLabel(record.name),
     size: `${record.sizeMb} MB`,
     uploaded: record.uploadedLabel,
-    currentPage: Math.min(12, record.pages),
-    classification: record.path,
+    classification: record.path.length > 0 ? record.path : [s.live.noCourse],
+  };
+  /** Ejecuta un cambio en el servidor y avisa si no se pudo guardar. */
+  const run = (action: Promise<boolean>, after?: () => void) => {
+    setFailed(false);
+    void action.then((ok) => {
+      if (ok) after?.();
+      else setFailed(true);
+    });
   };
   return (
     <Screen
@@ -66,24 +85,25 @@ export default function DocumentDetail() {
           {s.document.meta(doc.type, doc.size, doc.pages, doc.uploaded)}
         </Text>
       </View>
-      <Card style={styles.preview} accessibilityLabel={s.document.page(doc.currentPage, doc.pages)}>
-        {[0.9, 0.75, 0.85, 0.6, 0.8].map((w, i) => (
-          <View
-            key={i}
-            style={[styles.line, { width: `${w * 100}%`, backgroundColor: c.surfaceAlt }]}
-          />
-        ))}
-        <View style={styles.pageTag}>
-          <Chip label={s.document.page(doc.currentPage, doc.pages)} />
-        </View>
-      </Card>
+      <View style={styles.row}>
+        <Chip
+          label={s.live.status[doc.status]}
+          tone={
+            doc.status === 'failed' ? 'danger' : doc.status === 'completed' ? 'primary' : 'warning'
+          }
+        />
+        {doc.pages > 0 ? <Chip label={s.live.pagesOf(doc.pages)} /> : null}
+      </View>
+      {failed ? <Banner tone="danger" title={s.live.actionFailed} /> : null}
       <Card>
         <Text variant="smallStrong" accessibilityRole="header">
           {s.document.classifiedIn}
         </Text>
         <View style={styles.row}>
           <Text variant="small" style={styles.flex}>
-            {doc.classification.slice(0, -1).join(' › ')} ›{' '}
+            {doc.classification.length > 1
+              ? `${doc.classification.slice(0, -1).join(' › ')} › `
+              : ''}
             <Text variant="smallStrong" color="primary">
               {doc.classification.at(-1) ?? ''}
             </Text>
@@ -91,20 +111,19 @@ export default function DocumentDetail() {
           <TextLink label={s.common.change} onPress={() => setSheet('move')} />
         </View>
       </Card>
-      <Text variant="subheading" accessibilityRole="header">
-        {s.document.detectedTopics}
-      </Text>
-      <View style={styles.chips}>
-        {doc.topics.map((t) => (
-          <Chip key={t} label={t} tone="primary" />
-        ))}
-      </View>
+      {doc.topics.length > 0 ? (
+        <>
+          <Text variant="subheading" accessibilityRole="header">
+            {s.document.detectedTopics}
+          </Text>
+          <View style={styles.chips}>
+            {doc.topics.map((t) => (
+              <Chip key={t} label={t} tone="primary" />
+            ))}
+          </View>
+        </>
+      ) : null}
       <View style={styles.actions}>
-        <ActionButton
-          icon="share-2"
-          label={s.document.share}
-          onPress={() => router.push('/courses/topics/definicion-limite?sheet=share')}
-        />
         <ActionButton
           icon="edit-2"
           label={s.document.rename}
@@ -131,14 +150,6 @@ export default function DocumentDetail() {
               pathname: '/conversation',
               params: { q: `Resumen de ${record.name.replace(/\.[^.]+$/u, '')}` },
             });
-          }}
-        />
-        <ListRow
-          icon="share-2"
-          title={s.document.share}
-          onPress={() => {
-            setSheet(null);
-            router.push('/courses/topics/definicion-limite?sheet=share');
           }}
         />
         <ListRow
@@ -176,8 +187,8 @@ export default function DocumentDetail() {
           label={s.documentMenu.save}
           disabled={newName.trim().length === 0}
           onPress={() => {
-            renameDocument(record.id, newName.trim());
             setSheet(null);
+            run(renameDocument(record.id, newName.trim()));
           }}
         />
       </Sheet>
@@ -195,8 +206,8 @@ export default function DocumentDetail() {
               course.id === record.courseId ? <Icon name="check" color="primary" /> : undefined
             }
             onPress={() => {
-              moveDocument(record.id, course.id);
               setSheet(null);
+              run(moveDocument(record.id, course.id));
             }}
           />
         ))}
@@ -225,9 +236,10 @@ export default function DocumentDetail() {
                 variant="danger"
                 onPress={() => {
                   setConfirming(false);
-                  deleteDocument(record.id);
-                  if (router.canGoBack()) router.back();
-                  else router.replace('/courses');
+                  run(deleteDocument(record.id), () => {
+                    if (router.canGoBack()) router.back();
+                    else router.replace('/courses');
+                  });
                 }}
               />
               <Button
@@ -271,9 +283,6 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
-  preview: { minHeight: 160, gap: space.md },
-  line: { height: 8, borderRadius: 4 },
-  pageTag: { alignItems: 'flex-end', marginTop: 'auto' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },

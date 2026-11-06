@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -26,7 +27,7 @@ import { Tap } from '@/components/ui/Tap';
  * "Aún no lo sé" la devuelve al final de este repaso y a mañana; "Lo sé" la saca del repaso
  * y la agenda dentro de más días.
  */
-export default function Flashcards() {
+function Flashcards() {
   const s = useStrings();
   const { c } = useTheme();
   const f = s.flashcards;
@@ -154,3 +155,6 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center' },
   done: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Flashcards);

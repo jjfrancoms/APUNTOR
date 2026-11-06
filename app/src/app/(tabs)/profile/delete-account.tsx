@@ -27,6 +27,7 @@ export default function DeleteAccount() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const [confirm, setConfirm] = useState(demo === 'wrong' ? 'borrar' : '');
   const [deleting, setDeleting] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [exported, setExported] = useState(false);
   const documents = useStore((st) => st.documents.length);
   const courses = useStore((st) => st.courses.length);
@@ -46,16 +47,19 @@ export default function DeleteAccount() {
             disabled={!ok}
             onPress={() => {
               setDeleting(true);
-              setTimeout(() => {
-                deleteAccount();
-                router.replace('/login');
-              }, 900);
+              setFailed(false);
+              void deleteAccount().then((done) => {
+                setDeleting(false);
+                if (done) router.replace('/login');
+                else setFailed(true);
+              });
             }}
           />
           <Button label={s.common.cancel} variant="secondary" onPress={() => router.back()} />
         </>
       }
     >
+      {failed ? <Banner tone="danger" title={s.live.deleteAccountFailed} /> : null}
       <Banner tone="danger" icon="trash-2" title={d.title}>
         {d
           .items(accountTotals.documents, accountTotals.courses, accountTotals.conversations)

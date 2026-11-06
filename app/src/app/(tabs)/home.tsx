@@ -2,8 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import {
+  Banner,
   Button,
   Card,
+  Chip,
+  EmptyState,
   Icon,
   ListRow,
   Mascot,
@@ -12,8 +15,14 @@ import {
   Text,
   TextLink,
 } from '@/components/ui';
-import { continueLearning, todayReview } from '@/data/mock';
-import { FREE_DAILY_QUESTIONS, questionsToday, quotaMb, usedMb, useStore } from '@/store/store';
+import {
+  dailyQuestionLimit,
+  questionsToday,
+  quotaMb,
+  refreshAll,
+  usedMb,
+  useStore,
+} from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { layout, space, useTheme } from '@/theme';
@@ -23,17 +32,20 @@ import { Tap } from '@/components/ui/Tap';
 export default function Home() {
   const s = useStrings();
   const { c } = useTheme();
-  const name = useStore((st) => st.session?.name ?? 'Ana');
+  const name = useStore((st) => st.session?.name ?? '');
   const courses = useStore((st) => st.courses);
   const docCount = useStore((st) => st.documents.length);
+  const lastDoc = useStore((st) => st.documents[0]);
+  const sync = useStore((st) => st.sync);
   const asked = useStore(questionsToday);
+  const limit = useStore(dailyQuestionLimit);
   const plan = useStore((st) => st.plan);
   const used = useStore(usedMb);
   const quota = useStore(quotaMb);
   const desktop = useWindowDimensions().width >= layout.breakpoints.desktop;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   // Pantalla 51 · Inicio cargando: esqueleto con la forma de la pantalla.
-  if (demo === 'loading') {
+  if (demo === 'loading' || (sync.loading && docCount === 0 && courses.length === 0)) {
     return (
       <Screen>
         <View
@@ -77,37 +89,72 @@ export default function Home() {
       </View>
     </>
   );
+  const syncError = sync.error ? (
+    <Banner tone="danger" title={s.errors[sync.error]}>
+      <TextLink label={s.live.retry} color="danger" onPress={() => void refreshAll()} />
+    </Banner>
+  ) : null;
+  if (docCount === 0) {
+    return (
+      <Screen>
+        {greetingBlock}
+        {syncError}
+        <EmptyState
+          title={s.live.firstUploadTitle}
+          body={s.live.firstUploadBody}
+          primary={{ label: s.live.firstUploadCta, onPress: () => router.push('/upload') }}
+        />
+      </Screen>
+    );
+  }
   const main = (
     <>
+      {syncError}
       <Card tone="primary" style={styles.review}>
         <Mascot size={desktop ? 112 : 80} />
         <View style={styles.flex}>
-          <Text variant="bodyStrong">{s.home.review(todayReview.topic)}</Text>
+          <Text variant="bodyStrong">{s.live.askTitle}</Text>
+          <Text variant="caption">{s.live.askBody}</Text>
           <View style={styles.start}>
-            <Button label={s.home.reviewNow} compact onPress={() => router.push('/study/review')} />
+            <Button label={s.live.askCta} compact onPress={() => router.push('/conversation')} />
           </View>
         </View>
       </Card>
-      {/* Encabezado de sección como "Mis cursos" (sin etiqueta en mayúsculas sobre el título). */}
-      <Text variant="heading">{s.home.continue}</Text>
-      <Tap
-        accessibilityRole="button"
-        accessibilityLabel={`${s.home.continue}: ${continueLearning.title}`}
-        onPress={() => router.push(`/courses/topics/${continueLearning.topicId}`)}
-      >
-        <Card>
-          <View style={styles.row}>
-            <View style={styles.flex}>
-              <Text variant="bodyStrong">{continueLearning.title}</Text>
-              <Text variant="caption" color="textMuted">
-                {continueLearning.location}
-              </Text>
-            </View>
-            <Icon name="chevron-right" color="textMuted" />
-          </View>
-          <ProgressBar value={continueLearning.progress} label={continueLearning.title} />
-        </Card>
-      </Tap>
+      {lastDoc ? (
+        <>
+          {/* Encabezado de sección (sin etiqueta en mayúsculas sobre el título). */}
+          <Text variant="heading">{s.live.lastDocument}</Text>
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={`${s.live.lastDocument}: ${lastDoc.name}`}
+            onPress={() => router.push(`/documents/${lastDoc.id}`)}
+          >
+            <Card>
+              <View style={styles.row}>
+                <View style={styles.flex}>
+                  <Text variant="bodyStrong" numberOfLines={1}>
+                    {lastDoc.name}
+                  </Text>
+                  <Text variant="caption" color="textMuted">
+                    {lastDoc.path[0] ?? s.live.noCourse}
+                  </Text>
+                </View>
+                <Chip
+                  label={s.live.status[lastDoc.status]}
+                  tone={
+                    lastDoc.status === 'failed'
+                      ? 'danger'
+                      : lastDoc.status === 'completed'
+                        ? 'primary'
+                        : 'warning'
+                  }
+                />
+                <Icon name="chevron-right" color="textMuted" />
+              </View>
+            </Card>
+          </Tap>
+        </>
+      ) : null}
       <View style={styles.row}>
         <Text variant="heading" style={styles.flex}>
           {s.home.myCourses}
@@ -160,9 +207,9 @@ export default function Home() {
               <Text variant="small" color="textMuted" style={styles.flex}>
                 {s.home.questions}
               </Text>
-              <Text variant="bodyStrong">{`${asked} / ${FREE_DAILY_QUESTIONS}`}</Text>
+              <Text variant="bodyStrong">{`${asked} / ${limit}`}</Text>
             </View>
-            <ProgressBar value={asked / FREE_DAILY_QUESTIONS} label={s.home.questions} />
+            <ProgressBar value={asked / limit} label={s.home.questions} />
           </View>
         ) : null}
         <View style={styles.flex}>
@@ -178,14 +225,9 @@ export default function Home() {
       <Text variant="heading">{s.home.quickActions}</Text>
       <Card style={styles.list}>
         <ListRow
-          icon="check-square"
-          title={s.home.quiz}
-          onPress={() => router.push('/study/quiz-setup')}
-        />
-        <ListRow
-          icon="layers"
-          title={s.home.flashcards}
-          onPress={() => router.push('/study/flashcards')}
+          icon="upload"
+          title={s.live.firstUploadCta}
+          onPress={() => router.push('/upload')}
         />
         <ListRow
           icon="message-circle"

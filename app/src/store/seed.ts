@@ -1,31 +1,18 @@
 /**
- * Datos de prueba con los que arranca la app (y a los que vuelve con "Restablecer datos").
- * Simulan lo que devolverá el backend: documentos con fragmentos por página, cursos,
- * conversaciones y uso. Cuenta de prueba: ana@correo.com / apuntor123.
+ * Tipos del estado de la app y su estado inicial vacío. Los datos vienen del servidor
+ * (cursos, documentos, consumo) o se generan en el uso real (conversaciones); no hay
+ * datos de prueba.
  */
-import {
-  courses as baseCourses,
-  topics as baseTopics,
-  type Course,
-  type TopicDetail,
-} from '@/data/mock';
+import type { Course, TopicDetail } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
 import type { Language } from '@/i18n/language';
-import { chunksFromContent, contentItems, extraDocuments, type ContentItem } from './content';
-
-export const DEMO_EMAIL = 'ana@correo.com';
-export const DEMO_PASSWORD = 'apuntor123';
+import type { ContentItem } from './content';
 
 export type Level = 'school' | 'university' | 'other';
 export type Plan = 'free' | 'student';
 
-export interface Account {
-  email: string;
-  password: string;
-  fullName: string;
-}
-
 export interface SessionUser {
+  id: string;
   name: string;
   fullName: string;
   email: string;
@@ -55,15 +42,21 @@ export interface StoreCourse extends Course {
   keywords: string[];
 }
 
+export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
 export interface DocRecord {
   id: string;
   name: string;
   sizeMb: number;
   pages: number;
+  /** '' si todavía no tiene curso. */
   courseId: string;
   path: string[];
   topics: string[];
   uploadedLabel: string;
+  status: DocumentStatus;
+  topicCount: number;
+  createdAt: string;
 }
 
 export interface Chunk {
@@ -73,7 +66,7 @@ export interface Chunk {
   klass: number;
   section: string;
   text: string;
-  /** Contexto externo de ejemplo asociado (siempre con fuente). */
+  /** Contexto externo asociado (siempre con fuente). */
   external?: { title: string; host: string; text: string };
 }
 
@@ -90,6 +83,8 @@ export interface UploadJob {
   courseId?: string;
   path: string[];
   confident: boolean;
+  /** Id del documento en el servidor, una vez registrado. */
+  documentId?: string;
 }
 
 export interface Message {
@@ -98,7 +93,7 @@ export interface Message {
   text: string;
   kind: 'text' | 'answer' | 'notFound' | 'external' | 'error' | 'limit';
   sources?: { page: number; klass: number; documentId: string }[];
-  external?: { title: string; host: string };
+  external?: { title: string; host: string; url?: string };
 }
 
 export interface Conversation {
@@ -116,21 +111,32 @@ export interface ShareLink {
   active: boolean;
 }
 
+export interface Usage {
+  day: string;
+  questions: number;
+  questionsLimit: number;
+  storageBytes: number;
+  storageLimit: number;
+}
+
 export interface AppState {
-  version: 2;
-  accounts: Account[];
+  version: 3;
   session: SessionUser | null;
+  /** Usuario al que pertenecen las conversaciones guardadas en el dispositivo. */
+  ownerId: string | null;
   settings: Settings;
   plan: Plan;
   courses: StoreCourse[];
   topics: Record<string, TopicDetail>;
   documents: DocRecord[];
-  /** Definiciones, conceptos y ejercicios por clase, con página de origen. */
+  /** Definiciones, conceptos y ejercicios por clase (llegan en la fase de estudio). */
   items: ContentItem[];
   chunks: Chunk[];
   uploads: UploadJob[];
   conversations: Conversation[];
-  usage: { day: string; questions: number };
+  usage: Usage;
+  /** Estado de la última carga desde el servidor. */
+  sync: { loading: boolean; error: ErrorCode | null };
   shares: ShareLink[];
   waitlist: string[];
   study: {
@@ -142,181 +148,56 @@ export interface AppState {
   };
   payments: { id: string; date: string; amount: string; plan: string }[];
   notices: { languages: boolean; reported: string[] };
-  /** Espacio ocupado por archivos que no son documentos de estudio (MB). */
-  baseUsedMb: number;
 }
-
-const KEYWORDS: Record<string, string[]> = {
-  'calculo-1': ['calculo', 'limite', 'limites', 'derivada', 'continuidad', 'funcion'],
-  'fisica-2': ['fisica', 'dinamica', 'electro', 'ondas', 'newton'],
-  'historia-peru': ['historia', 'peru', 'inca', 'preinca', 'virreinato'],
-};
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const now = Date.now();
 
 export function todayKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function createSeed(): AppState {
+export const DEFAULT_SETTINGS: Settings = {
+  useDocs: true,
+  external: true,
+  analytics: false,
+  saveProgress: true,
+  theme: 'system',
+  language: 'es',
+  lightMode: false,
+  voice: false,
+  notifProcessed: true,
+  notifReview: true,
+  notifLimit: false,
+  reviewTime: '8:00 p. m.',
+};
+
+/** Plan gratis mientras no haya suscripciones (fase 4); el servidor manda los límites reales. */
+export const DEFAULT_USAGE: Usage = {
+  day: todayKey(),
+  questions: 0,
+  questionsLimit: 20,
+  storageBytes: 0,
+  storageLimit: 500 * 1024 * 1024,
+};
+
+export function createInitialState(): AppState {
   return {
-    version: 2,
-    accounts: [{ email: DEMO_EMAIL, password: DEMO_PASSWORD, fullName: 'Ana Torres' }],
+    version: 3,
     session: null,
-    settings: {
-      useDocs: true,
-      external: true,
-      analytics: false,
-      saveProgress: true,
-      theme: 'system',
-      language: 'es',
-      lightMode: false,
-      voice: false,
-      notifProcessed: true,
-      notifReview: true,
-      notifLimit: false,
-      reviewTime: '8:00 p. m.',
-    },
+    ownerId: null,
+    settings: DEFAULT_SETTINGS,
     plan: 'free',
-    courses: baseCourses.map((c) => ({
-      ...c,
-      keywords: KEYWORDS[c.id] ?? [],
-      topicCount: contentItems.filter((i) => i.courseId === c.id).length,
-      classes: c.classes.map((k) => ({
-        ...k,
-        topicCount: contentItems.filter((i) => i.classId === k.id).length,
-      })),
-    })),
-    topics: { ...baseTopics },
-    documents: [
-      {
-        id: 'limites-continuidad',
-        name: 'Límites y continuidad.pdf',
-        sizeMb: 2.4,
-        pages: 34,
-        courseId: 'calculo-1',
-        path: ['Cálculo I', 'Clase 3', 'Límites'],
-        topics: ['Definición de límite', 'Límites laterales', 'Continuidad'],
-        uploadedLabel: 'hoy',
-      },
-      {
-        id: 'calculo-problemas',
-        name: 'Cálculo – problemas.pdf',
-        sizeMb: 1.1,
-        pages: 12,
-        courseId: 'calculo-1',
-        path: ['Cálculo I', 'Clase 3', 'Ejercicios'],
-        topics: ['Práctica guiada 3'],
-        uploadedLabel: 'ayer',
-      },
-      {
-        id: 'fisica-dinamica',
-        name: 'Física II – dinámica.pptx',
-        sizeMb: 8.1,
-        pages: 22,
-        courseId: 'fisica-2',
-        path: ['Física II', 'Clase 2', 'Dinámica'],
-        topics: ['Leyes de Newton'],
-        uploadedLabel: 'lunes',
-      },
-      {
-        id: 'historia-preincas',
-        name: 'Culturas preincas.docx',
-        sizeMb: 1.2,
-        pages: 9,
-        courseId: 'historia-peru',
-        path: ['Historia del Perú', 'Clase 1', 'Culturas preincas'],
-        topics: ['Chavín', 'Paracas', 'Moche'],
-        uploadedLabel: 'la semana pasada',
-      },
-      ...extraDocuments,
-    ],
-    items: contentItems,
-    chunks: chunksFromContent(contentItems),
-    uploads: [
-      {
-        id: 'up-r3',
-        name: 'apuntes-clase.docx',
-        sizeMb: 0.8,
-        status: 'review',
-        progress: 1,
-        path: [],
-        confident: false,
-      },
-      {
-        id: 'up-r4',
-        name: 'Resumen dinámica.pdf',
-        sizeMb: 0.6,
-        status: 'review',
-        progress: 1,
-        courseId: 'fisica-2',
-        path: ['Física II', 'Clase 2', 'Dinámica'],
-        confident: true,
-      },
-    ],
-    conversations: [
-      {
-        id: 'c1',
-        title: 'Límite con épsilon y delta',
-        course: 'Cálculo I',
-        updatedAt: now - 2 * 60 * 60 * 1000,
-        messages: [
-          {
-            id: 'm1',
-            role: 'user',
-            kind: 'text',
-            text: 'No entiendo la definición de límite con épsilon y delta',
-          },
-          {
-            id: 'm2',
-            role: 'mascot',
-            kind: 'answer',
-            text: 'Te lo explico con tus apuntes (Clase 3, p. 12): imagina que alguien te reta a acercarte a L tanto como quieras. Épsilon dice qué tan cerca; delta dice qué tan cerca de a debes estar para lograrlo.',
-            sources: [{ page: 12, klass: 3, documentId: 'limites-continuidad' }],
-            external: { title: 'Límite de una función', host: 'es.wikipedia.org' },
-          },
-        ],
-      },
-      {
-        id: 'c2',
-        title: 'Quiz de dinámica',
-        course: 'Física II',
-        updatedAt: now - 4 * 60 * 60 * 1000,
-        messages: [
-          { id: 'm3', role: 'user', kind: 'text', text: '¿Qué dice la tercera ley de Newton?' },
-          {
-            id: 'm4',
-            role: 'mascot',
-            kind: 'answer',
-            text: 'Según tus apuntes (Clase 2, p. 5): a toda acción corresponde una reacción igual y opuesta.',
-            sources: [{ page: 5, klass: 2, documentId: 'fisica-dinamica' }],
-          },
-        ],
-      },
-      {
-        id: 'c3',
-        title: 'Resumen de las culturas preincas',
-        course: 'Historia del Perú',
-        updatedAt: now - 3 * DAY_MS,
-        messages: [
-          { id: 'm5', role: 'user', kind: 'text', text: '¿Dónde estaba el centro de Chavín?' },
-          {
-            id: 'm6',
-            role: 'mascot',
-            kind: 'answer',
-            text: 'Según tus apuntes (Clase 1, p. 2): su centro ceremonial principal fue Chavín de Huántar.',
-            sources: [{ page: 2, klass: 1, documentId: 'historia-preincas' }],
-          },
-        ],
-      },
-    ],
-    usage: { day: todayKey(), questions: 7 },
+    courses: [],
+    topics: {},
+    documents: [],
+    items: [],
+    chunks: [],
+    uploads: [],
+    conversations: [],
+    usage: DEFAULT_USAGE,
+    sync: { loading: false, error: null },
     shares: [],
+    waitlist: [],
+    study: { known: [], unknown: [], lastQuiz: null, boxes: {} },
     payments: [],
     notices: { languages: false, reported: [] },
-    waitlist: [],
-    study: { known: [], unknown: [], lastQuiz: null },
-    baseUsedMb: 120,
   };
 }

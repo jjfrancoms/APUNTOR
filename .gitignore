@@ -25,3 +25,6 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Python
+__pycache__/

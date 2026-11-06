@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { pickFiles } from '@/lib/pick-files';
@@ -10,7 +11,7 @@ import { palettes, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 28 · Escanear apunte. Visor simulado: la cámara real llega con expo-camera. */
-export default function Scan() {
+function Scan() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
@@ -142,3 +143,6 @@ const styles = StyleSheet.create({
   shutterInner: { width: 54, height: 54, borderRadius: 27 },
   chips: { flexDirection: 'row', justifyContent: 'center', gap: space.sm },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Scan);

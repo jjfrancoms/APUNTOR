@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { TextInput } from 'react-native';
@@ -14,14 +15,13 @@ import {
   TopBar,
 } from '@/components/ui';
 import { scanReading } from '@/data/mock';
-import { enqueueUploads } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { fonts, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 29 · Lectura poco clara */
-export default function ScanReview() {
+function ScanReview() {
   const s = useStrings();
   const { c } = useTheme();
   const r = s.scanReview;
@@ -29,10 +29,8 @@ export default function ScanReview() {
   const [fixed, setFixed] = useState(scanReading.doubtful);
   const corrected = fixed !== scanReading.doubtful;
   const doubts = corrected ? scanReading.doubts - 1 : scanReading.doubts;
-  const save = () => {
-    enqueueUploads([{ name: 'Apunte escaneado.jpg', sizeMb: 0.9 }]);
-    router.push('/upload/progress');
-  };
+  // Solo vista previa del diseño: el escáner real llega en otra fase.
+  const save = () => router.push('/upload/progress');
   return (
     <Screen
       header={<TopBar title={r.header} />}
@@ -109,3 +107,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', gap: space.sm },
   center: { alignItems: 'center' },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(ScanReview);

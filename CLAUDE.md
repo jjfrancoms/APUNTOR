@@ -122,7 +122,7 @@ app/                      # app Expo/React Native (Expo Router, SDK 58), paquete
 ├── src/components/ui/    # componentes base (Button, TextField, Card, Chip, Mascot…)
 ├── src/theme/            # tokens.ts y tema claro/oscuro
 ├── src/i18n/es.ts        # todos los textos visibles (listos para traducir)
-├── src/store/            # backend simulado: estado, acciones y datos de prueba (seed.ts)
+├── src/store/            # estado y acciones contra Supabase y la API (seed.ts: tipos y estado vacío)
 └── src/data/mock.ts      # contenido estático de ejemplo para las pantallas
 ```
 
@@ -153,11 +153,17 @@ App móvil (dentro de `app/`, con su propio `package.json`):
 | `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
 | `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
 
-Datos de prueba: la app usa `app/src/store/` como backend simulado (persistido en el dispositivo)
-con la misma semántica que tendrá la API: validación con códigos de error, ingesta asíncrona, respuestas
-que solo citan fragmentos propios por página, límite diario y cuotas. Cuenta de prueba:
-`ana@correo.com` / `apuntor123`. "Restablecer datos de prueba" (Perfil) vuelve al estado inicial. Al
-conectar la API, se reemplazan las acciones del store; las pantallas no cambian.
+Datos reales: `app/src/store/store.ts` habla con Supabase Auth (`lib/supabase.ts`) y con la API
+(`lib/api.ts`). No hay cuenta ni datos de prueba. El dispositivo solo guarda ajustes, conversaciones y
+progreso de estudio del usuario que inició sesión. La app necesita `app/.env` (ver `app/.env.example`):
+URL y clave publicable de Supabase, y la URL de la API (con Expo Go, la IP de la laptop en la red).
+
+Fases: 1 (hecha) cuentas, cursos creados por el usuario, subida, preguntas con citas, cuotas y contexto
+externo; 2 clasificación automática y conversaciones en el servidor; 3 quizzes, flashcards y resúmenes
+compartidos; 4 pagos, notificaciones e inicio con Google/Apple. Las pantallas de fases pendientes
+usan `previewOnly()` (`components/domain/PreviewOnly.tsx`): con datos de ejemplo solo en la vista previa
+del diseño (`EXPO_PUBLIC_PREVIEW=1`, mapa en `/mapa`); en la app real muestran "Muy pronto". Hasta la
+fase 2, cada documento hace de clase dentro de su curso.
 
 Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
 en `app/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
@@ -177,9 +183,12 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 
 ## Pendiente
 
-- Conectar la app a la API: se reemplazan las acciones de `app/src/store/`.
-- Organización curso → clase → sección → tema con confirmación del usuario (hoy solo hay `topics`).
-- Suscripciones (RevenueCat y Stripe/Culqi); hoy todos usan las cuotas del plan gratis.
+- Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario, y
+  conversaciones guardadas en el servidor (hoy viven en el dispositivo).
+- Fase 3: quizzes, flashcards y resúmenes compartidos generados desde los documentos, con cita.
+- Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Google/Apple.
+- Cambiar la contraseña desde el enlace del correo: el enlace abre la página de Supabase; falta la
+  pantalla de la app que lo reciba.
 - Cuentas escolares `student_restricted`: las reglas siguen por definir.
 - Animación Rive de 7 estados de la mascota.
 - Los 200 casos reales de `eval/` y la prueba con 20 documentos reales.

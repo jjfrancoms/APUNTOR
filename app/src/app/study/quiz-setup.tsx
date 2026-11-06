@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -20,7 +21,7 @@ import { radius, space, useTheme } from '@/theme';
 type Amount = (typeof quizSetupData.amounts)[number];
 
 /** Pantalla 31 · Quiz: configuración. Cantidad 5, 10 o 20 con dificultad adaptativa. */
-export default function QuizSetup() {
+function QuizSetup() {
   const s = useStrings();
   const { c } = useTheme();
   const q = s.quizSetup;
@@ -89,3 +90,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   chips: { flexDirection: 'row', gap: space.sm },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(QuizSetup);

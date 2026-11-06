@@ -21,7 +21,8 @@ export interface ContentItem {
   external?: { title: string; host: string; text: string };
 }
 
-export const extraDocuments: DocRecord[] = [
+/** Documentos de ejemplo de la vista previa del diseño (sin estado del servidor). */
+export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdAt'>[] = [
   {
     id: 'funciones',
     name: 'Funciones.pdf',

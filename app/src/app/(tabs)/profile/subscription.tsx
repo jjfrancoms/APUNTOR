@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -18,7 +19,7 @@ import {
 import { plans } from '@/data/mock';
 import {
   choosePlan,
-  FREE_DAILY_QUESTIONS,
+  dailyQuestionLimit,
   questionsToday,
   quotaMb,
   usedMb,
@@ -28,7 +29,7 @@ import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
 /** Pantalla 38 · Gestionar suscripción; `?demo=restore-failed` muestra el estado 49. */
-export default function Subscription() {
+function Subscription() {
   const s = useStrings();
   const sub = s.subscription;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
@@ -36,6 +37,7 @@ export default function Subscription() {
   const used = useStore(usedMb);
   const quota = useStore(quotaMb);
   const asked = useStore(questionsToday);
+  const limit = useStore(dailyQuestionLimit);
   const payments = useStore((st) => st.payments);
   const [sheet, setSheet] = useState<'payment' | 'history' | null>(null);
   if (demo === 'restore-failed') {
@@ -74,7 +76,7 @@ export default function Subscription() {
           <Text variant="caption" color="textMuted">
             {s.demo.freePlanBody}
           </Text>
-          <Text variant="caption">{`${used} / ${quota} MB · ${asked} / ${FREE_DAILY_QUESTIONS}`}</Text>
+          <Text variant="caption">{`${used} / ${quota} MB · ${asked} / ${limit}`}</Text>
         </Card>
         <Card style={styles.list}>
           <ListRow
@@ -199,3 +201,6 @@ const styles = StyleSheet.create({
   note: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   links: { flexDirection: 'row', justifyContent: 'center', gap: space.xl },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Subscription);

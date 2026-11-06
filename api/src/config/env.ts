@@ -6,6 +6,8 @@ const serverEnvSchema = z.object({
   /** Conexión directa o de sesión: pg-boss necesita sesiones largas. */
   QUEUE_DATABASE_URL: z.url(),
   SUPABASE_URL: z.url(),
+  /** Solo para borrar cuentas de Supabase Auth. Nunca va en la app. */
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   R2_ACCOUNT_ID: z.string().min(1),
   R2_ACCESS_KEY_ID: z.string().min(1),
   R2_SECRET_ACCESS_KEY: z.string().min(1),

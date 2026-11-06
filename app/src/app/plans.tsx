@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -13,7 +14,7 @@ type Plan = 'free' | 'student' | 'school';
 type Billing = 'monthly' | 'yearly';
 
 /** Pantalla 26 · Planes. Compra dentro de la app (Google Play / App Store); precios de ejemplo. */
-export default function Plans() {
+function Plans() {
   const s = useStrings();
   const { c } = useTheme();
   const p = s.plans;
@@ -157,3 +158,6 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1.5, borderRadius: radius.lg, padding: space.lg, gap: space.xs + 2 },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(Plans);

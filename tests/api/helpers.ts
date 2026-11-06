@@ -51,6 +51,9 @@ export function fakeQuota(limit = 20) {
     get used() {
       return used;
     },
+    usage() {
+      return Promise.resolve({ questions: used, storage_bytes: 0 });
+    },
     consume(_userId: string, _kind: string, amount: number) {
       if (used + amount > limit) return Promise.resolve(false);
       used += amount;

@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Icon, Mascot, Screen, Text, TextField, TextLink } from '@/components/ui';
+import { Banner, Button, Icon, Mascot, Screen, Text, TextField, TextLink } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { DEMO_EMAIL, DEMO_PASSWORD, signIn, signInWithProvider } from '@/store/store';
+import { backendConfigured } from '@/lib/config';
+import { signIn } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 1 · Inicio de sesión */
@@ -12,14 +13,14 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
-  const submit = () => {
-    const r = signIn(email, password);
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    const r = await signIn(email, password);
+    setBusy(false);
     if (r.ok) router.replace('/home');
     else setError(s.errors[r.error]);
-  };
-  const provider = () => {
-    signInWithProvider();
-    router.replace('/home');
   };
   return (
     <Screen narrow>
@@ -32,6 +33,7 @@ export default function Login() {
           {s.login.subtitle}
         </Text>
       </View>
+      {backendConfigured ? null : <Banner tone="warning" title={s.live.notConfigured} />}
       <TextField
         label={s.login.email}
         placeholder={s.login.emailPlaceholder}
@@ -50,7 +52,7 @@ export default function Login() {
         }}
         secureTextEntry
         autoComplete="current-password"
-        onSubmitEditing={submit}
+        onSubmitEditing={() => void submit()}
         error={error}
       />
       <View style={styles.right}>
@@ -59,11 +61,10 @@ export default function Login() {
       <View style={styles.actions}>
         <Button
           label={s.login.submit}
-          onPress={submit}
+          onPress={() => void submit()}
+          loading={busy}
           disabled={email.length === 0 || password.length === 0}
         />
-        <Button label={s.common.google} variant="secondary" onPress={provider} />
-        <Button label={s.common.apple} variant="secondary" onPress={provider} />
       </View>
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">
@@ -77,9 +78,6 @@ export default function Login() {
           {s.login.privacyNote}
         </Text>
       </View>
-      <Text variant="caption" color="textMuted" align="center" selectable>
-        {s.demo.account(DEMO_EMAIL, DEMO_PASSWORD)}
-      </Text>
     </Screen>
   );
 }

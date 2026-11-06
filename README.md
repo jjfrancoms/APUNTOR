@@ -97,6 +97,8 @@ npm install
 
 npm install solo instala el backend (api, worker, db y eval). La app tiene su propio paquete: npm --prefix app install.
 
+La app lee su configuración de app/.env (copia app/.env.example): URL y clave publicable de Supabase, y la URL de la API. Con Expo Go en el celular, la API se apunta a la IP de la laptop en la misma red Wi-Fi.
+
 Comandos:
 
 npm run db:migrate     # aplica las migraciones de db/migrations

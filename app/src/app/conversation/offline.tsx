@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import {
   ChatScreen,
   Composer,
@@ -11,7 +12,7 @@ import { chatOffline } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 
 /** Pantalla 10 · Chat sin conexión: solo material propio, con chip "Externo · sin red". */
-export default function ChatOffline() {
+function ChatOffline() {
   const s = useStrings();
   return (
     <ChatScreen
@@ -30,3 +31,6 @@ export default function ChatOffline() {
     </ChatScreen>
   );
 }
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(ChatOffline);

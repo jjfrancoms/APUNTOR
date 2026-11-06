@@ -1,3 +1,4 @@
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -32,7 +33,7 @@ const KIND_ICON = { definicion: 'book', concepto: 'zap', ejercicio: 'edit-3' } a
  * Vista de clase (nueva, a partir de los comentarios): todo lo que hay en los documentos de la
  * clase, filtrable por definiciones, conceptos y ejercicios, cada uno con su página de origen.
  */
-export default function ClassDetail() {
+function ClassDetail() {
   const s = useStrings();
   const cv = s.classView;
   const { classId } = useLocalSearchParams<{ classId: string }>();
@@ -157,3 +158,6 @@ const styles = StyleSheet.create({
   // Sin el máximo, un nombre de archivo largo saca la cita de la pantalla.
   source: { alignSelf: 'flex-start', maxWidth: '100%' },
 });
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
+export default previewOnly(ClassDetail);

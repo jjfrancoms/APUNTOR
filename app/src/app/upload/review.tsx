@@ -9,6 +9,7 @@ import {
   Screen,
   SelectField,
   Text,
+  TextField,
   TextLink,
   TopBar,
 } from '@/components/ui';
@@ -27,6 +28,22 @@ export default function ReviewClassification() {
   const confirmed = items.filter((r) => r.courseId).length;
   // Fila cuyo curso se está cambiando (las de alta confianza muestran el selector al tocar "Cambiar").
   const [editing, setEditing] = useState<string | null>(null);
+  // Fila donde se está creando un curso nuevo, con el nombre que escribe la persona.
+  const [creating, setCreating] = useState<string | null>(null);
+  const [courseName, setCourseName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const create = async (uploadId: string) => {
+    setBusy(true);
+    const id = await createCourse(courseName);
+    setBusy(false);
+    setFailed(id === null);
+    if (id) {
+      assignUploadCourse(uploadId, id);
+      setCreating(null);
+      setCourseName('');
+    }
+  };
   const options = courses.map((c) => ({
     value: c.id,
     label: c.title,
@@ -40,9 +57,14 @@ export default function ReviewClassification() {
           <Button
             label={s.review.save(confirmed)}
             disabled={confirmed === 0}
+            loading={busy}
             onPress={() => {
-              confirmUploads();
-              router.replace('/courses');
+              setBusy(true);
+              void confirmUploads().then((saved) => {
+                setBusy(false);
+                if (saved > 0) router.replace('/courses');
+                else setFailed(true);
+              });
             }}
           />
           <Button
@@ -56,6 +78,11 @@ export default function ReviewClassification() {
       <Text variant="small" color="textMuted">
         {s.review.intro(items.length)}
       </Text>
+      {failed ? (
+        <Text variant="small" color="danger">
+          {s.live.actionFailed}
+        </Text>
+      ) : null}
       {items.map((r) =>
         r.courseId && editing !== r.id ? (
           <FileRow key={r.id} ext={extLabel(r.name)} name={r.name} detail="">
@@ -92,17 +119,39 @@ export default function ReviewClassification() {
                 setEditing(null);
               }}
             />
-            <Tap
-              accessibilityRole="button"
-              hitSlop={13}
-              style={styles.row}
-              onPress={() => assignUploadCourse(r.id, createCourse(s.demo.newCourseName))}
-            >
-              <Icon name="plus" size={14} color="primary" />
-              <Text variant="smallStrong" color="primary">
-                {s.review.newCourse}
-              </Text>
-            </Tap>
+            {creating === r.id ? (
+              <>
+                <TextField
+                  label={s.live.newCourseLabel}
+                  placeholder={s.live.newCoursePlaceholder}
+                  value={courseName}
+                  onChangeText={setCourseName}
+                  autoFocus
+                />
+                <Button
+                  label={s.live.createCourse}
+                  compact
+                  loading={busy}
+                  disabled={courseName.trim().length === 0}
+                  onPress={() => void create(r.id)}
+                />
+              </>
+            ) : (
+              <Tap
+                accessibilityRole="button"
+                hitSlop={13}
+                style={styles.row}
+                onPress={() => {
+                  setCreating(r.id);
+                  setCourseName('');
+                }}
+              >
+                <Icon name="plus" size={14} color="primary" />
+                <Text variant="smallStrong" color="primary">
+                  {s.review.newCourse}
+                </Text>
+              </Tap>
+            )}
           </FileRow>
         ),
       )}
