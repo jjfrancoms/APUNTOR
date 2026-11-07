@@ -9,10 +9,10 @@ La API y el worker son dos servicios de Railway que salen del mismo repositorio.
 2. El primer servicio será la **API**. En _Settings_:
    - **Branch**: la rama publicada (por ahora `main`).
    - **Root Directory**: vacío (raíz del repositorio). La app de `app/` no se instala ahí.
-   - **Start Command**: `npm run api`
+   - **Start Command**: `npm start` (arranca la API; si lo dejas vacío, Railway usa este mismo)
    - **Healthcheck Path**: `/health`
 3. Agrega un segundo servicio desde el mismo repositorio para el **worker**:
-   - **Start Command**: `npm run worker`
+   - **Start Command**: `npm run start:worker` (obligatorio: sin él, este servicio arrancaría la API)
    - Sin dominio público ni healthcheck: no recibe peticiones, solo procesa la cola.
 
 Node se fija con `.nvmrc` (22) y `engines` en `package.json`. No hay paso de build: los

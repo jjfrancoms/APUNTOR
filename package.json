@@ -21,7 +21,9 @@
     "db:studio": "drizzle-kit studio",
     "api": "tsx api/src/index.ts",
     "eval": "tsx eval/cli.ts",
-    "app": "npm --prefix app start"
+    "app": "npm --prefix app start",
+    "start": "tsx api/src/index.ts",
+    "start:worker": "tsx worker/src/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1162.0",
