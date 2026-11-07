@@ -21,7 +21,7 @@ export function createInfrastructure(env: ServerEnv, options: { maxConnections?:
     db,
     models,
     embedder: new VertexEmbeddingProvider(models, EMBEDDING_DIMENSIONS),
-    generator: new VertexGenerator(models),
+    generator: new VertexGenerator(models, env.GENERATION_MODEL),
     search: createChunkSearch(db),
     storage: new R2FileStorage(
       env.R2_ACCOUNT_ID,

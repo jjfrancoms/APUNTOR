@@ -97,3 +97,20 @@ describe('chooseGenAiBackend', () => {
     expect(() => chooseGenAiBackend({})).toThrow('GEMINI_API_KEY');
   });
 });
+
+describe('modelo configurable', () => {
+  it('usa el modelo indicado en lugar del de la especificación', async () => {
+    let seen = '';
+    const generator = new VertexGenerator(
+      fakeModels({
+        generateContent: (params) => {
+          seen = params.model;
+          return Promise.resolve({ text: '{}' });
+        },
+      }),
+      'gemini-3.8-flash',
+    );
+    await generator.generateJson({ system: 's', user: 'u', schema: {} });
+    expect(seen).toBe('gemini-3.8-flash');
+  });
+});

@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import type { EmbeddingProvider } from './embedding-provider';
 
 export const EMBEDDING_MODEL = 'gemini-embedding-2';
+/** Modelo de la especificación v2.4. Se cambia con GENERATION_MODEL cuando Google lo retira. */
 export const GENERATION_MODEL = 'gemini-2.5-flash';
 
 /**
@@ -126,7 +127,10 @@ export class VertexEmbeddingProvider implements EmbeddingProvider {
 }
 
 export class VertexGenerator implements JsonGenerator {
-  constructor(private readonly models: GenAiModels) {}
+  constructor(
+    private readonly models: GenAiModels,
+    private readonly model: string = GENERATION_MODEL,
+  ) {}
 
   async generateJson(request: {
     system: string;
@@ -134,7 +138,7 @@ export class VertexGenerator implements JsonGenerator {
     schema: object;
   }): Promise<LlmResult> {
     const response = await this.models.generateContent({
-      model: GENERATION_MODEL,
+      model: this.model,
       contents: [{ role: 'user', parts: [{ text: request.user }] }],
       config: {
         systemInstruction: request.system,
@@ -162,11 +166,14 @@ const OCR_SYSTEM_PROMPT = [
 ].join('\n');
 
 export class VertexOcrProvider implements OcrProvider {
-  constructor(private readonly models: GenAiModels) {}
+  constructor(
+    private readonly models: GenAiModels,
+    private readonly model: string = GENERATION_MODEL,
+  ) {}
 
   async transcribe(data: Uint8Array, mimeType: string): Promise<string> {
     const response = await this.models.generateContent({
-      model: GENERATION_MODEL,
+      model: this.model,
       contents: [
         {
           role: 'user',

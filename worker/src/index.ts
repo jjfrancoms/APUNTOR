@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   await startIngestionConsumer(boss, {
     repository: new DrizzleIngestionRepository(db),
     storage,
-    extractor: new MultiFormatExtractor(new VertexOcrProvider(models)),
+    extractor: new MultiFormatExtractor(new VertexOcrProvider(models, env.GENERATION_MODEL)),
     embedder,
   });
 
