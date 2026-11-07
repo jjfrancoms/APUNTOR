@@ -12,7 +12,7 @@ de Protección y Defensa del Consumidor) tampoco se leyó para esta lista.
 
 ## 1. Datos por completar en los textos
 
-- [x] Datos del responsable completados el 07/11/2026 (persona natural con negocio, RUC 10762140859).
+- [x] Datos del responsable completados el 07/11/2026 (persona natural, RUC 10762140859).
       Confirmar que el domicilio coincida exactamente con el domicilio fiscal de SUNAT. Antes:
       `[RAZÓN SOCIAL]` / `[LEGAL NAME]`, `[RUC]`, `[DOMICILIO]` / `[ADDRESS]` y
       `[CORREO DE PRIVACIDAD]` / `[PRIVACY EMAIL]` en `app/src/i18n/legal.ts` y en los `.md`.

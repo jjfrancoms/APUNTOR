@@ -13,7 +13,7 @@
 
 ### 1. Quién presta el servicio
 
-APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural con negocio, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú ("APUNTOR", "nosotros").
+APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú ("APUNTOR", "nosotros").
 
 Para cualquier consulta sobre estos términos puedes escribirnos a soporte@apuntor.com.
 
@@ -123,7 +123,7 @@ Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la 
 
 ### 1. Who provides the service
 
-APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, a sole proprietor, RUC (Peruvian tax ID) 10762140859, with its address at Jr. Montevideo 706, Peru ("APUNTOR", "we").
+APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, an individual, RUC (Peruvian tax ID) 10762140859, with its address at Jr. Montevideo 706, Peru ("APUNTOR", "we").
 
 For any question about these terms, write to us at soporte@apuntor.com.
 
