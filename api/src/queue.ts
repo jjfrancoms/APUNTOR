@@ -19,8 +19,8 @@ export async function ensureIngestionQueue(boss: PgBoss): Promise<void> {
   await boss.createQueue(INGESTION_QUEUE_NAME, {
     // `exclusive` + singletonKey: un documento no puede estar en cola ni activo dos veces.
     policy: 'exclusive',
-    retryLimit: 2,
-    retryDelay: 5,
+    retryLimit: 3,
+    retryDelay: 60,
     retryBackoff: true,
     // Con OCR, un documento grande puede tardar bastante.
     expireInSeconds: 30 * 60,

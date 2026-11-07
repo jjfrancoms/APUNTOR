@@ -364,6 +364,9 @@ export const en: Strings = {
     sizeBody: (mb: number) =>
       `It weighs ${mb} MB. Video isn't supported yet: upload its transcript or your notes.`,
     remove: 'Remove from the list',
+    unreadableTitle: "We couldn't process the file",
+    unreadableBody:
+      "The file was uploaded, but we didn't finish reading it. It's usually temporary: try again in a few minutes.",
     networkTitle: 'The connection dropped during the upload',
     quotaTitle: 'Not enough space left',
     networkBody: 'Nothing was lost: try again when you have a connection.',

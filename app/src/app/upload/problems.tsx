@@ -52,6 +52,13 @@ export default function UploadProblems() {
           action: p.retry,
           onPress: () => retryUpload(job.id),
         };
+      case 'UP_UNREADABLE':
+        return {
+          title: p.unreadableTitle,
+          body: p.unreadableBody,
+          action: p.retry,
+          onPress: () => retryUpload(job.id),
+        };
       case 'UP_QUOTA':
         return {
           title: s.errors.UP_QUOTA,
