@@ -20,6 +20,8 @@ export function failureTitle(code: ErrorCode, s: Strings): string {
       return s.uploadProblems.networkTitle;
     case 'UP_QUOTA':
       return s.uploadProblems.quotaTitle;
+    case 'UP_UNREADABLE':
+      return s.uploadProblems.unreadableTitle;
     default:
       return s.uploadProblems.formatTitle;
   }

@@ -1,3 +1,4 @@
+import { isTransientAiError } from '../../../api/src/llm/retry';
 import {
   assertEmbeddingDimensions,
   type EmbeddingProvider,
@@ -53,11 +54,19 @@ export class PermanentIngestionError extends Error {
   }
 }
 
-const MAX_ERROR_MESSAGE_LENGTH = 1000;
+const MAX_ERROR_MESSAGE_LENGTH = 300;
 const DEFAULT_EMBEDDING_BATCH_SIZE = 64;
 
-function toErrorMessage(error: unknown): string {
+/**
+ * Motivo que se guarda en `documents.error_message` (lo ve el panel de administrador). Nunca la
+ * respuesta cruda del proveedor de IA: puede ser larga y traer datos de la cuenta de Google.
+ */
+export function toErrorMessage(error: unknown): string {
+  if (isTransientAiError(error)) {
+    return 'AI_RATE_LIMIT: la IA alcanzó su límite de uso; se puede reintentar más tarde.';
+  }
   const message = error instanceof Error ? error.message : String(error);
+  if (/^\s*[[{]/u.test(message)) return 'AI_ERROR: el proveedor de IA devolvió un error.';
   return message.slice(0, MAX_ERROR_MESSAGE_LENGTH);
 }
 

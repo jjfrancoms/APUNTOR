@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { getServerEnv } from '../../api/src/config/env';
+import { WORKER_AI_RETRY } from '../../api/src/llm/retry';
 import { VertexOcrProvider } from '../../api/src/llm/vertex';
 import { createQueueClient, ensureIngestionQueue } from '../../api/src/queue';
 import { createInfrastructure } from '../../api/src/wiring';
@@ -10,7 +11,10 @@ import { MultiFormatExtractor } from './ingestion/extractors';
 /** Proceso independiente de la API: consume la cola de ingesta. */
 async function main(): Promise<void> {
   const env = getServerEnv();
-  const { db, models, embedder, storage } = createInfrastructure(env, { maxConnections: 5 });
+  const { db, models, embedder, storage } = createInfrastructure(env, {
+    maxConnections: 5,
+    aiRetry: WORKER_AI_RETRY,
+  });
 
   const boss = createQueueClient(env.QUEUE_DATABASE_URL);
   boss.on('error', (error) => {

@@ -7,16 +7,23 @@ import {
   VertexEmbeddingProvider,
   VertexGenerator,
 } from './llm/vertex';
+import { REQUEST_AI_RETRY, withRetries, type RetryPolicy } from './llm/retry';
 import { createChunkSearch } from './rag/retriever';
 import { R2FileStorage } from './storage/file-storage';
 
 /** Piezas reales que comparten la API, el worker y el arnés de evaluación. */
-export function createInfrastructure(env: ServerEnv, options: { maxConnections?: number } = {}) {
+export function createInfrastructure(
+  env: ServerEnv,
+  options: { maxConnections?: number; aiRetry?: RetryPolicy } = {},
+) {
   const db: Database = createDatabase(
     env.DATABASE_URL,
     options.maxConnections === undefined ? {} : { max: options.maxConnections },
   );
-  const models = createGenAiModels(chooseGenAiBackend(env));
+  const models = withRetries(
+    createGenAiModels(chooseGenAiBackend(env)),
+    options.aiRetry ?? REQUEST_AI_RETRY,
+  );
   return {
     db,
     models,

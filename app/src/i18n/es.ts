@@ -359,6 +359,9 @@ export const es = {
     sizeBody: (mb: number) =>
       `Pesa ${mb} MB. El video no está soportado todavía: sube su transcripción o tus apuntes.`,
     remove: 'Quitar de la lista',
+    unreadableTitle: 'No pudimos procesar el archivo',
+    unreadableBody:
+      'El archivo se subió, pero no terminamos de leerlo. Suele ser algo pasajero: reinténtalo en unos minutos.',
     networkTitle: 'Sin conexión durante la subida',
     quotaTitle: 'No queda espacio suficiente',
     networkBody: 'No se perdió nada: reintenta cuando tengas red.',
