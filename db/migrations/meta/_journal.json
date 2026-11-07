@@ -78,6 +78,20 @@
       "when": 1794060415102,
       "tag": "0010_consents_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794066485232,
+      "tag": "0011_admin_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794066487029,
+      "tag": "0012_admin_audit_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -147,6 +147,13 @@ export interface AppState {
    * 'unknown' mientras no se sabe (cargando o sin red), 'missing' si falta alguno.
    */
   consent: 'unknown' | 'accepted' | 'missing';
+  /**
+   * La cuenta puede abrir el panel de administración (lo decide `GET /v1/admin/me`). Nunca se
+   * guarda en el dispositivo: se vuelve a preguntar en cada sesión.
+   */
+  isAdmin: boolean;
+  /** true mientras se consulta `isAdmin` (el panel espera en vez de redirigir). */
+  adminChecking: boolean;
   shares: ShareLink[];
   waitlist: string[];
   study: {
@@ -205,6 +212,8 @@ export function createInitialState(): AppState {
     usage: DEFAULT_USAGE,
     sync: { loading: false, error: null },
     consent: 'unknown',
+    isAdmin: false,
+    adminChecking: false,
     shares: [],
     waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null, boxes: {} },

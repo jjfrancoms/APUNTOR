@@ -26,6 +26,9 @@ INSERT INTO consents (user_id, document, version) VALUES
   ('11111111-1111-4111-8111-111111111111', 'terms', '2026-11-01'),
   ('22222222-2222-4222-8222-222222222222', 'terms', '2026-11-01');
 
+INSERT INTO admin_audit (admin_user_id, admin_email, action, target) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'admin@example.com', 'user.delete', 'user:22222222-2222-4222-8222-222222222222');
+
 -- Usuario 1 autenticado
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
@@ -38,6 +41,13 @@ BEGIN
   IF (SELECT count(*) FROM courses) <> 1 THEN RAISE EXCEPTION 'RLS cursos: ve cursos ajenos'; END IF;
   IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
   IF (SELECT count(*) FROM consents) <> 1 THEN RAISE EXCEPTION 'RLS consentimientos: ve consentimientos ajenos'; END IF;
+  -- La auditoría del administrador es solo del backend: ni siquiera el propio admin la lee así.
+  BEGIN
+    IF (SELECT count(*) FROM admin_audit) <> 0 THEN
+      RAISE EXCEPTION 'RLS admin_audit: authenticated ve la auditoría';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
   -- Aunque pida los fragmentos de otro usuario, RLS no se los entrega.
   IF (SELECT count(*) FROM match_user_chunks(
         '22222222-2222-4222-8222-222222222222',
@@ -68,6 +78,12 @@ BEGIN
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en consents';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    INSERT INTO admin_audit (admin_user_id, admin_email, action, target)
+    VALUES ('11111111-1111-4111-8111-111111111111', 'x@example.com', 'x', 'x');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en admin_audit';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 -- anon no ve nada
@@ -87,12 +103,19 @@ BEGIN
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    IF (SELECT count(*) FROM admin_audit) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer admin_audit';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 RESET ROLE;
 DO $$
 BEGIN
   IF (SELECT count(*) FROM documents) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró un documento ajeno'; END IF;
+  IF (SELECT count(*) FROM admin_audit) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la auditoría'; END IF;
 END $$;
 
 ROLLBACK;

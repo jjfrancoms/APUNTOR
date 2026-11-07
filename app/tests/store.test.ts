@@ -91,6 +91,16 @@ const api = {
       ],
     }),
   ),
+  // Por defecto la cuenta no es administradora (403 FORBIDDEN).
+  adminMe: vi.fn(async (): Promise<{ admin: true; email: string }> => {
+    throw new FakeApiError('FORBIDDEN', 403);
+  }),
+  adminStats: vi.fn(),
+  adminUsers: vi.fn(),
+  adminDocuments: vi.fn(),
+  adminRetryDocument: vi.fn(async (id: string) => ({ id, status: 'pending' as const })),
+  adminDeleteUser: vi.fn(async (_id: string) => undefined),
+  adminAudit: vi.fn(),
 };
 vi.mock('@/lib/api', () => ({
   api,
@@ -644,5 +654,166 @@ describe('nueva contraseña', () => {
     expect(await store.updatePassword('nueva12345', 'nueva12345')).toMatchObject({
       error: 'AUTH_SAME_PASSWORD',
     });
+  });
+});
+
+describe('panel de administración', () => {
+  const adminUser = (id: string, email = `${id}@correo.com`) => ({
+    id,
+    email,
+    createdAt: '2026-11-01T10:00:00.000Z',
+    lastSignInAt: null,
+    provider: 'email',
+    documents: 2,
+    storageBytes: 1024,
+    questionsToday: 1,
+    consentVersion: null,
+  });
+  const adminDoc = (id: string, status: 'pending' | 'processing' | 'completed' | 'failed') => ({
+    id,
+    userId: 'u9',
+    title: `${id}.pdf`,
+    sizeBytes: 2048,
+    status,
+    totalPages: 3,
+    topicCount: 1,
+    errorMessage: status === 'failed' ? 'UP_UNREADABLE' : null,
+    createdAt: '2026-11-01T10:00:00.000Z',
+  });
+
+  it('isAdmin es true si GET /v1/admin/me responde 200', async () => {
+    api.adminMe.mockResolvedValueOnce({ admin: true, email: 'u1@correo.com' });
+    await signedIn();
+    expect(store.getState().isAdmin).toBe(true);
+    expect(store.getState().adminChecking).toBe(false);
+  });
+
+  it('isAdmin es false con 403 FORBIDDEN', async () => {
+    await signedIn();
+    expect(api.adminMe).toHaveBeenCalledTimes(1);
+    expect(store.getState().isAdmin).toBe(false);
+  });
+
+  it('isAdmin es false si falla la red, y no pasa a otra cuenta', async () => {
+    api.adminMe.mockResolvedValueOnce({ admin: true, email: 'u1@correo.com' });
+    await signedIn('u1');
+    expect(store.getState().isAdmin).toBe(true);
+    api.adminMe.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await signedIn('u2');
+    expect(store.getState().isAdmin).toBe(false);
+    expect(store.getState().adminChecking).toBe(false);
+  });
+
+  it('isAdmin nunca se guarda en el dispositivo', async () => {
+    const storage = (await import('@react-native-async-storage/async-storage')).default;
+    api.adminMe.mockResolvedValueOnce({ admin: true, email: 'u1@correo.com' });
+    await signedIn();
+    const calls = vi.mocked(storage.setItem).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const [, value] of calls) expect(value).not.toContain('isAdmin');
+  });
+
+  it('cerrar sesión quita el acceso al panel', async () => {
+    api.adminMe.mockResolvedValueOnce({ admin: true, email: 'u1@correo.com' });
+    await signedIn();
+    await store.signOut();
+    expect(store.getState().isAdmin).toBe(false);
+  });
+
+  it('pagina usuarios: la página 1 reemplaza y las siguientes se agregan sin repetir', async () => {
+    api.adminUsers
+      .mockResolvedValueOnce({ users: [adminUser('a'), adminUser('b')], page: 1, hasMore: true })
+      .mockResolvedValueOnce({ users: [adminUser('b'), adminUser('c')], page: 2, hasMore: false });
+    const first = await store.loadAdminUsers(1);
+    const second = await store.loadAdminUsers(2);
+    if (!first.ok || !second.ok) throw new Error('debía cargar');
+    expect(api.adminUsers).toHaveBeenNthCalledWith(1, 1);
+    expect(api.adminUsers).toHaveBeenNthCalledWith(2, 2);
+    const merged = store.mergeAdminPage(first.data, second.data);
+    expect(merged.items.map((u) => u.id)).toEqual(['a', 'b', 'c']);
+    expect(merged).toMatchObject({ page: 2, hasMore: false });
+    const again = store.mergeAdminPage(merged, { ...first.data, items: [adminUser('z')] });
+    expect(again.items.map((u) => u.id)).toEqual(['z']);
+  });
+
+  it('filtra documentos por estado y "Todos" no manda filtro', async () => {
+    api.adminDocuments.mockResolvedValue({ documents: [], page: 1, hasMore: false });
+    await store.loadAdminDocuments('failed', 1);
+    await store.loadAdminDocuments('all', 3);
+    expect(api.adminDocuments).toHaveBeenNthCalledWith(1, 'failed', 1);
+    expect(api.adminDocuments).toHaveBeenNthCalledWith(2, null, 3);
+  });
+
+  it('traduce errores: sin red → offline; 403 → forbidden y quita el acceso', async () => {
+    api.adminMe.mockResolvedValueOnce({ admin: true, email: 'u1@correo.com' });
+    await signedIn();
+    api.adminAudit.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.loadAdminAudit(1)).toEqual({ ok: false, error: 'offline' });
+    expect(store.getState().isAdmin).toBe(true);
+    api.adminStats.mockRejectedValueOnce(new FakeApiError('INTERNAL', 500));
+    expect(await store.loadAdminStats()).toEqual({ ok: false, error: 'failed' });
+    api.adminAudit.mockRejectedValueOnce(new FakeApiError('FORBIDDEN', 403));
+    expect(await store.loadAdminAudit(1)).toEqual({ ok: false, error: 'forbidden' });
+    expect(store.getState().isAdmin).toBe(false);
+  });
+
+  it('reintenta solo documentos fallidos y los marca en cola', async () => {
+    expect(await store.retryAdminDocument(adminDoc('d1', 'completed'))).toEqual({
+      ok: false,
+      error: 'DOC_STATE',
+    });
+    expect(api.adminRetryDocument).not.toHaveBeenCalled();
+    const failed = adminDoc('d2', 'failed');
+    expect(await store.retryAdminDocument(failed)).toEqual({
+      ok: true,
+      data: { id: 'd2', status: 'pending' },
+    });
+    expect(api.adminRetryDocument).toHaveBeenCalledWith('d2');
+    const list = store.markDocumentRetried(
+      { items: [failed, adminDoc('d3', 'failed')], page: 1, hasMore: false },
+      'd2',
+    );
+    expect(list.items.map((d) => [d.id, d.status, d.errorMessage])).toEqual([
+      ['d2', 'pending', null],
+      ['d3', 'failed', 'UP_UNREADABLE'],
+    ]);
+    api.adminRetryDocument.mockRejectedValueOnce(new FakeApiError('DOC_STATE', 409));
+    expect(await store.retryAdminDocument(failed)).toEqual({ ok: false, error: 'DOC_STATE' });
+  });
+
+  it('borra otra cuenta solo con su correo escrito; nunca la propia', async () => {
+    await signedIn('u1');
+    const own = adminUser('u1');
+    expect(store.isOwnAccount(own)).toBe(true);
+    expect(await store.adminDeleteUser(own, store.deleteConfirmationText(own))).toEqual({
+      ok: false,
+      error: 'ADMIN_TARGET_IS_SELF',
+    });
+    const other = adminUser('u7', 'Beto@Correo.com');
+    expect(store.deleteConfirmationMatches(other, 'otro@correo.com')).toBe(false);
+    expect(store.deleteConfirmationMatches(other, '   ')).toBe(false);
+    expect(await store.adminDeleteUser(other, 'otro@correo.com')).toMatchObject({ ok: false });
+    expect(api.adminDeleteUser).not.toHaveBeenCalled();
+    expect(await store.adminDeleteUser(other, ' beto@correo.com ')).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect(api.adminDeleteUser).toHaveBeenCalledWith('u7');
+    const list = store.withoutUser({ items: [own, other], page: 1, hasMore: false }, 'u7');
+    expect(list.items.map((u) => u.id)).toEqual(['u1']);
+    api.adminDeleteUser.mockRejectedValueOnce(new FakeApiError('ADMIN_TARGET_IS_SELF', 400));
+    expect(await store.adminDeleteUser(other, store.deleteConfirmationText(other))).toEqual({
+      ok: false,
+      error: 'ADMIN_TARGET_IS_SELF',
+    });
+  });
+
+  it('una cuenta sin correo se confirma con su id y no se confunde con la propia', async () => {
+    await signedIn('u1');
+    const noEmail = { ...adminUser('u9'), email: null };
+    expect(store.isOwnAccount(noEmail)).toBe(false);
+    expect(store.deleteConfirmationText(noEmail)).toBe('u9');
+    expect(store.deleteConfirmationMatches(noEmail, ' U9 ')).toBe(true);
+    expect(store.deleteConfirmationMatches(noEmail, '')).toBe(false);
   });
 });

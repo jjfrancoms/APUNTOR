@@ -179,6 +179,26 @@ export const consents = pgTable(
   ],
 );
 
+/**
+ * Registro de las acciones del panel de administrador que cambian algo (reintentos, borrados).
+ * Solo lo escribe y lee el backend: RLS habilitada y sin políticas para authenticated ni anon.
+ * Guarda metadatos, nunca contenido de documentos ni preguntas.
+ */
+export const adminAudit = pgTable(
+  'admin_audit',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminUserId: uuid('admin_user_id').notNull(),
+    adminEmail: text('admin_email').notNull(),
+    /** Qué hizo, p. ej. `document.retry` o `user.delete`. */
+    action: text('action').notNull(),
+    /** Sobre qué lo hizo, p. ej. `document:<id>` o `user:<id>`. */
+    target: text('target').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('admin_audit_created_at_idx').on(t.createdAt)],
+);
+
 export type Course = typeof courses.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
@@ -187,3 +207,4 @@ export type NewDocumentChunk = typeof documentChunks.$inferInsert;
 export type Topic = typeof topics.$inferSelect;
 export type Consent = typeof consents.$inferSelect;
 export type NewTopic = typeof topics.$inferInsert;
+export type AdminAuditEntry = typeof adminAudit.$inferSelect;

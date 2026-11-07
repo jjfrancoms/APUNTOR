@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
+import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
@@ -30,6 +31,9 @@ async function main(): Promise<void> {
     quota: createQuotaService(db),
     answer: { embedder, search, generator },
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
+    admin: createAdminRepository(db),
+    authUsers: createSupabaseUsersDirectory(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
+    adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
     ...(env.TAVILY_API_KEY === undefined
       ? {}
       : { externalSearch: createTavilySearch(env.TAVILY_API_KEY) }),

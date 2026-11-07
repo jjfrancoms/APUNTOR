@@ -207,6 +207,7 @@ const es: LegalTexts = {
       title: '8. Seguridad',
       paragraphs: [
         'Aplicamos medidas técnicas, organizativas y legales para proteger tus datos (artículo 16 de la Ley N.° 29733): conexiones cifradas, contraseñas protegidas, aislamiento para que solo tu cuenta acceda a tus documentos, enlaces temporales para tus archivos y credenciales de los proveedores guardadas solo en nuestros servidores.',
+        'Para darte soporte y mantener el servicio seguro, el responsable puede ver metadatos de las cuentas y de los documentos (correo, fechas de alta y de último ingreso, nombres de archivo, tamaños, estados del procesamiento y conteos de uso), sin ver nunca el contenido de tus documentos ni tus preguntas.',
         'Quienes intervienen en el tratamiento guardan confidencialidad sobre tus datos (artículo 17). Ningún sistema es infalible: si ocurre un incidente que te afecte, te lo comunicaremos y actuaremos según la ley.',
       ],
     },
@@ -430,6 +431,7 @@ const en: LegalTexts = {
       title: '8. Security',
       paragraphs: [
         'We apply technical, organizational and legal measures to protect your data (article 16 of Law No. 29733): encrypted connections, protected passwords, isolation so that only your account can access your documents, temporary links for your files, and provider credentials kept only on our servers.',
+        'To support you and keep the service secure, the data controller can see metadata about accounts and documents (email, sign-up and last sign-in dates, file names, sizes, processing status and usage counts), without ever seeing the content of your documents or your questions.',
         'Everyone involved in the processing keeps your data confidential (article 17). No system is infallible: if an incident affects you, we will let you know and act as the law requires.',
       ],
     },
