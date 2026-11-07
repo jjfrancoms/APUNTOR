@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
@@ -16,7 +16,8 @@ export default function Courses() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const allCourses = useStore((st) => st.courses);
   const pendingReviewCount = useStore((st) => pendingReview(st).length);
-  const unassigned = useStore((st) => st.documents.filter((d) => d.courseId === ''));
+  const documents = useStore((st) => st.documents);
+  const unassigned = useMemo(() => documents.filter((d) => d.courseId === ''), [documents]);
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
 

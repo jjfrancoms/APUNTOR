@@ -817,3 +817,20 @@ describe('panel de administración', () => {
     expect(store.deleteConfirmationMatches(noEmail, '')).toBe(false);
   });
 });
+
+describe('lectura estable del estado (useStore)', () => {
+  it('arreglos y objetos con el mismo contenido cuentan como iguales', () => {
+    const doc = { id: 'd1' };
+    expect(store.shallowEqual([doc], [doc])).toBe(true);
+    expect(store.shallowEqual([], [])).toBe(true);
+    expect(store.shallowEqual({ a: 1, b: doc }, { a: 1, b: doc })).toBe(true);
+  });
+
+  it('distingue contenido distinto', () => {
+    expect(store.shallowEqual([{ id: 'd1' }], [{ id: 'd1' }])).toBe(false);
+    expect(store.shallowEqual([1], [1, 2])).toBe(false);
+    expect(store.shallowEqual([], {})).toBe(false);
+    expect(store.shallowEqual({ a: 1 }, { b: 1 })).toBe(false);
+    expect(store.shallowEqual(null, {})).toBe(false);
+  });
+});
