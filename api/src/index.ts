@@ -3,6 +3,7 @@ import { createSupabaseUserDeleter } from './account';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
+import { createConsentsRepository } from './consents';
 import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
@@ -23,6 +24,7 @@ async function main(): Promise<void> {
   const app = await buildApp({
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
+    consents: createConsentsRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),
@@ -35,6 +37,9 @@ async function main(): Promise<void> {
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),
     logger: true,
+    // Railway pone un proxy delante: sin esto, todas las peticiones tendrían la misma IP.
+    // Solo se confía en ese salto, para que X-Forwarded-For inventado no cambie la IP.
+    trustProxy: 1,
   });
 
   const shutdown = async (): Promise<void> => {

@@ -17,6 +17,11 @@ export interface SessionUser {
   fullName: string;
   email: string;
   level: Level;
+  /**
+   * true si confirmó tener 18 años o más (`user_metadata.adult_confirmed`). Quien entra con
+   * Google no pasó por el registro con fecha de nacimiento y debe confirmarlo antes de seguir.
+   */
+  adultConfirmed: boolean;
 }
 
 /** Apariencia: 'system' sigue el modo claro/oscuro del dispositivo. */
@@ -137,6 +142,11 @@ export interface AppState {
   usage: Usage;
   /** Estado de la última carga desde el servidor. */
   sync: { loading: boolean; error: ErrorCode | null };
+  /**
+   * Aceptación de los Términos y la Política vigentes (`LEGAL_VERSION`) según el servidor:
+   * 'unknown' mientras no se sabe (cargando o sin red), 'missing' si falta alguno.
+   */
+  consent: 'unknown' | 'accepted' | 'missing';
   shares: ShareLink[];
   waitlist: string[];
   study: {
@@ -194,6 +204,7 @@ export function createInitialState(): AppState {
     conversations: [],
     usage: DEFAULT_USAGE,
     sync: { loading: false, error: null },
+    consent: 'unknown',
     shares: [],
     waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null, boxes: {} },

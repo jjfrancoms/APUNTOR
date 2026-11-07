@@ -13,6 +13,9 @@ export const supabase = createClient(
       ...(authStorage ? { storage: authStorage } : {}),
       autoRefreshToken: true,
       persistSession: true,
+      // PKCE: los enlaces del correo y el regreso de Google traen `?code=`, que la app cambia
+      // por la sesión con exchangeCodeForSession (reset-password y auth-callback).
+      flowType: 'pkce',
       detectSessionInUrl: false,
     },
   },

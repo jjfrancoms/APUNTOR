@@ -14,3 +14,9 @@ export const backendConfigured =
 
 /** Vista previa del diseño (mapa de pantallas con datos de ejemplo), nunca la app real. */
 export const PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
+
+/**
+ * Inicio con Google (Supabase OAuth). Apagado hasta configurar el proveedor en Supabase:
+ * EXPO_PUBLIC_GOOGLE_AUTH=1 muestra el botón en Inicio de sesión y Registro.
+ */
+export const GOOGLE_AUTH = process.env.EXPO_PUBLIC_GOOGLE_AUTH === '1';

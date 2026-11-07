@@ -39,6 +39,10 @@ export const en: Strings = {
     CHAT_DAILY_LIMIT: "You've reached today's limit",
     AUTH_EMAIL_UNCONFIRMED: 'Confirm your email with the link we sent you, then sign in again.',
     NET_UNAVAILABLE: "We couldn't reach the server. Check your connection and try again.",
+    AUTH_OAUTH_FAILED: "We couldn't sign you in with Google. Try again or use your email.",
+    AUTH_SAME_PASSWORD: 'Choose a password different from your previous one.',
+    AUTH_CALLBACK_FAILED:
+      "We couldn't open your session with this link. If you were confirming your email, sign in with your email and password.",
   },
   live: {
     notConfigured:
@@ -152,7 +156,7 @@ export const en: Strings = {
     },
     minorTitle: 'Are you under 18?',
     minorBody:
-      "We'll ask for your parent's or guardian's email so they can approve your account before you use the app.",
+      "For now APUNTOR is only for people 18 and over. If you're under 18, you can join the waitlist.",
     minorAction: "I'm under 18",
     readAndAccept: 'I have read and accept the',
     submit: 'Accept and continue',
@@ -720,20 +724,6 @@ export const en: Strings = {
     privacy: 'Privacy Policy',
     subscription: 'Subscription terms',
     draft: 'Draft for the prototype, pending legal review (Peru, Law 29733).',
-    termsBody: [
-      'APUNTOR helps you study with your own documents. You are responsible for having the right to use the material you upload.',
-      'Answers are based on your documents and cite the source page. External context is shown separately and with its source.',
-      'You can delete your account and your data whenever you want from Profile.',
-    ],
-    privacyBody: [
-      'We only use your documents to help you; nobody else sees them.',
-      'Analytics are anonymous and optional, and never include the content of your documents.',
-      'People under 18 need approval from a parent or guardian.',
-    ],
-    subscriptionBody: [
-      'The subscription is charged and canceled from your store (Google Play or App Store).',
-      "If you cancel, you keep the plan until the renewal date and your data isn't deleted.",
-    ],
   },
   helpView: {
     answers: [
@@ -787,6 +777,33 @@ export const en: Strings = {
     day: (day: number, month: string, year: number) => `${month} ${day}, ${year}`,
   },
   mascot: { label: 'Illari, your mascot' },
+  resetPassword: {
+    header: 'New password',
+    title: 'Create your new password',
+    subtitle: "Type it twice. Then you'll go straight to your account.",
+    opening: 'Opening the link…',
+    password: 'New password',
+    passwordPlaceholder: 'At least 8 characters',
+    confirm: 'Confirm password',
+    confirmPlaceholder: 'Type it again',
+    submit: 'Save password',
+    requestNew: 'Ask for a new link',
+  },
+  authCallback: {
+    header: 'Sign in',
+    opening: 'Opening your session…',
+    backToLogin: 'Back to sign in',
+  },
+  confirmAge: {
+    header: 'Your age',
+    title: 'One last thing',
+    subtitle: 'For now APUNTOR is for people 18 and over. Confirm it with your date of birth.',
+    birthDate: 'Date of birth',
+    birthPlaceholder: 'DD/MM/YYYY',
+    birthNote: "We only store that you're 18 or over, never the date.",
+    submit: 'Continue',
+    signOut: 'Use another account',
+  },
   map: {
     title: 'Screen map',
     intro: 'Preview with sample data. Tap a screen to open it.',

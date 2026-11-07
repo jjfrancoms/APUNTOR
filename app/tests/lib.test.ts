@@ -117,3 +117,30 @@ describe('calendario', () => {
     expect(yearRange(2026, 2024)).toEqual([2026, 2025, 2024]);
   });
 });
+
+describe('nueva contraseña y enlaces de regreso', () => {
+  it('pide 8+ caracteres y que se escriba dos veces igual', async () => {
+    const { validateNewPassword } = await import('../src/lib/validation');
+    expect(validateNewPassword('', '')).toBe('AUTH_WEAK_PASSWORD');
+    expect(validateNewPassword('1234567', '1234567')).toBe('AUTH_WEAK_PASSWORD');
+    expect(validateNewPassword('12345678', '12345679')).toBe('AUTH_PASSWORD_MISMATCH');
+    expect(validateNewPassword('12345678', '12345678')).toBeNull();
+  });
+
+  it('lee el código y los errores de la URL de regreso', async () => {
+    const { authParamsFromUrl } = await import('../src/lib/auth-url');
+    expect(
+      authParamsFromUrl('exp://192.168.1.20:8081/--/auth-callback?code=abc&sb_flow_id=f1'),
+    ).toEqual({ code: 'abc', flowId: 'f1', error: null });
+    expect(
+      authParamsFromUrl(
+        'http://localhost:8081/reset-password#error=access_denied&error_code=otp_expired',
+      ),
+    ).toEqual({ code: null, flowId: null, error: 'otp_expired' });
+    expect(authParamsFromUrl('apuntor://auth-callback')).toEqual({
+      code: null,
+      flowId: null,
+      error: null,
+    });
+  });
+});

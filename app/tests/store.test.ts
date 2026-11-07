@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LEGAL_VERSION } from '../src/i18n/legal';
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined) },
@@ -14,13 +15,26 @@ const auth = {
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
   signOut: vi.fn(async () => ({ error: null })),
-  updateUser: vi.fn(async () => ({ error: null })),
+  updateUser: vi.fn(
+    async (_attrs: unknown): Promise<{ error: { code: string; status: number } | null }> => ({
+      error: null,
+    }),
+  ),
   getSession: vi.fn(async () => ({ data: { session: null } })),
   onAuthStateChange: vi.fn(),
   resetPasswordForEmail: vi.fn(async () => ({ error: null })),
   resend: vi.fn(async () => ({ error: null })),
+  exchangeCodeForSession: vi.fn(),
+  signInWithOAuth: vi.fn(),
 };
 vi.mock('@/lib/supabase', () => ({ supabase: { auth } }));
+
+const links = {
+  usesBrowserRedirect: false,
+  authReturnUrl: vi.fn((route: string) => `exp://192.168.1.20:8081/--/${route}`),
+  openAuthSession: vi.fn<(url: string, returnUrl: string) => Promise<string | null>>(),
+};
+vi.mock('@/lib/auth-links', () => links);
 
 const putFile = vi.fn(async () => undefined);
 vi.mock('@/lib/upload-transfer', () => ({ putFile }));
@@ -61,6 +75,22 @@ const api = {
   deleteAccount: vi.fn(async () => undefined),
   ask: vi.fn(),
   external: vi.fn(),
+  acceptConsent: vi.fn(async (document: string, version: string) => ({
+    document,
+    version,
+    acceptedAt: new Date().toISOString(),
+  })),
+  // Por defecto la cuenta ya aceptó la versión vigente de ambos documentos.
+  consents: vi.fn(
+    async (): Promise<{
+      consents: { document: 'terms' | 'privacy'; version: string; acceptedAt: string }[];
+    }> => ({
+      consents: [
+        { document: 'terms', version: LEGAL_VERSION, acceptedAt: '' },
+        { document: 'privacy', version: LEGAL_VERSION, acceptedAt: '' },
+      ],
+    }),
+  ),
 };
 vi.mock('@/lib/api', () => ({
   api,
@@ -79,10 +109,14 @@ function doc(over: { id: string; courseId: string | null; title: string; topicCo
   };
 }
 
-const user = (id: string, name = 'Ana Torres') => ({
+const user = (id: string, name = 'Ana Torres', adult = true) => ({
   id,
   email: `${id}@correo.com`,
-  user_metadata: { full_name: name, level: 'university' },
+  user_metadata: {
+    full_name: name,
+    level: 'university',
+    ...(adult ? { adult_confirmed: true } : {}),
+  },
 });
 
 const store = await import('../src/store/store');
@@ -352,6 +386,263 @@ describe('chat', () => {
       kind: 'external',
       text: 'Dato',
       external: { host: 'es.wikipedia.org', url: 'https://es.wikipedia.org/wiki/X' },
+    });
+  });
+});
+
+describe('consentimientos', () => {
+  it('registra Términos y Política con la versión vigente', async () => {
+    const { LEGAL_VERSION } = await import('../src/i18n/legal');
+    await signedIn();
+    expect(await store.acceptLegalDocuments()).toEqual({ ok: true });
+    expect(api.acceptConsent).toHaveBeenCalledTimes(2);
+    expect(api.acceptConsent).toHaveBeenCalledWith('terms', LEGAL_VERSION);
+    expect(api.acceptConsent).toHaveBeenCalledWith('privacy', LEGAL_VERSION);
+  });
+
+  it('si el servidor no lo registra, devuelve un código para mostrar y no avanza', async () => {
+    await signedIn();
+    api.acceptConsent.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.acceptLegalDocuments()).toEqual({ ok: false, error: 'NET_UNAVAILABLE' });
+  });
+
+  it('sin sesión no llama a la API', async () => {
+    expect(await store.acceptLegalDocuments()).toMatchObject({ ok: false });
+    expect(api.acceptConsent).not.toHaveBeenCalled();
+  });
+
+  it('quien no aceptó la versión vigente va a Privacidad, no a Inicio', async () => {
+    api.consents.mockResolvedValueOnce({ consents: [] });
+    await signedIn();
+    expect(store.needsConsent(store.getState())).toBe(true);
+    expect(store.entryRoute(store.getState())).toBe('/privacy');
+    expect(await store.acceptLegalDocuments()).toEqual({ ok: true });
+    expect(store.entryRoute(store.getState())).toBe('/home');
+  });
+
+  it('una versión anterior o un solo documento aceptado no bastan', async () => {
+    api.consents.mockResolvedValueOnce({
+      consents: [
+        { document: 'terms', version: '2020-01-01', acceptedAt: '' },
+        { document: 'privacy', version: LEGAL_VERSION, acceptedAt: '' },
+      ],
+    });
+    await signedIn();
+    expect(store.entryRoute(store.getState())).toBe('/privacy');
+    expect(
+      store.consentStatus([{ document: 'terms', version: LEGAL_VERSION, acceptedAt: '' }]),
+    ).toBe('missing');
+  });
+
+  it('sin red no bloquea la entrada: muestra el error de sincronización', async () => {
+    api.consents.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await signedIn();
+    expect(store.getState().consent).toBe('unknown');
+    expect(store.getState().sync.error).toBe('NET_UNAVAILABLE');
+    expect(store.entryRoute(store.getState())).toBe('/home');
+  });
+
+  it('si ya se sabe que no aceptó, un fallo de red posterior no lo deja pasar', async () => {
+    api.consents.mockResolvedValueOnce({ consents: [] });
+    await signedIn();
+    api.consents.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    api.courses.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await store.refreshAll();
+    expect(store.getState().sync.error).toBe('NET_UNAVAILABLE');
+    expect(store.entryRoute(store.getState())).toBe('/privacy');
+  });
+
+  it('otra cuenta en el mismo teléfono no hereda la aceptación de la anterior', async () => {
+    await signedIn('u1');
+    expect(store.getState().consent).toBe('accepted');
+    await store.signOut();
+    api.consents.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await signedIn('u2');
+    expect(store.getState().consent).toBe('unknown');
+  });
+});
+
+describe('mayoría de edad', () => {
+  it('se pide solo si hay sesión y la cuenta no la confirmó', async () => {
+    expect(store.needsAdultCheck(store.getState())).toBe(false);
+    expect(store.entryRoute(store.getState())).toBe('/login');
+    await signedIn();
+    expect(store.needsAdultCheck(store.getState())).toBe(false);
+    expect(store.entryRoute(store.getState())).toBe('/home');
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: user('g1', 'Ana', false) },
+      error: null,
+    });
+    await store.signIn('ana@gmail.com', 'secreta123');
+    expect(store.needsAdultCheck(store.getState())).toBe(true);
+    expect(store.entryRoute(store.getState())).toBe('/confirm-age');
+  });
+
+  it('mayor de 18: guarda solo adult_confirmed, nunca la fecha', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: user('g1', 'Ana', false) },
+      error: null,
+    });
+    await store.signIn('ana@gmail.com', 'secreta123');
+    expect(await store.confirmAdult('15/03/1999')).toEqual({ ok: true });
+    expect(auth.updateUser).toHaveBeenCalledWith({ data: { adult_confirmed: true } });
+    expect(JSON.stringify(auth.updateUser.mock.calls)).not.toContain('1999');
+    expect(store.entryRoute(store.getState())).toBe('/home');
+  });
+
+  it('menor de 18: borra la cuenta que creó Google, sin guardar nada', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: user('g1', 'Ana', false) },
+      error: null,
+    });
+    await store.signIn('ana@gmail.com', 'secreta123');
+    const minor = new Date().getFullYear() - 15;
+    expect(await store.confirmAdult(`01/01/${minor}`)).toEqual({ ok: false, error: 'AUTH_MINOR' });
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(auth.updateUser).not.toHaveBeenCalled();
+    expect(auth.signOut).toHaveBeenCalled();
+    expect(store.getState().session).toBeNull();
+  });
+
+  it('menor de 18: si el borrado falla, igual cierra la sesión', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: user('g1', 'Ana', false) },
+      error: null,
+    });
+    await store.signIn('ana@gmail.com', 'secreta123');
+    api.deleteAccount.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    const minor = new Date().getFullYear() - 15;
+    expect(await store.confirmAdult(`01/01/${minor}`)).toEqual({ ok: false, error: 'AUTH_MINOR' });
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(auth.signOut).toHaveBeenCalledTimes(1);
+    expect(store.getState().session).toBeNull();
+  });
+
+  it('fecha inválida → AUTH_BIRTHDATE_INVALID', async () => {
+    await signedIn();
+    expect(await store.confirmAdult('31/02/2000')).toEqual({
+      ok: false,
+      error: 'AUTH_BIRTHDATE_INVALID',
+    });
+  });
+});
+
+describe('Google y enlaces de la app', () => {
+  it('la confirmación del registro vuelve a auth-callback, la misma URL que Google', async () => {
+    auth.signUp.mockResolvedValueOnce({ data: { user: null, session: null }, error: null });
+    await store.signUp({
+      fullName: 'Ana',
+      email: 'ana@correo.com',
+      password: 'secreta123',
+      confirm: 'secreta123',
+      birthDate: '15/03/1999',
+    });
+    const url = 'exp://192.168.1.20:8081/--/auth-callback';
+    expect(auth.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({ options: expect.objectContaining({ emailRedirectTo: url }) }),
+    );
+    expect(await store.resendSignupEmail('ana@correo.com')).toBe(true);
+    expect(auth.resend).toHaveBeenCalledWith({
+      type: 'signup',
+      email: 'ana@correo.com',
+      options: { emailRedirectTo: url },
+    });
+    // Al volver con el código del correo, la sesión se abre igual que con Google.
+    auth.exchangeCodeForSession.mockResolvedValueOnce({
+      data: { user: user('u9'), session: {} },
+      error: null,
+    });
+    expect(await store.completeAuthCode('del-correo', null, 'AUTH_CALLBACK_FAILED')).toEqual({
+      ok: true,
+      next: '/home',
+    });
+    expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('del-correo', undefined);
+  });
+
+  it('el enlace de recuperación vuelve a la pantalla de la app', async () => {
+    expect(await store.requestPasswordReset(' ana@correo.com ')).toBe(true);
+    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('ana@correo.com', {
+      redirectTo: 'exp://192.168.1.20:8081/--/reset-password',
+    });
+  });
+
+  it('en el teléfono abre el navegador y cambia el código por la sesión una sola vez', async () => {
+    auth.signInWithOAuth.mockResolvedValueOnce({
+      data: { provider: 'google', url: 'https://x.supabase.co/auth/v1/authorize', flowId: 'f1' },
+      error: null,
+    });
+    links.openAuthSession.mockResolvedValueOnce(
+      'exp://192.168.1.20:8081/--/auth-callback?code=abc123',
+    );
+    auth.exchangeCodeForSession.mockResolvedValue({
+      data: { user: user('g1', 'Ana', false), session: {} },
+      error: null,
+    });
+    const r = await store.signInWithGoogle();
+    expect(r).toEqual({ ok: true, next: '/confirm-age' });
+    expect(auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: 'exp://192.168.1.20:8081/--/auth-callback',
+        skipBrowserRedirect: true,
+      },
+    });
+    expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('abc123', { flowId: 'f1' });
+    // El mismo código llega también por el enlace a auth-callback: no se cambia otra vez.
+    await store.completeAuthCode('abc123');
+    expect(auth.exchangeCodeForSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('si la persona cierra el navegador, no muestra error', async () => {
+    auth.signInWithOAuth.mockResolvedValueOnce({
+      data: { provider: 'google', url: 'https://x.supabase.co/auth/v1/authorize' },
+      error: null,
+    });
+    links.openAuthSession.mockResolvedValueOnce(null);
+    expect(await store.signInWithGoogle()).toEqual({ ok: false, error: null });
+    expect(auth.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it('un código vencido o de otro dispositivo → AUTH_LINK_EXPIRED', async () => {
+    auth.exchangeCodeForSession.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { name: 'AuthPKCECodeVerifierMissingError', status: 400 },
+    });
+    expect(await store.completeAuthCode('viejo')).toEqual({
+      ok: false,
+      error: 'AUTH_LINK_EXPIRED',
+    });
+    expect(store.getState().session).toBeNull();
+    // Un fallo (p. ej. sin red) no queda guardado: se puede reintentar con el mismo código.
+    auth.exchangeCodeForSession.mockResolvedValueOnce({
+      data: { user: user('u3'), session: {} },
+      error: null,
+    });
+    expect(await store.completeAuthCode('viejo')).toMatchObject({ ok: true });
+    expect(auth.exchangeCodeForSession).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('nueva contraseña', () => {
+  it('valida antes de llamar al servidor y la guarda con la sesión de recuperación', async () => {
+    expect(await store.updatePassword('corta', 'corta')).toMatchObject({
+      error: 'AUTH_WEAK_PASSWORD',
+      field: 'password',
+    });
+    expect(await store.updatePassword('secreta123', 'secreta124')).toMatchObject({
+      error: 'AUTH_PASSWORD_MISMATCH',
+      field: 'confirm',
+    });
+    expect(await store.updatePassword('secreta123', 'secreta123')).toMatchObject({
+      error: 'AUTH_LINK_EXPIRED',
+    });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+    await signedIn();
+    expect(await store.updatePassword('nueva12345', 'nueva12345')).toEqual({ ok: true });
+    expect(auth.updateUser).toHaveBeenCalledWith({ password: 'nueva12345' });
+    auth.updateUser.mockResolvedValueOnce({ error: { code: 'same_password', status: 422 } });
+    expect(await store.updatePassword('nueva12345', 'nueva12345')).toMatchObject({
+      error: 'AUTH_SAME_PASSWORD',
     });
   });
 });

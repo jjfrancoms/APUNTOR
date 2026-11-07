@@ -8,14 +8,32 @@ import type { User } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
-import { api, ApiRequestError, toErrorCode, type ApiDocument, type ApiUsage } from '@/lib/api';
+import { LEGAL_VERSION } from '@/i18n/legal';
+import {
+  api,
+  ApiRequestError,
+  toErrorCode,
+  type ApiConsent,
+  type ApiDocument,
+  type ApiUsage,
+  type LegalDocument,
+} from '@/lib/api';
+import { authReturnUrl, openAuthSession, usesBrowserRedirect } from '@/lib/auth-links';
+import { authParamsFromUrl } from '@/lib/auth-url';
 import { backendConfigured } from '@/lib/config';
 import { daysUntilNext, nextBox } from '@/lib/flashcards';
 import { supabase } from '@/lib/supabase';
 import { normalize, overlapScore } from '@/lib/text-search';
 import { putFile } from '@/lib/upload-transfer';
 import { extensionOf, validateUpload } from '@/lib/upload-rules';
-import { ADULT_AGE, ageOn, isValidEmail, isWeakPassword, parseBirthDate } from '@/lib/validation';
+import {
+  ADULT_AGE,
+  ageOn,
+  isValidEmail,
+  isWeakPassword,
+  parseBirthDate,
+  validateNewPassword,
+} from '@/lib/validation';
 import {
   createInitialState,
   DEFAULT_SETTINGS,
@@ -200,16 +218,30 @@ export async function refreshUsage(): Promise<void> {
   }
 }
 
-/** Cursos, documentos y consumo del usuario. */
+const LEGAL_DOCUMENTS: readonly LegalDocument[] = ['terms', 'privacy'];
+
+/** 'accepted' solo si están los dos documentos en la versión vigente (`LEGAL_VERSION`). */
+export function consentStatus(consents: readonly ApiConsent[]): 'accepted' | 'missing' {
+  return LEGAL_DOCUMENTS.every((d) =>
+    consents.some((c) => c.document === d && c.version === LEGAL_VERSION),
+  )
+    ? 'accepted'
+    : 'missing';
+}
+
+/** Cursos, documentos, consumo y consentimientos del usuario. */
 export async function refreshAll(): Promise<void> {
   if (!state.session) return;
   setState((s) => ({ ...s, sync: { loading: true, error: null } }));
-  try {
-    const [{ courses }, { documents }, usage] = await Promise.all([
-      api.courses(),
-      api.documents(),
-      api.usage(),
-    ]);
+  const [data, consents] = await Promise.allSettled([
+    Promise.all([api.courses(), api.documents(), api.usage()]),
+    api.consents(),
+  ]);
+  // Sin respuesta del servidor el consentimiento queda como estaba ('unknown' si no se sabía):
+  // se avisa con el error de sincronización, pero lo ya sabido no se olvida.
+  const consent = consents.status === 'fulfilled' ? consentStatus(consents.value.consents) : null;
+  if (data.status === 'fulfilled') {
+    const [{ courses }, { documents }, usage] = data.value;
     const titles = new Map(courses.map((c) => [c.id, c.title]));
     const docs = documents.map((d) =>
       toDocRecord(d, d.courseId ? titles.get(d.courseId) : undefined),
@@ -218,13 +250,19 @@ export async function refreshAll(): Promise<void> {
       ...s,
       documents: docs,
       courses: buildCourses(courses, docs),
-      sync: { loading: false, error: null },
+      consent: consent ?? s.consent,
+      sync: {
+        loading: false,
+        error:
+          consents.status === 'rejected' ? toErrorCode(consents.reason, 'NET_UNAVAILABLE') : null,
+      },
     }));
     applyUsage(usage);
-  } catch (error) {
+  } else {
     setState((s) => ({
       ...s,
-      sync: { loading: false, error: toErrorCode(error, 'NET_UNAVAILABLE') },
+      consent: consent ?? s.consent,
+      sync: { loading: false, error: toErrorCode(data.reason, 'NET_UNAVAILABLE') },
     }));
   }
 }
@@ -252,25 +290,32 @@ function toSessionUser(user: User): SessionUser {
     fullName,
     email,
     level: isLevel(meta.level) ? meta.level : 'university',
+    adultConfirmed: meta.adult_confirmed === true,
   };
 }
 
-/** Las conversaciones y el progreso guardados son de otra cuenta: no se muestran. */
-function startSession(user: User): void {
+/**
+ * Las conversaciones y el progreso guardados son de otra cuenta: no se muestran. Devuelve la
+ * carga desde el servidor, que incluye el consentimiento que decide la entrada.
+ */
+function startSession(user: User): Promise<void> {
   const session = toSessionUser(user);
-  setState((s) =>
-    s.ownerId === session.id
-      ? { ...s, session }
+  // Lo que se sabía del consentimiento solo vale para la misma sesión abierta.
+  setState((s) => {
+    const consent = s.session?.id === session.id ? s.consent : 'unknown';
+    return s.ownerId === session.id
+      ? { ...s, session, consent }
       : {
           ...s,
           session,
+          consent,
           ownerId: session.id,
           conversations: [],
           study: createInitialState().study,
           uploads: [],
-        },
-  );
-  void refreshAll();
+        };
+  });
+  return refreshAll();
 }
 
 function endSession(): void {
@@ -307,7 +352,8 @@ export async function hydrate(): Promise<void> {
   if (backendConfigured) {
     try {
       const { data } = await supabase.auth.getSession();
-      if (data.session) startSession(data.session.user);
+      // Sin esperar al servidor: la protección de (tabs) redirige si falta el consentimiento.
+      if (data.session) void startSession(data.session.user);
     } catch {
       // Sin red: la app abre en Inicio de sesión y avisa al intentar entrar.
     }
@@ -341,7 +387,8 @@ export async function signIn(email: string, password: string): Promise<AuthResul
     }
     return authFailure('NET_UNAVAILABLE', 'password');
   }
-  startSession(data.user);
+  // Espera la carga para que entryRoute ya sepa si falta aceptar los términos vigentes.
+  await startSession(data.user);
   return { ok: true };
 }
 
@@ -373,7 +420,11 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({
     email,
     password: input.password,
-    options: { data: { full_name: fullName, level: 'university', adult_confirmed: true } },
+    options: {
+      data: { full_name: fullName, level: 'university', adult_confirmed: true },
+      // El enlace de confirmación vuelve a la app (auth-callback), que abre la sesión.
+      emailRedirectTo: authReturnUrl('auth-callback'),
+    },
   });
   if (error) {
     if (error.code === 'user_already_exists') return authFailure('AUTH_EMAIL_TAKEN', 'email');
@@ -382,21 +433,195 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
   }
   // Con la confirmación de correo activada, Supabase no abre sesión hasta usar el enlace.
   if (!data.session || !data.user) return { ok: true, needsConfirmation: true };
-  startSession(data.user);
+  await startSession(data.user);
   return { ok: true };
 }
 
-/** Envía el enlace para elegir una contraseña nueva. */
+/**
+ * Envía el enlace para elegir una contraseña nueva. El enlace vuelve a la pantalla
+ * reset-password de la app (con PKCE, en el mismo navegador o teléfono que lo pidió).
+ */
 export async function requestPasswordReset(email: string): Promise<boolean> {
   if (!backendConfigured) return false;
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: authReturnUrl('reset-password'),
+  });
   return !error;
+}
+
+// --- Entrada a la app, Google, recuperación y consentimientos ---------------------
+
+/** A dónde va quien abre la app o acaba de iniciar sesión. */
+export type EntryRoute = '/login' | '/confirm-age' | '/privacy' | '/home';
+
+/**
+ * Hay que pedir la fecha de nacimiento si hay sesión pero la cuenta no confirmó ser mayor de
+ * edad (`user_metadata.adult_confirmed`): pasa con quien entra con Google por primera vez.
+ */
+export function needsAdultCheck(s: AppState): boolean {
+  return s.session !== null && !s.session.adultConfirmed;
+}
+
+/**
+ * Con sesión, falta aceptar los Términos o la Política vigentes (`LEGAL_VERSION`) según el
+ * servidor. Si el servidor no respondió ('unknown') no se bloquea: Inicio muestra el error de
+ * sincronización y la próxima carga vuelve a decidir.
+ */
+export function needsConsent(s: AppState): boolean {
+  return s.session !== null && s.consent === 'missing';
+}
+
+export function entryRoute(s: AppState): EntryRoute {
+  if (!s.session) return '/login';
+  if (needsAdultCheck(s)) return '/confirm-age';
+  return needsConsent(s) ? '/privacy' : '/home';
+}
+
+export type SessionResult = { ok: true; next: EntryRoute } | { ok: false; error: ErrorCode };
+
+/** Cada código PKCE se cambia una sola vez, aunque lleguen el regreso del navegador y el enlace. */
+const codeExchanges = new Map<string, Promise<SessionResult>>();
+
+async function exchangeCode(
+  code: string,
+  flowId: string | null,
+  failure: ErrorCode,
+): Promise<SessionResult> {
+  if (!backendConfigured) return { ok: false, error: 'NET_UNAVAILABLE' };
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(
+      code,
+      flowId ? { flowId } : undefined,
+    );
+    if (error || !data.user) {
+      const offline = error?.name === 'AuthRetryableFetchError' || error?.status === 0;
+      return { ok: false, error: offline ? 'NET_UNAVAILABLE' : failure };
+    }
+    await startSession(data.user);
+    return { ok: true, next: entryRoute(state) };
+  } catch {
+    return { ok: false, error: 'NET_UNAVAILABLE' };
+  }
+}
+
+/**
+ * Abre la sesión con el `code` que trae la URL de regreso (enlace de recuperación, confirmación
+ * del registro o Google). `failure` es el código que se muestra si el código no sirve (vencido
+ * o de otro dispositivo). Un intento fallido no se recuerda: se puede volver a intentar.
+ */
+export function completeAuthCode(
+  code: string,
+  flowId: string | null = null,
+  failure: ErrorCode = 'AUTH_LINK_EXPIRED',
+): Promise<SessionResult> {
+  const pending = codeExchanges.get(code);
+  if (pending) return pending;
+  const started = exchangeCode(code, flowId, failure).then((result) => {
+    if (!result.ok) codeExchanges.delete(code);
+    return result;
+  });
+  codeExchanges.set(code, started);
+  return started;
+}
+
+/** `next: null` = el navegador sale hacia Google (web); `error: null` = la persona canceló. */
+export type OAuthResult =
+  { ok: true; next: EntryRoute | null } | { ok: false; error: ErrorCode | null };
+
+/**
+ * Inicio con Google por Supabase OAuth. En web redirige la pestaña y vuelve a auth-callback;
+ * en el teléfono abre el navegador del sistema y cambia el `code` por la sesión aquí mismo.
+ */
+export async function signInWithGoogle(): Promise<OAuthResult> {
+  if (!backendConfigured) return { ok: false, error: 'NET_UNAVAILABLE' };
+  const redirectTo = authReturnUrl('auth-callback');
+  if (usesBrowserRedirect) {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    return error ? { ok: false, error: 'AUTH_OAUTH_FAILED' } : { ok: true, next: null };
+  }
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error || !data.url) return { ok: false, error: 'AUTH_OAUTH_FAILED' };
+  let returned: string | null;
+  try {
+    returned = await openAuthSession(data.url, redirectTo);
+  } catch {
+    return { ok: false, error: 'AUTH_OAUTH_FAILED' };
+  }
+  if (!returned) return { ok: false, error: null };
+  const params = authParamsFromUrl(returned);
+  if (!params.code) {
+    return { ok: false, error: params.error === 'access_denied' ? null : 'AUTH_OAUTH_FAILED' };
+  }
+  return completeAuthCode(params.code, params.flowId ?? data.flowId ?? null, 'AUTH_OAUTH_FAILED');
+}
+
+/**
+ * Mayoría de edad de quien entró con Google. Solo se guarda `adult_confirmed: true`, nunca la
+ * fecha. Si es menor de 18, se borra la cuenta que Google acaba de crear (como prometen los
+ * Términos) y, si el borrado falla, al menos se cierra la sesión. AUTH_MINOR lleva a la lista
+ * de espera.
+ */
+export async function confirmAdult(
+  birthDate: string,
+): Promise<{ ok: true } | { ok: false; error: ErrorCode }> {
+  const birth = parseBirthDate(birthDate);
+  if (!birth) return { ok: false, error: 'AUTH_BIRTHDATE_INVALID' };
+  if (ageOn(birth) < ADULT_AGE) {
+    if (!(await deleteAccount())) await signOut().catch(() => endSession());
+    return { ok: false, error: 'AUTH_MINOR' };
+  }
+  const { error } = await supabase.auth.updateUser({ data: { adult_confirmed: true } });
+  if (error) return { ok: false, error: 'NET_UNAVAILABLE' };
+  setState((s) => (s.session ? { ...s, session: { ...s.session, adultConfirmed: true } } : s));
+  return { ok: true };
+}
+
+/** Guarda la contraseña nueva con la sesión de recuperación abierta desde el enlace. */
+export async function updatePassword(password: string, confirm: string): Promise<AuthResult> {
+  const invalid = validateNewPassword(password, confirm);
+  if (invalid)
+    return authFailure(invalid, invalid === 'AUTH_WEAK_PASSWORD' ? 'password' : 'confirm');
+  if (!state.session) return authFailure('AUTH_LINK_EXPIRED', 'password');
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    if (error.code === 'weak_password') return authFailure('AUTH_WEAK_PASSWORD', 'password');
+    if (error.code === 'same_password') return authFailure('AUTH_SAME_PASSWORD', 'password');
+    if (error.code === 'session_not_found' || error.status === 401) {
+      return authFailure('AUTH_LINK_EXPIRED', 'password');
+    }
+    return authFailure('NET_UNAVAILABLE', 'password');
+  }
+  return { ok: true };
+}
+
+/** Registra en el servidor que se aceptaron los Términos y la Política vigentes (LEGAL_VERSION). */
+export async function acceptLegalDocuments(): Promise<
+  { ok: true } | { ok: false; error: ErrorCode }
+> {
+  if (!state.session) return { ok: false, error: 'NET_UNAVAILABLE' };
+  try {
+    await Promise.all(LEGAL_DOCUMENTS.map((d) => api.acceptConsent(d, LEGAL_VERSION)));
+    setState((s) => (s.session ? { ...s, consent: 'accepted' } : s));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: toErrorCode(error, 'NET_UNAVAILABLE') };
+  }
 }
 
 /** Vuelve a enviar el correo de confirmación del registro. */
 export async function resendSignupEmail(email: string): Promise<boolean> {
   if (!backendConfigured) return false;
-  const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+    options: { emailRedirectTo: authReturnUrl('auth-callback') },
+  });
   return !error;
 }
 
@@ -1059,6 +1284,7 @@ export function topicDetail(s: AppState, topicId: string): TopicDetail | null {
 /** Para pruebas: vuelve al estado inicial. */
 export function resetForTests(): void {
   state = createInitialState();
+  codeExchanges.clear();
   pickedFiles.clear();
 }
 

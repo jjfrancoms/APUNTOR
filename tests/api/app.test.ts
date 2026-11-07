@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildApp, type AppDeps } from '../../api/src/app';
+import type { ConsentRecord } from '../../api/src/consents';
 import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
 import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from './helpers';
 
@@ -11,11 +12,13 @@ const AUTH_OTHER = { authorization: 'Bearer token-2' };
 
 type StoredDocument = DocumentRecord & { userId: string };
 type StoredCourse = CourseRecord & { userId: string };
+type StoredConsent = ConsentRecord & { userId: string };
 
 interface World {
   app: FastifyInstance;
   docs: Map<string, StoredDocument>;
   courses: Map<string, StoredCourse>;
+  consents: StoredConsent[];
   topics: Map<string, TopicRecord[]>;
   objects: Map<string, number>;
   enqueued: string[];
@@ -26,6 +29,7 @@ interface World {
 async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const docs: World['docs'] = new Map();
   const courses: World['courses'] = new Map();
+  const consents: World['consents'] = [];
   const topics: World['topics'] = new Map();
   const objects: World['objects'] = new Map();
   const enqueued: string[] = [];
@@ -90,8 +94,21 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       deleteAllForUser(userId) {
         for (const [id, doc] of docs) if (doc.userId === userId) docs.delete(id);
         for (const [id, course] of courses) if (course.userId === userId) courses.delete(id);
+        consents.splice(0, consents.length, ...consents.filter((c) => c.userId !== userId));
         return Promise.resolve();
       },
+    },
+    consents: {
+      accept(userId, document, version) {
+        const found = consents.find(
+          (c) => c.userId === userId && c.document === document && c.version === version,
+        );
+        if (found) return Promise.resolve(found);
+        const consent = { userId, document, version, acceptedAt: new Date(consents.length * 1000) };
+        consents.push(consent);
+        return Promise.resolve(consent);
+      },
+      list: (userId) => Promise.resolve(consents.filter((c) => c.userId === userId)),
     },
     storage: {
       download: () => Promise.resolve(new Uint8Array()),
@@ -118,7 +135,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
     },
     ...overrides,
   });
-  return { app, docs, courses, topics, objects, enqueued, deletedUsers, quota };
+  return { app, docs, courses, consents, topics, objects, enqueued, deletedUsers, quota };
 }
 
 function errorCode(response: { json: () => unknown }): unknown {
@@ -456,6 +473,14 @@ describe('cuenta', () => {
     world.objects.set(`${USER}/${id}.pdf`, 100);
     await createCourse(world);
     await createCourse(world, AUTH_OTHER, 'Ajeno');
+    for (const headers of [AUTH, AUTH_OTHER]) {
+      await world.app.inject({
+        method: 'POST',
+        url: '/v1/consents',
+        headers,
+        payload: { document: 'terms', version: '2026-11-01' },
+      });
+    }
     const response = await world.app.inject({
       method: 'DELETE',
       url: '/v1/account',
@@ -466,6 +491,7 @@ describe('cuenta', () => {
     expect(world.docs.size).toBe(0);
     expect([...world.courses.values()].map((c) => c.title)).toEqual(['Ajeno']);
     expect(world.deletedUsers).toEqual([USER]);
+    expect(world.consents.map((c) => c.userId)).toEqual([OTHER]);
   });
 });
 
@@ -562,5 +588,192 @@ describe('contexto externo', () => {
     });
     expect(response.statusCode).toBe(503);
     expect(world.quota.used).toBe(0);
+  });
+});
+
+describe('consentimientos', () => {
+  const terms = { document: 'terms', version: '2026-11-01' };
+
+  it('registra la aceptación y la lista solo a su dueño', async () => {
+    const world = await createWorld();
+    const response = await world.app.inject({
+      method: 'POST',
+      url: '/v1/consents',
+      headers: AUTH,
+      payload: terms,
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({ ...terms, acceptedAt: new Date(0).toISOString() });
+
+    const own = await world.app.inject({ method: 'GET', url: '/v1/consents', headers: AUTH });
+    expect(own.json()).toEqual({ consents: [{ ...terms, acceptedAt: new Date(0).toISOString() }] });
+    const other = await world.app.inject({
+      method: 'GET',
+      url: '/v1/consents',
+      headers: AUTH_OTHER,
+    });
+    expect(other.json()).toEqual({ consents: [] });
+  });
+
+  it('aceptar dos veces la misma versión no la duplica', async () => {
+    const world = await createWorld();
+    const accept = () =>
+      world.app.inject({ method: 'POST', url: '/v1/consents', headers: AUTH, payload: terms });
+    const first = await accept();
+    const second = await accept();
+    expect(second.statusCode).toBe(201);
+    expect(second.json()).toEqual(first.json());
+    expect(world.consents).toHaveLength(1);
+  });
+
+  it('exige sesión y valida documento y versión', async () => {
+    const world = await createWorld();
+    const anonymous = await world.app.inject({
+      method: 'POST',
+      url: '/v1/consents',
+      payload: terms,
+    });
+    expect(anonymous.statusCode).toBe(401);
+    expect((await world.app.inject({ method: 'GET', url: '/v1/consents' })).statusCode).toBe(401);
+    for (const payload of [
+      { document: 'cookies', version: '1' },
+      { document: 'privacy', version: '' },
+      { document: 'privacy', version: 'x'.repeat(33) },
+      { document: 'privacy', version: 'cualquier-cosa' },
+      { document: 'privacy' },
+    ]) {
+      const response = await world.app.inject({
+        method: 'POST',
+        url: '/v1/consents',
+        headers: AUTH,
+        payload,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(errorCode(response)).toBe('REQ_INVALID');
+    }
+    expect(world.consents).toEqual([]);
+  });
+});
+
+describe('límite de peticiones', () => {
+  const rateLimit = {
+    global: { max: 3, timeWindowMs: 60_000 },
+    strict: { max: 1, timeWindowMs: 60_000 },
+  };
+
+  it('responde 429 con RATE_LIMITED al pasar el límite global', async () => {
+    const { app } = await createWorld({ rateLimit });
+    const statuses: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      statuses.push(
+        (await app.inject({ method: 'GET', url: '/v1/courses', headers: AUTH })).statusCode,
+      );
+    }
+    expect(statuses).toEqual([200, 200, 200, 429]);
+    const limited = await app.inject({ method: 'GET', url: '/v1/courses', headers: AUTH });
+    expect(errorCode(limited)).toBe('RATE_LIMITED');
+    expect(limited.headers['retry-after']).toBeDefined();
+  });
+
+  it('las preguntas tienen un límite más estricto, por usuario', async () => {
+    const { app } = await createWorld({ rateLimit });
+    const ask = (headers: Record<string, string>) =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/questions',
+        headers,
+        payload: { question: '¿Qué produce la mitocondria?' },
+      });
+    expect((await ask(AUTH)).statusCode).toBe(200);
+    const second = await ask(AUTH);
+    expect(second.statusCode).toBe(429);
+    expect(errorCode(second)).toBe('RATE_LIMITED');
+    // Otro usuario tiene su propio cupo.
+    expect((await ask(AUTH_OTHER)).statusCode).toBe(200);
+  });
+
+  it('sin sesión cuenta por IP y /health no se limita', async () => {
+    const { app } = await createWorld({ rateLimit });
+    for (let i = 0; i < 3; i += 1) await app.inject({ method: 'GET', url: '/v1/documents' });
+    const limited = await app.inject({ method: 'GET', url: '/v1/documents' });
+    expect(limited.statusCode).toBe(429);
+    expect((await app.inject({ method: 'GET', url: '/health' })).statusCode).toBe(200);
+  });
+
+  it('detrás de un proxy, un X-Forwarded-For inventado no da cupo nuevo', async () => {
+    const { app } = await createWorld({ rateLimit, trustProxy: 1 });
+    const statuses: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/documents',
+        // El cliente inventa una IP distinta en cada petición; el proxy agrega la real.
+        headers: { 'x-forwarded-for': `10.0.0.${i}, 203.0.113.7` },
+      });
+      statuses.push(response.statusCode);
+    }
+    expect(statuses).toEqual([401, 401, 401, 429]);
+  });
+
+  it('se puede desactivar', async () => {
+    const { app } = await createWorld({ rateLimit: false });
+    for (let i = 0; i < 5; i += 1) {
+      expect((await app.inject({ method: 'GET', url: '/health' })).statusCode).toBe(200);
+    }
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/courses', headers: AUTH })).headers[
+        'x-ratelimit-limit'
+      ],
+    ).toBeUndefined();
+  });
+});
+
+describe('cabeceras y registro', () => {
+  it('las respuestas traen cabeceras de seguridad', async () => {
+    const { app } = await createWorld();
+    const response = await app.inject({ method: 'GET', url: '/health' });
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBeDefined();
+  });
+
+  it('los logs no guardan el cuerpo ni el header Authorization', async () => {
+    const lines: string[] = [];
+    const { app } = await createWorld({
+      logger: { stream: { write: (line) => void lines.push(line) } },
+      answer: {
+        embedder: fakeEmbedder,
+        search: () => Promise.reject(new Error('caído')),
+        generator: fakeGenerator(VALID_ANSWER),
+      },
+    });
+    const question = '¿Cuál es mi pregunta secreta de examen?';
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions?origen=chat',
+      headers: AUTH,
+      payload: { question },
+    });
+    expect(response.statusCode).toBe(502);
+    const output = lines.join('');
+    expect(output).toContain('/v1/questions');
+    expect(output).not.toContain('secreta');
+    expect(output).not.toContain('token-1');
+    expect(output).not.toContain('origen=chat');
+  });
+
+  it('un JSON mal formado es 400 REQ_INVALID y su contenido no llega a los logs', async () => {
+    const lines: string[] = [];
+    const { app } = await createWorld({
+      logger: { stream: { write: (line) => void lines.push(line) } },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: { ...AUTH, 'content-type': 'application/json' },
+      payload: '{"question": "mi apunte secreto',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(errorCode(response)).toBe('REQ_INVALID');
+    expect(lines.join('')).not.toContain('secreto');
   });
 });

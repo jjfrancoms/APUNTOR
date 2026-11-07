@@ -151,6 +151,9 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
       },
       { n: 54, name: 'Editar perfil', href: '/profile/edit', designed: false },
       { n: 55, name: 'Términos y privacidad', href: '/legal/terms', designed: false },
+      { n: 56, name: 'Nueva contraseña', href: '/reset-password', designed: false },
+      { n: 57, name: 'Regreso de Google', href: '/auth-callback', designed: false },
+      { n: 58, name: 'Confirmar mayoría de edad', href: '/confirm-age', designed: false },
     ],
   },
 ];

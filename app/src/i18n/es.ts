@@ -45,6 +45,10 @@ export const es = {
     AUTH_EMAIL_UNCONFIRMED: 'Confirma tu correo con el enlace que te enviamos y vuelve a entrar.',
     NET_UNAVAILABLE:
       'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    AUTH_OAUTH_FAILED: 'No pudimos entrar con Google. Inténtalo de nuevo o usa tu correo.',
+    AUTH_SAME_PASSWORD: 'Elige una contraseña distinta de la anterior.',
+    AUTH_CALLBACK_FAILED:
+      'No pudimos abrir tu sesión con este enlace. Si venías de confirmar tu correo, inicia sesión con tu correo y contraseña.',
   },
   live: {
     notConfigured: 'La app todavía no está conectada a su servidor. Falta completar app/.env.',
@@ -156,7 +160,7 @@ export const es = {
     },
     minorTitle: '¿Tienes menos de 18 años?',
     minorBody:
-      'Pediremos el correo de tu padre, madre o tutor para que autorice tu cuenta antes de usar la app.',
+      'Por ahora APUNTOR es solo para mayores de 18 años. Si eres menor, puedes anotarte en la lista de espera.',
     minorAction: 'Soy menor de 18',
     readAndAccept: 'Leí y acepto los',
     submit: 'Aceptar y continuar',
@@ -716,20 +720,6 @@ export const es = {
     privacy: 'Política de privacidad',
     subscription: 'Términos de suscripción',
     draft: 'Borrador para el prototipo, pendiente de revisión legal (Ley 29733).',
-    termsBody: [
-      'APUNTOR te ayuda a estudiar con tus propios documentos. Eres responsable de tener derecho a usar el material que subes.',
-      'Las respuestas se basan en tus documentos y citan la página de origen. El contexto externo se muestra aparte y con su fuente.',
-      'Puedes borrar tu cuenta y tus datos cuando quieras desde Perfil.',
-    ],
-    privacyBody: [
-      'Usamos tus documentos solo para ayudarte; nadie más los ve.',
-      'La analítica es anónima y opcional, y nunca incluye el contenido de tus documentos.',
-      'Los menores de 18 años necesitan la autorización de su padre, madre o tutor.',
-    ],
-    subscriptionBody: [
-      'La suscripción se cobra y se cancela desde tu tienda (Google Play o App Store).',
-      'Si cancelas, conservas el plan hasta la fecha de renovación y tus datos no se borran.',
-    ],
   },
   helpView: {
     answers: [
@@ -784,6 +774,34 @@ export const es = {
     day: (day: number, month: string, year: number) => `${day} de ${month} de ${year}`,
   },
   mascot: { label: 'Illari, tu mascota' },
+  resetPassword: {
+    header: 'Nueva contraseña',
+    title: 'Crea tu nueva contraseña',
+    subtitle: 'Escríbela dos veces. Después entrarás directo a tu cuenta.',
+    opening: 'Abriendo el enlace…',
+    password: 'Nueva contraseña',
+    passwordPlaceholder: 'Mínimo 8 caracteres',
+    confirm: 'Confirmar contraseña',
+    confirmPlaceholder: 'Escríbela otra vez',
+    submit: 'Guardar contraseña',
+    requestNew: 'Pedir un enlace nuevo',
+  },
+  authCallback: {
+    header: 'Iniciar sesión',
+    opening: 'Abriendo tu sesión…',
+    backToLogin: 'Volver a iniciar sesión',
+  },
+  confirmAge: {
+    header: 'Tu edad',
+    title: 'Una última cosa',
+    subtitle:
+      'Por ahora APUNTOR es para mayores de 18 años. Confírmalo con tu fecha de nacimiento.',
+    birthDate: 'Fecha de nacimiento',
+    birthPlaceholder: 'DD/MM/AAAA',
+    birthNote: 'Solo guardamos que tienes 18 años o más, nunca la fecha.',
+    submit: 'Continuar',
+    signOut: 'Usar otra cuenta',
+  },
   map: {
     title: 'Mapa de pantallas',
     intro: 'Vista previa con datos de ejemplo. Toca una pantalla para abrirla.',

@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
 import { Banner, Button, Icon, Mascot, Screen, Text, TextField, TextLink } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { backendConfigured } from '@/lib/config';
-import { signIn } from '@/store/store';
+import { entryRoute, getState, signIn } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 1 · Inicio de sesión */
@@ -19,7 +20,8 @@ export default function Login() {
     setBusy(true);
     const r = await signIn(email, password);
     setBusy(false);
-    if (r.ok) router.replace('/home');
+    // Sin la mayoría de edad confirmada en la cuenta, se pide antes de entrar.
+    if (r.ok) router.replace(entryRoute(getState()));
     else setError(s.errors[r.error]);
   };
   return (
@@ -65,6 +67,7 @@ export default function Login() {
           loading={busy}
           disabled={email.length === 0 || password.length === 0}
         />
+        <GoogleSignIn />
       </View>
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">

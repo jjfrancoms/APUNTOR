@@ -77,6 +77,15 @@ export interface ApiUploadTicket {
   uploadHeaders: Record<string, string>;
 }
 
+/** Documentos legales que el usuario acepta (con la versión vigente de `i18n/legal.ts`). */
+export type LegalDocument = 'terms' | 'privacy';
+
+export interface ApiConsent {
+  document: LegalDocument;
+  version: string;
+  acceptedAt: string;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (!config.apiUrl) throw new ApiRequestError('NOT_CONFIGURED', 0);
   const { data } = await supabase.auth.getSession();
@@ -122,4 +131,8 @@ export const api = {
   deleteDocument: (id: string) => request<void>('DELETE', `/v1/documents/${id}`),
   ask: (question: string) => request<ApiAnswer>('POST', '/v1/questions', { question }),
   external: (question: string) => request<ApiExternal>('POST', '/v1/external', { question }),
+  /** Registra la aceptación (idempotente: repetirla con la misma versión no duplica). */
+  acceptConsent: (document: LegalDocument, version: string) =>
+    request<ApiConsent>('POST', '/v1/consents', { document, version }),
+  consents: () => request<{ consents: ApiConsent[] }>('GET', '/v1/consents'),
 };

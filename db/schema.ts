@@ -157,10 +157,33 @@ export const usageQuotas = pgTable(
   ],
 );
 
+export const CONSENT_DOCUMENTS = ['terms', 'privacy'] as const;
+export type ConsentDocument = (typeof CONSENT_DOCUMENTS)[number];
+
+/**
+ * Aceptación de los términos y de la política de privacidad, una fila por versión aceptada.
+ * Solo la escribe el backend; el usuario autenticado lee las suyas (RLS).
+ */
+export const consents = pgTable(
+  'consents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    document: text('document').$type<ConsentDocument>().notNull(),
+    version: text('version').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('consents_user_document_version_idx').on(t.userId, t.document, t.version),
+    check('consents_document_valid', sql`${t.document} IN ('terms', 'privacy')`),
+  ],
+);
+
 export type Course = typeof courses.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type DocumentChunk = typeof documentChunks.$inferSelect;
 export type NewDocumentChunk = typeof documentChunks.$inferInsert;
 export type Topic = typeof topics.$inferSelect;
+export type Consent = typeof consents.$inferSelect;
 export type NewTopic = typeof topics.$inferInsert;

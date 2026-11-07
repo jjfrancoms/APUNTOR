@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { courses, documents, topics, type DocumentStatus } from '../../db/schema';
+import { consents, courses, documents, topics, type DocumentStatus } from '../../db/schema';
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const MAX_COURSE_TITLE = 80;
@@ -71,7 +71,7 @@ export interface DocumentsRepository {
   createCourse(userId: string, title: string): Promise<CourseRecord>;
   renameCourse(userId: string, courseId: string, title: string): Promise<void>;
   deleteCourse(userId: string, courseId: string): Promise<void>;
-  /** Borra cursos, documentos (con fragmentos y temas) y cuotas del usuario. */
+  /** Borra cursos, documentos (con fragmentos y temas), cuotas y consentimientos del usuario. */
   deleteAllForUser(userId: string): Promise<void>;
 }
 
@@ -180,6 +180,7 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
         await tx.delete(documents).where(eq(documents.userId, userId));
         await tx.delete(courses).where(eq(courses.userId, userId));
         await tx.execute(sql`DELETE FROM usage_quotas WHERE user_id = ${userId}::uuid`);
+        await tx.delete(consents).where(eq(consents.userId, userId));
       });
     },
   };

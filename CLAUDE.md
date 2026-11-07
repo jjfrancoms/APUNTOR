@@ -64,6 +64,21 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - `match_user_chunks` usa `hnsw.iterative_scan = relaxed_order`: requiere pgvector ≥ 0.8.
 - `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
   (`formatEmbeddingInput()`).
+- **Consentimientos con versión**: la tabla `consents` guarda documento (`terms`/`privacy`),
+  versión y fecha, una fila por versión (`POST /v1/consents` es idempotente y responde 201;
+  `GET /v1/consents` lista las del usuario; se borran con la cuenta en `deleteAllForUser`). La
+  versión vigente es `LEGAL_VERSION` (fecha ISO) en `app/src/i18n/legal.ts`: cambiar el texto
+  legal obliga a subirla y la app vuelve a pedir la aceptación (con sesión y sin la versión
+  vigente aceptada, la entrada lleva a Privacidad (15), no a Inicio; sin red no bloquea).
+- **Límite de peticiones** (`@fastify/rate-limit`): 300/min global y 20/min en
+  `POST /v1/questions`, `/v1/external` y `/v1/documents`, por usuario con sesión o por IP sin
+  ella; responde 429 `RATE_LIMITED`. Configurable con `AppDeps.rateLimit`. En Railway la API
+  confía en un solo salto de proxy (`trustProxy: 1`): no uses `true`, porque deja inventar la
+  IP con X-Forwarded-For.
+- **Logs sin contenido** (`api/src/logging.ts`): de cada petición solo método, ruta sin query
+  e id; nunca el cuerpo (preguntas, títulos) ni `Authorization`. Los errores 4xx de Fastify (JSON
+  mal formado) responden `REQ_INVALID` y no se registran.
+- Cabeceras de seguridad con `@fastify/helmet`.
 
 ### Reglas de producto (de `docs/producto/mvp-ux.md`)
 
@@ -163,10 +178,22 @@ URL y clave publicable de Supabase, y la URL de la API (con Expo Go, la IP de la
 
 Fases: 1 (hecha) cuentas, cursos creados por el usuario, subida, preguntas con citas, cuotas y contexto
 externo; 2 clasificación automática y conversaciones en el servidor; 3 quizzes, flashcards y resúmenes
-compartidos; 4 pagos, notificaciones e inicio con Google/Apple. Las pantallas de fases pendientes
+compartidos; 4 pagos, notificaciones e inicio con Apple (Google ya está, tras una bandera). Las pantallas de fases pendientes
 usan `previewOnly()` (`components/domain/PreviewOnly.tsx`): con datos de ejemplo solo en la vista previa
 del diseño (`EXPO_PUBLIC_PREVIEW=1`, mapa en `/mapa`); en la app real muestran "Muy pronto". Hasta la
 fase 2, cada documento hace de clase dentro de su curso.
+
+Cuentas y acceso: solo mayores de 18 (los menores van a la lista de espera; no hay
+consentimiento parental por ahora). El registro por correo guarda solo `adult_confirmed`; quien
+entra con Google la confirma en la pantalla 58 y, si es menor, su cuenta se borra. El inicio con
+Google está detrás de `EXPO_PUBLIC_GOOGLE_AUTH=1` (apagado hasta configurar el proveedor en
+Supabase). Los enlaces del correo (confirmación del registro y recuperación) y el regreso de
+Google usan PKCE y vuelven a la app: `auth-callback` (57) y `reset-password` (56); sus URLs
+(`Linking.createURL`) deben estar en las Redirect URLs de Supabase.
+
+Migraciones contra Supabase: usa la conexión directa o de sesión (`QUEUE_DATABASE_URL`), no la
+del pooler de transacciones:
+`sh -c 'set -a; . ./.env; set +a; DATABASE_URL="$QUEUE_DATABASE_URL" npx drizzle-kit migrate'`.
 
 Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
 en `app/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
@@ -189,9 +216,10 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 - Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario, y
   conversaciones guardadas en el servidor (hoy viven en el dispositivo).
 - Fase 3: quizzes, flashcards y resúmenes compartidos generados desde los documentos, con cita.
-- Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Google/Apple.
-- Cambiar la contraseña desde el enlace del correo: el enlace abre la página de Supabase; falta la
-  pantalla de la app que lo reciba.
+- Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Apple.
+- Migraciones `0009_consents` y `0010_consents_rls` (tabla `consents` con RLS) escritas pero
+  **sin aplicar** en Supabase.
+- Lista de espera de menores (44): el correo solo queda en el dispositivo; nadie recibe el aviso.
 - Cuentas escolares `student_restricted`: las reglas siguen por definir.
 - Animación Rive de 7 estados de la mascota.
 - Los 200 casos reales de `eval/` y la prueba con 20 documentos reales.

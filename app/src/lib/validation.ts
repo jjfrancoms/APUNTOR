@@ -4,6 +4,19 @@ export function isWeakPassword(password: string): boolean {
   return password.length < MIN_PASSWORD_LENGTH;
 }
 
+/**
+ * Contraseña nueva escrita dos veces (registro y recuperación): 8+ caracteres e iguales.
+ * Devuelve el código de error que se muestra, o null si es válida.
+ */
+export function validateNewPassword(
+  password: string,
+  confirm: string,
+): 'AUTH_WEAK_PASSWORD' | 'AUTH_PASSWORD_MISMATCH' | null {
+  if (isWeakPassword(password)) return 'AUTH_WEAK_PASSWORD';
+  if (password !== confirm) return 'AUTH_PASSWORD_MISMATCH';
+  return null;
+}
+
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email.trim());
 }

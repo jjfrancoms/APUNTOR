@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
+  Banner,
   Button,
   Card,
   Checkbox,
@@ -13,8 +14,8 @@ import {
   Toggle,
   TopBar,
 } from '@/components/ui';
-import { useStrings } from '@/i18n/es';
-import { updateSettings, useStore } from '@/store/store';
+import { useStrings, type ErrorCode } from '@/i18n/es';
+import { acceptLegalDocuments, updateSettings, useStore } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 15 · Privacidad y consentimiento */
@@ -27,7 +28,26 @@ export default function Privacy() {
   const setUseDocs = (v: boolean) => updateSettings({ useDocs: v });
   const setExternal = (v: boolean) => updateSettings({ external: v });
   const setAnalytics = (v: boolean) => updateSettings({ analytics: v });
-  const [accepted, setAccepted] = useState(true);
+  // Consentimiento explícito: la casilla empieza sin marcar.
+  const [accepted, setAccepted] = useState(false);
+  const signedIn = useStore((st) => st.session !== null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ErrorCode | null>(null);
+  /** Con sesión, la aceptación (Términos y Política vigentes) queda registrada en el servidor. */
+  const submit = async () => {
+    if (busy) return;
+    if (signedIn) {
+      setBusy(true);
+      setError(null);
+      const r = await acceptLegalDocuments();
+      setBusy(false);
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
+    }
+    router.push('/onboarding');
+  };
   return (
     <Screen
       narrow
@@ -60,11 +80,13 @@ export default function Privacy() {
               </Text>
             </Text>
           </Checkbox>
+          {error ? <Banner tone="danger" title={s.errors[error]} /> : null}
           {/* "Usar mis documentos" es necesario para que la app funcione. */}
           <Button
             label={s.privacy.submit}
             disabled={!accepted || !useDocs}
-            onPress={() => router.push('/onboarding')}
+            loading={busy}
+            onPress={() => void submit()}
           />
           <Button
             label={s.privacy.fullPolicy}

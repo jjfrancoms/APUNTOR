@@ -64,6 +64,20 @@
       "when": 1793904537019,
       "tag": "0008_courses_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794060413517,
+      "tag": "0009_consents",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794060415102,
+      "tag": "0010_consents_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -17,7 +17,7 @@ Principios de diseño
 Solo tus documentos. Sin fuente en tus apuntes, no hay respuesta.
 Toda afirmación se puede verificar. Cada cita se valida contra el fragmento recuperado (id del fragmento, cita literal y coherencia con la afirmación).
 Lo externo se etiqueta. Contenido de internet siempre visible como tal.
-Privacidad primero. Analítica anónima, consentimiento parental para menores y documentos aislados por usuario mediante RLS.
+Privacidad primero. Analítica anónima, solo mayores de 18 (los menores van a lista de espera; no hay consentimiento parental por ahora), aceptación de términos registrada con su versión y documentos aislados por usuario mediante RLS.
 Medir antes de construir. El lanzamiento depende de un conjunto de pruebas, no de una impresión.
 Arquitectura (resumen de la especificación v2.4)
 Capa	Tecnología
@@ -111,7 +111,7 @@ npm run eval -- score --results <resultados.jsonl> --grades <notas.jsonl>
 Pendientes y riesgos abiertos
 Retención cero en Vertex AI: requiere configuración (caching duradero apagado, logging de solicitudes apagado) y confirmación escrita de Google. No se declara hasta tenerla.
 Costos: los precios y el consumo real de tokens (incluidos los de razonamiento) están por medir.
-Marco legal (Ley 29733): consentimiento de menores, edad mínima y registro de bancos de datos requieren revisión de un abogado.
+Marco legal (Ley 29733): edad mínima (hoy 18; un posible acceso de menores con consentimiento parental está por decidir), textos legales (docs/legal/) y registro de bancos de datos requieren revisión de un abogado.
 Nombre: falta validar disponibilidad en tiendas, dominios, redes e INDECOPI (clases 9, 41 y 42).
 Cuentas escolares: quién contrata, roles y alcance de "solo estudio".
 Licencia

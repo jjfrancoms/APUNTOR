@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import { drizzle } from 'drizzle-orm/pglite';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createConsentsRepository, type ConsentsRepository } from '../../api/src/consents';
 import { createDocumentsRepository, type DocumentsRepository } from '../../api/src/documents';
 import type { Database } from '../../db/client';
 import * as schema from '../../db/schema';
@@ -16,6 +17,7 @@ const OTHER_DOC = 'ffffffff-0000-4000-8000-000000000002';
 
 let pg: PGlite;
 let repo: DocumentsRepository;
+let consentsRepo: ConsentsRepository;
 
 beforeAll(async () => {
   pg = new PGlite({ extensions: { vector } });
@@ -26,7 +28,9 @@ beforeAll(async () => {
     await pg.exec(readFileSync(join(ROOT, 'migrations', file), 'utf8'));
   }
   // Las consultas del repositorio no dependen del driver: se prueban sobre PGlite.
-  repo = createDocumentsRepository(drizzle(pg, { schema }) as unknown as Database);
+  const db = drizzle(pg, { schema }) as unknown as Database;
+  repo = createDocumentsRepository(db);
+  consentsRepo = createConsentsRepository(db);
 }, 60_000);
 
 describe('repositorio de documentos y cursos (SQL real)', () => {
@@ -78,6 +82,28 @@ describe('repositorio de documentos y cursos (SQL real)', () => {
     expect((await repo.get(USER, DOC))?.courseId).toBeNull();
   });
 
+  it('aceptar un consentimiento es idempotente y cada usuario ve solo los suyos', async () => {
+    const first = await consentsRepo.accept(USER, 'terms', '2026-11-01');
+    const again = await consentsRepo.accept(USER, 'terms', '2026-11-01');
+    expect(again).toEqual(first);
+    await consentsRepo.accept(USER, 'privacy', '2026-11-01');
+    await consentsRepo.accept(OTHER, 'terms', '2026-11-01');
+
+    const own = await consentsRepo.list(USER);
+    expect(own.map((c) => [c.document, c.version])).toEqual([
+      ['terms', '2026-11-01'],
+      ['privacy', '2026-11-01'],
+    ]);
+    expect(own[0]?.acceptedAt).toBeInstanceOf(Date);
+    const rows = await pg.query(`SELECT 1 FROM consents WHERE user_id = '${USER}'`);
+    expect(rows.rows).toHaveLength(2);
+    await expect(
+      pg.query(
+        `INSERT INTO consents (user_id, document, version) VALUES ('${USER}', 'cookies', '1')`,
+      ),
+    ).rejects.toThrow();
+  });
+
   it('borrar la cuenta elimina todo lo del usuario y nada de otros', async () => {
     await pg.exec(`
       INSERT INTO usage_quotas (user_id, kind, period_start, used)
@@ -90,6 +116,8 @@ describe('repositorio de documentos y cursos (SQL real)', () => {
     expect(topics.rows).toEqual([]);
     const quotas = await pg.query<{ user_id: string }>('SELECT user_id FROM usage_quotas');
     expect(quotas.rows.map((r) => r.user_id)).toEqual([OTHER]);
+    expect(await consentsRepo.list(USER)).toEqual([]);
+    expect(await consentsRepo.list(OTHER)).toHaveLength(1);
     expect(await repo.list(OTHER)).toHaveLength(1);
   });
 });

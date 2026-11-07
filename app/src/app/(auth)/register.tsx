@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
 import {
   Button,
   Checkbox,
@@ -24,7 +25,8 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [accepted, setAccepted] = useState(true);
+  // Consentimiento explícito: la casilla empieza sin marcar.
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<{ code: ErrorCode; field: AuthField } | null>(null);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
@@ -141,6 +143,7 @@ export default function Register() {
           birthDate.length < 10
         }
       />
+      <GoogleSignIn />
       <View style={styles.inline}>
         <Text variant="small" color="textMuted">
           {s.register.haveAccount}

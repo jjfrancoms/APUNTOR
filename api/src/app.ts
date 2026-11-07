@@ -1,9 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { AuthUserDeleter } from './account';
 import type { Authenticator } from './auth';
+import {
+  CONSENT_DOCUMENTS,
+  MAX_CONSENT_VERSION,
+  type ConsentRecord,
+  type ConsentsRepository,
+} from './consents';
 import {
   extensionOf,
   MAX_COURSE_TITLE,
@@ -15,14 +23,34 @@ import {
 } from './documents';
 import { ApiError } from './errors';
 import type { ExternalSearch } from './external/tavily';
+import { loggerOptions, type LogStream } from './logging';
 import type { IngestionEnqueuer } from './queue';
 import { FREE_LIMITS, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
 
+/** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
+export interface RateLimitRule {
+  max: number;
+  timeWindowMs: number;
+}
+
+export interface RateLimitConfig {
+  /** Toda la API. */
+  global: RateLimitRule;
+  /** Rutas caras: preguntas, contexto externo y registro de subidas. */
+  strict: RateLimitRule;
+}
+
+export const DEFAULT_RATE_LIMIT: RateLimitConfig = {
+  global: { max: 300, timeWindowMs: 60_000 },
+  strict: { max: 20, timeWindowMs: 60_000 },
+};
+
 export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
+  consents: ConsentsRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -31,7 +59,16 @@ export interface AppDeps {
   /** Sin configurar, el contexto externo responde como no disponible. */
   externalSearch?: ExternalSearch;
   corsOrigins?: readonly string[];
-  logger?: boolean;
+  /** `true` escribe en stdout; con `{ stream }` escribe ahí (pruebas). */
+  logger?: boolean | { stream: LogStream };
+  /** Sin indicar usa `DEFAULT_RATE_LIMIT`; `false` lo desactiva (pruebas). */
+  rateLimit?: RateLimitConfig | false;
+  /**
+   * Detrás de un proxy (Railway): número de proxies de confianza delante de la API. Con `1`
+   * la IP es la que vio el proxy; con `true` se tomaría la primera de X-Forwarded-For, que el
+   * cliente puede inventar para esquivar el límite por IP.
+   */
+  trustProxy?: number | false;
 }
 
 const idParams = z.object({ id: z.uuid() });
@@ -53,6 +90,15 @@ const questionBody = z.object({
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
 });
 const externalBody = z.object({ question: z.string().trim().min(1).max(2000) });
+const consentBody = z.object({
+  document: z.enum(CONSENT_DOCUMENTS),
+  // Versión con formato de fecha ISO (`LEGAL_VERSION` de la app): evita filas basura.
+  version: z
+    .string()
+    .trim()
+    .max(MAX_CONSENT_VERSION)
+    .regex(/^\d{4}-\d{2}-\d{2}$/u),
+});
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
@@ -78,27 +124,106 @@ function toPublicCourse(course: CourseRecord) {
   return { id: course.id, title: course.title, createdAt: course.createdAt.toISOString() };
 }
 
+function toPublicConsent(consent: ConsentRecord) {
+  return {
+    document: consent.document,
+    version: consent.version,
+    acceptedAt: consent.acceptedAt.toISOString(),
+  };
+}
+
+function bearerToken(request: FastifyRequest): string | null {
+  const [scheme, token] = (request.headers.authorization ?? '').split(' ');
+  return scheme === 'Bearer' && token ? token : null;
+}
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 64 * 1024 });
-  await app.register(cors, {
-    origin: [...(deps.corsOrigins ?? [])],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  const logger =
+    deps.logger === undefined || deps.logger === false
+      ? false
+      : loggerOptions(deps.logger === true ? undefined : deps.logger.stream);
+  // Igual que `trustProxy: n` de proxy-addr (los tipos de Fastify no aceptan el número).
+  const hops = deps.trustProxy ?? false;
+  const app = Fastify({
+    logger,
+    bodyLimit: 64 * 1024,
+    trustProxy: hops === false ? false : (_address: string, hop: number) => hop < hops,
   });
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
       return reply.status(error.statusCode).send({ error: { code: error.code } });
     }
+    // Errores de Fastify con estado 4xx (JSON mal formado, cuerpo muy grande…): son de la
+    // petición, no del servidor. No se registran: el mensaje de JSON.parse cita el cuerpo.
+    const status =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof error.statusCode === 'number'
+        ? error.statusCode
+        : 500;
+    if (status >= 400 && status < 500) {
+      return reply.status(status).send({ error: { code: 'REQ_INVALID' } });
+    }
     request.log.error(error);
     return reply.status(500).send({ error: { code: 'INTERNAL' } });
   });
 
+  // API JSON: sin HTML que proteger, pero las cabeceras cierran nosniff, framing y referrer.
+  // CORP en cross-origin porque la app web vive en otro origen (lo controla CORS).
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  });
+  await app.register(cors, {
+    origin: [...(deps.corsOrigins ?? [])],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  });
+
+  // Un token se verifica una sola vez por petición: lo usan el límite y las rutas.
+  const sessions = new WeakMap<FastifyRequest, Promise<string | null>>();
+  function sessionUser(request: FastifyRequest): Promise<string | null> {
+    let session = sessions.get(request);
+    if (!session) {
+      const token = bearerToken(request);
+      session = token === null ? Promise.resolve(null) : deps.authenticate(token);
+      sessions.set(request, session);
+    }
+    return session;
+  }
+
   async function requireUser(request: FastifyRequest): Promise<string> {
-    const [scheme, token] = (request.headers.authorization ?? '').split(' ');
-    const userId = scheme === 'Bearer' && token ? await deps.authenticate(token) : null;
+    const userId = await sessionUser(request);
     if (userId === null) throw new ApiError('AUTH_REQUIRED', 401);
     return userId;
   }
+
+  const limits = deps.rateLimit ?? DEFAULT_RATE_LIMIT;
+  if (limits !== false) {
+    await app.register(rateLimit, {
+      global: true,
+      max: limits.global.max,
+      timeWindow: limits.global.timeWindowMs,
+      // Por usuario con sesión válida; sin ella, por IP. Un token inválido no da cupo propio.
+      keyGenerator: async (request) => {
+        const userId = await sessionUser(request).catch(() => null);
+        return userId === null ? `ip:${request.ip}` : `user:${userId}`;
+      },
+      errorResponseBuilder: () => new ApiError('RATE_LIMITED', 429),
+    });
+  }
+  /** Límite más estricto para las rutas caras: en ellas reemplaza al global. */
+  const strictLimit =
+    limits === false
+      ? {}
+      : {
+          config: { rateLimit: { max: limits.strict.max, timeWindow: limits.strict.timeWindowMs } },
+        };
 
   async function requireDocument(userId: string, params: unknown): Promise<DocumentRecord> {
     const { id } = parse(idParams, params);
@@ -113,7 +238,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return course;
   }
 
-  app.get('/health', () => ({ status: 'ok' }));
+  app.get('/health', { config: { rateLimit: false } }, () => ({ status: 'ok' }));
 
   // --- Cuenta y consumo ------------------------------------------------------------
 
@@ -138,6 +263,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await deps.documents.deleteAllForUser(userId);
     await deps.deleteAuthUser(userId);
     return reply.status(204).send();
+  });
+
+  // --- Consentimientos (términos y privacidad) ---------------------------------
+
+  // Idempotente: aceptar otra vez la misma versión devuelve la aceptación original.
+  app.post('/v1/consents', async (request, reply) => {
+    const userId = await requireUser(request);
+    const { document, version } = parse(consentBody, request.body);
+    const consent = await deps.consents.accept(userId, document, version);
+    return reply.status(201).send(toPublicConsent(consent));
+  });
+
+  app.get('/v1/consents', async (request) => {
+    const userId = await requireUser(request);
+    return { consents: (await deps.consents.list(userId)).map(toPublicConsent) };
   });
 
   // --- Cursos ----------------------------------------------------------------------
@@ -175,7 +315,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // --- Documentos ------------------------------------------------------------------
 
   // Registra el documento y entrega la URL prefirmada: el archivo va directo a R2.
-  app.post('/v1/documents', async (request, reply) => {
+  app.post('/v1/documents', strictLimit, async (request, reply) => {
     const userId = await requireUser(request);
     const body = parse(createDocumentBody, request.body);
 
@@ -277,7 +417,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // --- Preguntas -------------------------------------------------------------------
 
-  app.post('/v1/questions', async (request) => {
+  app.post('/v1/questions', strictLimit, async (request) => {
     const userId = await requireUser(request);
     const body = parse(questionBody, request.body);
     try {
@@ -300,7 +440,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   // Contexto externo: aparte de la respuesta, nunca entra al prompt. Cuenta como pregunta.
-  app.post('/v1/external', async (request) => {
+  app.post('/v1/external', strictLimit, async (request) => {
     const userId = await requireUser(request);
     const { question } = parse(externalBody, request.body);
     if (!deps.externalSearch) throw new ApiError('EXTERNAL_UNAVAILABLE', 503);
