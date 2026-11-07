@@ -43,7 +43,7 @@ const es: LegalTexts = {
     {
       title: '1. Quién presta el servicio',
       paragraphs: [
-        'APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú ("APUNTOR", "nosotros").',
+        'APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Mz. C1, Lote 05, distrito de San Juan de Lurigancho, provincia y departamento de Lima, Perú ("APUNTOR", "nosotros").',
         'Para cualquier consulta sobre estos términos puedes escribirnos a soporte@apuntor.com.',
       ],
     },
@@ -146,7 +146,7 @@ const es: LegalTexts = {
     {
       title: '1. Responsable del tratamiento',
       paragraphs: [
-        'El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú, titular del banco de datos de usuarios de APUNTOR.',
+        'El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Mz. C1, Lote 05, distrito de San Juan de Lurigancho, provincia y departamento de Lima, Perú, titular del banco de datos de usuarios de APUNTOR.',
         'Para cualquier asunto sobre tus datos escríbenos a soporte@apuntor.com.',
         'Esta política cumple con el deber de informarte que establece el artículo 18 de la Ley N.° 29733, Ley de Protección de Datos Personales.',
       ],
@@ -266,7 +266,7 @@ const en: LegalTexts = {
     {
       title: '1. Who provides the service',
       paragraphs: [
-        'APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, an individual, RUC (Peruvian tax ID) 10762140859, with its address at Jr. Montevideo 706, Peru ("APUNTOR", "we").',
+        'APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, an individual, RUC (Peruvian tax ID) 10762140859, with its address at Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Block C1, Lot 05, San Juan de Lurigancho district, Lima, Peru ("APUNTOR", "we").',
         'For any question about these terms, write to us at soporte@apuntor.com.',
       ],
     },
@@ -369,7 +369,7 @@ const en: LegalTexts = {
     {
       title: '1. Data controller',
       paragraphs: [
-        'The controller of your personal data is Juan Jhan Franco Monja Sanchez, an individual, RUC 10762140859, with its address at Jr. Montevideo 706, Peru, owner of the APUNTOR user database.',
+        'The controller of your personal data is Juan Jhan Franco Monja Sanchez, an individual, RUC 10762140859, with its address at Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Block C1, Lot 05, San Juan de Lurigancho district, Lima, Peru, owner of the APUNTOR user database.',
         'For any matter about your data, write to us at soporte@apuntor.com.',
         'This policy fulfills the duty to inform you set out in article 18 of Law No. 29733, the Personal Data Protection Law of Peru. The Spanish version prevails over this translation.',
       ],

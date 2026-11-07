@@ -13,7 +13,7 @@
 
 ### 1. Responsable del tratamiento
 
-El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú, titular del banco de datos de usuarios de APUNTOR.
+El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural, con RUC 10762140859 y domicilio en Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Mz. C1, Lote 05, distrito de San Juan de Lurigancho, provincia y departamento de Lima, Perú, titular del banco de datos de usuarios de APUNTOR.
 
 Para cualquier asunto sobre tus datos escríbenos a soporte@apuntor.com.
 
@@ -105,7 +105,7 @@ Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si la cam
 
 ### 1. Data controller
 
-The controller of your personal data is Juan Jhan Franco Monja Sanchez, an individual, RUC 10762140859, with its address at Jr. Montevideo 706, Peru, owner of the APUNTOR user database.
+The controller of your personal data is Juan Jhan Franco Monja Sanchez, an individual, RUC 10762140859, with its address at Asoc. Unión del Paraíso, San Antonio de Jicamarca Anexo 21, Block C1, Lot 05, San Juan de Lurigancho district, Lima, Peru, owner of the APUNTOR user database.
 
 For any matter about your data, write to us at soporte@apuntor.com.
 
