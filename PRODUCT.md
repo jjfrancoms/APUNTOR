@@ -11,16 +11,17 @@ adaptive
 ## Stack
 
 Expo SDK 58 / React Native 0.88 con Expo Router, una sola base para Android, iOS y web. Estilos
-con `StyleSheet` y tokens de `src/design/tokens.ts` vía `useTheme()`; íconos Feather; textos en
-`mobile/src/i18n/` (español e inglés). Sin CSS, Tailwind ni librería de componentes externa.
+con `StyleSheet` y tokens de `app/src/theme/tokens.ts` vía `useTheme()`; íconos Feather; textos en
+`app/src/i18n/` (español e inglés). Sin CSS, Tailwind ni librería de componentes externa.
 
 ## Users
 
 - Estudiantes universitarios de Perú (también colegio y cursos libres) que estudian con sus
   propios apuntes: PDF, Word, PowerPoint y fotos del cuaderno.
 - Usan la app en el celular entre clases y en la noche, y en la laptop para sesiones largas.
-- Menores de 18: por ahora a lista de espera hasta tener autorización de tutores
-  (**Por confirmar**, criterio legal).
+- La app es solo para mayores de 18. Los menores van a la lista de espera; no hay consentimiento
+  parental por ahora (abrir a menores con autorización de tutores queda **Por confirmar**, con
+  criterio legal).
 
 ## Product Purpose
 
@@ -38,8 +39,8 @@ separa siempre lo propio (verde) de lo externo (violeta, con fuente).
 - Modo por superficie: **Operate** en la app (inicio, cursos, subida, chat, estudio, perfil);
   **Read** en ayuda, términos y resumen compartido; **Persuade** solo en planes y en la llamada
   a crear cuenta del resumen público.
-- Pre-lanzamiento: hoy funciona con un backend simulado (`mobile/src/store/`); la API real
-  reemplazará esas acciones sin cambiar las pantallas.
+- Pre-lanzamiento: la app usa cuentas, documentos y preguntas reales (fase 1). Estudio, planes,
+  escáner y compartir llegan en fases siguientes y hoy dicen "Muy pronto".
 
 ## Capabilities and Constraints
 
@@ -60,7 +61,7 @@ separa siempre lo propio (verde) de lo externo (violeta, con fuente).
 
 - Especificación UX del MVP (`docs/producto/mvp-ux.md`): mapa de pantallas, estados, textos.
 - Diseños de pantallas compartidos por el equipo (no versionados en el repositorio).
-- Prototipo navegable con datos de prueba (cuenta `ana@correo.com` / `apuntor123`).
+- Vista previa del diseño con datos de ejemplo (`EXPO_PUBLIC_PREVIEW=1`, mapa de pantallas en `/mapa`).
 
 ## Product Principles
 

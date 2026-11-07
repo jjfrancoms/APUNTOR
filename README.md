@@ -17,7 +17,7 @@ Principios de diseño
 Solo tus documentos. Sin fuente en tus apuntes, no hay respuesta.
 Toda afirmación se puede verificar. Cada cita se valida contra el fragmento recuperado (id del fragmento, cita literal y coherencia con la afirmación).
 Lo externo se etiqueta. Contenido de internet siempre visible como tal.
-Privacidad primero. Analítica anónima, consentimiento parental para menores y documentos aislados por usuario mediante RLS.
+Privacidad primero. Analítica anónima, solo mayores de 18 (los menores van a lista de espera; no hay consentimiento parental por ahora), aceptación de términos registrada con su versión y documentos aislados por usuario mediante RLS.
 Medir antes de construir. El lanzamiento depende de un conjunto de pruebas, no de una impresión.
 Arquitectura (resumen de la especificación v2.4)
 Capa	Tecnología
@@ -95,12 +95,23 @@ cd apuntor
 cp .env.example .env   # completa las variables
 npm install
 
-Los comandos de ejecución se añadirán cuando existan los paquetes app, api y worker.
+npm install solo instala el backend (api, worker, db y eval). La app tiene su propio paquete: npm --prefix app install.
+
+La app lee su configuración de app/.env (copia app/.env.example): URL y clave publicable de Supabase, y la URL de la API. Con Expo Go en el celular, la API se apunta a la IP de la laptop en la misma red Wi-Fi.
+
+Comandos:
+
+npm run db:migrate     # aplica las migraciones de db/migrations
+npm run api            # API Fastify
+npm run worker         # worker de ingesta (proceso aparte)
+npm run app            # app Expo
+npm run eval -- run --cases <casos.jsonl> --out <resultados.jsonl>
+npm run eval -- score --results <resultados.jsonl> --grades <notas.jsonl>
 
 Pendientes y riesgos abiertos
 Retención cero en Vertex AI: requiere configuración (caching duradero apagado, logging de solicitudes apagado) y confirmación escrita de Google. No se declara hasta tenerla.
 Costos: los precios y el consumo real de tokens (incluidos los de razonamiento) están por medir.
-Marco legal (Ley 29733): consentimiento de menores, edad mínima y registro de bancos de datos requieren revisión de un abogado.
+Marco legal (Ley 29733): edad mínima (hoy 18; un posible acceso de menores con consentimiento parental está por decidir), textos legales (docs/legal/) y registro de bancos de datos requieren revisión de un abogado.
 Nombre: falta validar disponibilidad en tiendas, dominios, redes e INDECOPI (clases 9, 41 y 42).
 Cuentas escolares: quién contrata, roles y alcance de "solo estudio".
 Licencia

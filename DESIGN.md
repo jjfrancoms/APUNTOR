@@ -3,13 +3,14 @@
 Fuente de verdad del aspecto de la app. Cualquier skill de diseño (`frontend-design`,
 `impeccable`, `ui-ux-pro-max`) debe **respetar este archivo antes que sus propias propuestas**:
 no inventes paletas, tipografías ni estilos nuevos. Los valores salen de
-`src/design/tokens.ts` y un test (`tests/design-md.test.ts`) verifica que coincidan.
+`app/src/theme/tokens.ts` y un test (`app/tests/design-md.test.ts`) verifica que coincidan.
 
 ## Producto y tono
 
 - App de estudio con los **apuntes propios** del estudiante (Perú, español; también inglés).
 - Calma y confianza: fondos cálidos y claros, un solo color de marca, mucho aire.
-- Mascota amable que acompaña, nunca protagonista de la interfaz.
+- Mascota amable que acompaña, nunca protagonista de la interfaz. Illari es una llama: orejas en
+  forma de plátano, copete de lana, hocico alargado con labio partido y cuello largo.
 - Textos cortos, sin culpar al usuario y siempre con una acción (ver `docs/producto/mvp-ux.md`).
 
 ## Plataforma
@@ -53,10 +54,11 @@ fuente)**, **ámbar = avisos y mascota (nunca texto)**, **rojo = errores y accio
 ## Tipografía
 
 - Una sola familia: **Plus Jakarta Sans** (400, 500, 600, 700, 800).
-- Escala (`mobile/src/theme/index.tsx`): display 28/34 · title 24/30 · heading 18/24 ·
+- Escala (`app/src/theme/index.tsx`): display 28/34 · title 24/30 · heading 18/24 ·
   subheading 16/22 · body 15/22 · small 13/18 · caption 12/16 · overline 11/14 (+0,6).
-- Overline en mayúsculas solo para encabezados de sección de listas, no sobre cada título.
-- Ningún texto incrustado en imágenes; todo texto vive en `mobile/src/i18n/`.
+- Overline en mayúsculas solo para encabezados de sección de listas, no sobre cada título ni como
+  etiqueta de un campo.
+- Ningún texto incrustado en imágenes; todo texto vive en `app/src/i18n/`.
 
 ## Espacio, forma y tamaño
 
@@ -64,11 +66,11 @@ fuente)**, **ámbar = avisos y mascota (nunca texto)**, **rojo = errores y accio
 - Radios: 8 · 12 (campos y botones) · 16 (tarjetas) · 20 (hojas y diálogos) · píldora.
 - Área táctil mínima 44 px; botón principal 52 px de alto.
 - Ancho de lectura máximo: 720 px (móvil/tablet), 800 px (escritorio), 1120 px en pantallas
-  de varias columnas.
+  de varias columnas, 480 px en acceso y registro (`Screen narrow`).
 
 ## Componentes y patrones
 
-- Base en `mobile/src/components/ui/`: Button, TextField, DateField, SelectField, Card, Chip,
+- Base en `app/src/components/ui/`: Button, TextField, DateField, SelectField, Card, Chip,
   Banner, ListRow, Sheet, Segmented, Toggle, Checkbox, Mascot, TopBar, Screen.
 - Selectores (curso, tema, hora, clase, fecha) se despliegan **en línea** bajo el campo.
 - Menús de acciones: hoja inferior en móvil; diálogo centrado desde tablet.

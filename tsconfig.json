@@ -1,36 +1,30 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "ES2023"],
+    "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "jsx": "react-jsx",
     "allowJs": false,
     "noEmit": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "incremental": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "useUnknownInCatchVariables": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "useUnknownInCatchVariables": true
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "api/**/*.ts",
+    "worker/**/*.ts",
+    "db/**/*.ts",
+    "eval/**/*.ts",
+    "tests/**/*.ts",
+    "*.ts"
   ],
-  "exclude": ["node_modules", ".next", "drizzle", "mobile"]
+  "exclude": ["node_modules", "db/migrations", "app"]
 }

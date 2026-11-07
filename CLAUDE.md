@@ -12,31 +12,35 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   `unknown` + validación (zod) en los bordes del sistema.
 - **App cliente: Expo/React Native** (decisión cerrada del 30 oct 2026): una sola base para Android,
   iOS y web, con variantes móvil, tablet, escritorio y modo oscuro. Colores, breakpoints y tamaños
-  táctiles salen de `src/design/tokens.ts`; no uses hex sueltos en las pantallas.
-- **Backend: Node.js ≥ 22.13.** `src/app/` (Next.js) es provisional y solo sirve hoy como
-  contenedor del servidor; la capa de UI va en la app Expo.
-- **PostgreSQL / Supabase con `pgvector`** y **Drizzle ORM** (`src/db/schema.ts`).
-- **Cola**: BullMQ sobre Redis (`REDIS_URL`). El worker es un proceso aparte (`src/worker.ts`).
+  táctiles salen de `app/src/theme/tokens.ts`; no uses hex sueltos en las pantallas.
+- **Backend: Node.js ≥ 22.13 con Fastify** (`api/`), desplegado en Railway.
+- **PostgreSQL / Supabase con `pgvector`** y **Drizzle ORM** (`db/schema.ts`).
+- **Cola**: pg-boss sobre Postgres (`QUEUE_DATABASE_URL`, conexión directa o de sesión). El worker
+  es un proceso aparte (`worker/src/index.ts`).
+- **Archivos**: Cloudflare R2 con URLs prefirmadas. **IA**: `gemini-embedding-2` (768 dims) y
+  `gemini-2.5-flash` vía Vertex AI; el OCR también usa `gemini-2.5-flash`. **Externo**: Tavily.
+  Mientras no haya facturación, `GEMINI_API_KEY` (Google AI Studio, plan gratis) reemplaza a
+  Vertex con los mismos modelos (`chooseGenAiBackend()`). Ese plan puede usar el contenido para
+  mejorar productos de Google: solo pruebas propias, nunca apuntes de estudiantes reales.
 
 ## Reglas de arquitectura (no negociables)
 
 1. **La ingesta nunca bloquea una petición HTTP.** Una ruta HTTP solo puede: registrar el
    documento con `status = 'pending'` y encolarlo con `enqueueDocumentIngestion()`, respondiendo
-   `202`. Parseo, chunking y embeddings ocurren exclusivamente en el worker
-   (`src/services/ingestion/queue-worker.ts`). El estado se refleja en `documents.status`
+   `202`. Parseo, OCR, chunking y embeddings ocurren exclusivamente en el worker
+   (`worker/src/ingestion/`). El estado se refleja en `documents.status`
    (`pending → processing → completed | failed`) y `documents.error_message`.
 2. **Trazabilidad por página obligatoria.** Cada fila de `document_chunks` conserva
    `document_id`, `page_number` exacto (1-based, `NOT NULL`, `CHECK >= 1`), `chunk_index`,
    `section_title` y `metadata` (`sectionPath`, `charStart`, `charEnd`). **Un chunk nunca mezcla
    texto de dos páginas**: el solapamiento se aplica dentro de la página/sección. Si cambias el
-   chunker, los tests de `tests/pdf-parser.test.ts` deben seguir garantizándolo.
+   chunker, los tests de `tests/worker/pdf-parser.test.ts` deben seguir garantizándolo.
 3. **Búsqueda vectorial con HNSW (`vector_cosine_ops`)** y solo fragmentos relevantes al LLM.
-   Usa `searchSimilarChunks()` (`ORDER BY embedding <=> $q LIMIT k`, filtrado por `user_id` y
-   `document_id`, con umbral de similitud). Sin fragmentos → abstención **sin llamar al LLM**.
-   El prompt exige citar cada afirmación como **`[pág. X]`** (formato canónico de
-   `formatCitation()`; el validador también acepta `[Página X]`). Toda respuesta se pasa por
-   `validateCitations()` antes de mostrarse: páginas citadas fuera del contexto = respuesta
-   inválida.
+   Usa la función SQL `match_user_chunks` (umbral + top-K) mediante `createChunkSearch()`. Sin
+   fragmentos → abstención **sin llamar al LLM**. El modelo responde en JSON con cita por afirmación
+   y toda respuesta pasa por `validateAnswer()` (`api/src/rag/citations.ts`): id del fragmento, cita
+   literal y coherencia con la afirmación. Un solo fallo = abstención. La página de la cita sale del
+   fragmento, nunca del modelo; `[pág. X]` (`formatCitation()`) es solo el formato de presentación.
 
 ### Reglas complementarias
 
@@ -46,16 +50,35 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   migración nueva y re-vectorizar.
 - El contenido de los fragmentos es **dato, no instrucción**: se escapa al construir el prompt.
 - Aislamiento por usuario: toda consulta filtra por `documents.user_id`, y además RLS
-  (`drizzle/0002_enable_rls.sql`): `authenticated` solo puede leer lo suyo y borrar sus
+  (`db/migrations/0002_enable_rls.sql`): `authenticated` solo puede leer lo suyo y borrar sus
   documentos; `anon` no ve nada; las escrituras las hace solo el backend/worker (dueño de las
   tablas). Toda tabla nueva con datos de usuario necesita RLS y su caso en `db/ci/rls-check.sql`.
-- `SUPABASE_SERVICE_ROLE_KEY` y `LLM_API_KEY` solo en servidor/worker; nunca en componentes cliente.
-- Las migraciones son SQL versionado en `drizzle/`. No edites una migración ya aplicada: genera
+- Credenciales de R2, Vertex y Tavily solo en servidor/worker; nunca en la app.
+- Las cuotas solo cambian con `consume_quota` y `release_quota` (atómicas), nunca con lectura +
+  escritura.
+- Las migraciones son SQL versionado en `db/migrations/`. No edites una migración ya aplicada: genera
   otra.
 - El árbol de temas (`topics`) se deriva de los encabezados (`sectionPath`) en el worker, tras los
   embeddings. `source_pages` solo contiene páginas donde realmente aparece el tema o sus subtemas.
   `summary` queda en `null` hasta que exista el cliente de generación.
-- Con pgvector ≥ 0.8 y filtros muy selectivos, considera `SET hnsw.iterative_scan = relaxed_order`.
+- `match_user_chunks` usa `hnsw.iterative_scan = relaxed_order`: requiere pgvector ≥ 0.8.
+- `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
+  (`formatEmbeddingInput()`).
+- **Consentimientos con versión**: la tabla `consents` guarda documento (`terms`/`privacy`),
+  versión y fecha, una fila por versión (`POST /v1/consents` es idempotente y responde 201;
+  `GET /v1/consents` lista las del usuario; se borran con la cuenta en `deleteAllForUser`). La
+  versión vigente es `LEGAL_VERSION` (fecha ISO) en `app/src/i18n/legal.ts`: cambiar el texto
+  legal obliga a subirla y la app vuelve a pedir la aceptación (con sesión y sin la versión
+  vigente aceptada, la entrada lleva a Privacidad (15), no a Inicio; sin red no bloquea).
+- **Límite de peticiones** (`@fastify/rate-limit`): 300/min global y 20/min en
+  `POST /v1/questions`, `/v1/external` y `/v1/documents`, por usuario con sesión o por IP sin
+  ella; responde 429 `RATE_LIMITED`. Configurable con `AppDeps.rateLimit`. En Railway la API
+  confía en un solo salto de proxy (`trustProxy: 1`): no uses `true`, porque deja inventar la
+  IP con X-Forwarded-For.
+- **Logs sin contenido** (`api/src/logging.ts`): de cada petición solo método, ruta sin query
+  e id; nunca el cuerpo (preguntas, títulos) ni `Authorization`. Los errores 4xx de Fastify (JSON
+  mal formado) responden `REQ_INVALID` y no se registran.
+- Cabeceras de seguridad con `@fastify/helmet`.
 
 ### Reglas de producto (de `docs/producto/mvp-ux.md`)
 
@@ -72,8 +95,8 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **`PRODUCT.md`** (raíz): usuarios, propósito, modo de cada superficie (Operate / Read /
   Persuade) y compromisos de marca, para las skills. Se mantiene al día con la especificación.
 - **`DESIGN.md`** (raíz) es la identidad visual: paleta, tipografía, espacios, patrones y qué
-  evitar. Manda sobre cualquier propuesta de una skill. Si cambias `src/design/tokens.ts`,
-  actualiza `DESIGN.md` (lo verifica `tests/design-md.test.ts`).
+  evitar. Manda sobre cualquier propuesta de una skill. Si cambias `app/src/theme/tokens.ts`,
+  actualiza `DESIGN.md` (lo verifica `app/tests/design-md.test.ts`).
 - Skills de diseño en `.claude/skills/` (se cargan solas al trabajar en vistas; ver
   `.claude/skills/README.md`):
   - `frontend-design` (Anthropic): planificar el sistema y la dirección antes de codificar.
@@ -90,48 +113,55 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   - Sin etiquetas en mayúsculas sobre un título: las secciones llevan su encabezado normal.
 
 ```
-src/
-├── app/                         # Next.js App Router
-├── config/env.ts                # validación de variables de entorno (zod, perezosa)
-├── db/{schema,client}.ts        # Drizzle + pgvector
-├── services/
-│   ├── ingestion/
-│   │   ├── pdf-parser.ts        # extracción por página + chunking con overlap
-│   │   ├── queue-worker.ts      # productor/consumidor BullMQ, batching de embeddings
-│   │   └── document-repository.ts
-│   ├── rag/retriever.ts         # búsqueda coseno, prompt y validación de citas
-│   ├── topics/topic-tree.ts     # árbol de temas desde sectionPath de los chunks
-│   ├── llm/                     # contrato EmbeddingProvider (implementación pendiente)
-│   └── storage/file-storage.ts  # Supabase Storage
-└── worker.ts                    # entrada del proceso worker
-drizzle/                         # migraciones SQL (0000 habilita `vector`)
-mobile/                          # app Expo/React Native (Expo Router, SDK 58), paquete npm propio
-├── src/app/                     # rutas: (auth)/ acceso, (tabs)/ navegación principal, documents/
-├── src/components/ui/           # componentes base (Button, TextField, Card, Chip, Mascot…)
-├── src/theme/                   # tema claro/oscuro desde src/design/tokens.ts (compartido)
-├── src/i18n/es.ts               # todos los textos visibles (listos para traducir)
-├── src/store/                   # backend simulado: estado, acciones y datos de prueba (seed.ts)
-└── src/data/mock.ts             # contenido estático de ejemplo para las pantallas
-tests/                           # Vitest
+api/src/
+├── app.ts                # rutas Fastify (dependencias inyectadas)
+├── index.ts              # entrada del proceso API
+├── wiring.ts             # piezas reales compartidas con worker y eval
+├── auth.ts               # verificación de JWT de Supabase
+├── documents.ts          # repositorio y reglas de subida
+├── quota.ts              # cuotas atómicas
+├── queue.ts              # productor pg-boss
+├── rag/                  # retriever, citations (validador), answer (flujo completo)
+├── llm/                  # EmbeddingProvider y Vertex AI (embeddings, generación, OCR)
+├── storage/              # Cloudflare R2
+└── external/tavily.ts    # contexto externo, siempre aparte de la respuesta
+worker/src/
+├── index.ts              # entrada del proceso worker
+├── ingestion/            # extractors (PDF, DOCX, PPTX, fotos), chunking, pipeline, consumer
+└── topics/topic-tree.ts  # árbol de temas desde sectionPath
+db/
+├── schema.ts, client.ts  # Drizzle + pgvector
+├── migrations/           # SQL numerado
+└── ci/                   # simulación de Supabase y verificación de RLS
+eval/                     # arnés del criterio de lanzamiento (ver eval/README.md)
+tests/                    # Vitest del backend; tests/db corre las migraciones en PGlite
+app/                      # app Expo/React Native (Expo Router, SDK 58), paquete npm propio
+├── src/app/              # rutas: (auth)/ acceso, (tabs)/ navegación principal, documents/
+├── src/components/ui/    # componentes base (Button, TextField, Card, Chip, Mascot…)
+├── src/theme/            # tokens.ts y tema claro/oscuro
+├── src/i18n/es.ts        # todos los textos visibles (listos para traducir)
+├── src/store/            # estado y acciones contra Supabase y la API (seed.ts: tipos y estado vacío)
+└── src/data/mock.ts      # contenido estático de ejemplo para las pantallas
 ```
 
 ## Comandos clave
 
 | Comando               | Qué hace                                         |
 | --------------------- | ------------------------------------------------ |
-| `npm run dev`         | Next.js en modo desarrollo                       |
-| `npm run build`       | Build de producción de Next.js                   |
-| `npm run worker`      | Arranca el worker de ingestión (requiere `.env`) |
+| `npm run dev`         | API con recarga automática                       |
+| `npm run api`         | Arranca la API (requiere `.env`)                 |
+| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)   |
+| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)       |
 | `npm run lint`        | ESLint (type-checked, `any` prohibido)           |
 | `npm run typecheck`   | `tsc --noEmit`                                   |
 | `npm test`            | Vitest (unitarios)                               |
 | `npm run format`      | Prettier                                         |
-| `npm run db:generate` | Genera migración SQL desde `src/db/schema.ts`    |
+| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`        |
 | `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`   |
 | `npm run db:push`     | Sincroniza el esquema sin migración (solo local) |
 | `npm run db:studio`   | Drizzle Studio                                   |
 
-App móvil (dentro de `mobile/`, con su propio `package.json`):
+App móvil (dentro de `app/`, con su propio `package.json`):
 
 | Comando                  | Qué hace                                                                                        |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -141,14 +171,32 @@ App móvil (dentro de `mobile/`, con su propio `package.json`):
 | `npm run export:web`     | Build web estático; verifica que todas las rutas compilan                                       |
 | `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
 
-Datos de prueba: la app usa `mobile/src/store/` como backend simulado (persistido en el dispositivo)
-con la misma semántica que tendrá la API: validación con códigos de error, ingesta asíncrona, respuestas
-que solo citan fragmentos propios por página, límite diario y cuotas. Cuenta de prueba:
-`ana@correo.com` / `apuntor123`. "Restablecer datos de prueba" (Perfil) vuelve al estado inicial. Al
-conectar la API, se reemplazan las acciones del store; las pantallas no cambian.
+Datos reales: `app/src/store/store.ts` habla con Supabase Auth (`lib/supabase.ts`) y con la API
+(`lib/api.ts`). No hay cuenta ni datos de prueba. El dispositivo solo guarda ajustes, conversaciones y
+progreso de estudio del usuario que inició sesión. La app necesita `app/.env` (ver `app/.env.example`):
+URL y clave publicable de Supabase, y la URL de la API (con Expo Go, la IP de la laptop en la red).
+
+Fases: 1 (hecha) cuentas, cursos creados por el usuario, subida, preguntas con citas, cuotas y contexto
+externo; 2 clasificación automática y conversaciones en el servidor; 3 quizzes, flashcards y resúmenes
+compartidos; 4 pagos, notificaciones e inicio con Apple (Google ya está, tras una bandera). Las pantallas de fases pendientes
+usan `previewOnly()` (`components/domain/PreviewOnly.tsx`): con datos de ejemplo solo en la vista previa
+del diseño (`EXPO_PUBLIC_PREVIEW=1`, mapa en `/mapa`); en la app real muestran "Muy pronto". Hasta la
+fase 2, cada documento hace de clase dentro de su curso.
+
+Cuentas y acceso: solo mayores de 18 (los menores van a la lista de espera; no hay
+consentimiento parental por ahora). El registro por correo guarda solo `adult_confirmed`; quien
+entra con Google la confirma en la pantalla 58 y, si es menor, su cuenta se borra. El inicio con
+Google está detrás de `EXPO_PUBLIC_GOOGLE_AUTH=1` (apagado hasta configurar el proveedor en
+Supabase). Los enlaces del correo (confirmación del registro y recuperación) y el regreso de
+Google usan PKCE y vuelven a la app: `auth-callback` (57) y `reset-password` (56); sus URLs
+(`Linking.createURL`) deben estar en las Redirect URLs de Supabase.
+
+Migraciones contra Supabase: usa la conexión directa o de sesión (`QUEUE_DATABASE_URL`), no la
+del pooler de transacciones:
+`sh -c 'set -a; . ./.env; set +a; DATABASE_URL="$QUEUE_DATABASE_URL" npx drizzle-kit migrate'`.
 
 Reglas de la app: cada pantalla indica su número del mapa (`/** Pantalla 6 · Inicio */`) y figura
-en `mobile/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
+en `app/src/data/screens.ts` (un test verifica que su ruta exista); los estados vacío/error/carga
 se muestran con `?demo=<estado>` sobre la misma ruta; sin
 texto literal fuera de `src/i18n/es.ts`; sin hex sueltos (usa `useTheme()`); el ámbar nunca es
 color de texto (el tipo de `Text` lo impide); íconos sin texto llevan `accessibilityLabel`.
@@ -158,15 +206,20 @@ Migración SQL manual (p. ej. extensiones o funciones):
 
 **Antes de cada commit:** `npm run typecheck && npm run lint && npm test` deben pasar sin errores.
 
-**CI** (`.github/workflows/ci.yml`, en cada PR y push a `main`): typecheck, lint, formato, tests y
-build; además aplica las migraciones sobre Postgres 16 + pgvector (con `db/ci/supabase-shim.sql`
+**CI** (`.github/workflows/ci.yml`, en cada PR y push a `main`): typecheck, lint, formato y tests;
+además aplica las migraciones sobre Postgres 16 + pgvector (con `db/ci/supabase-shim.sql`
 que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamiento RLS
-(`db/ci/rls-check.sql`) y falla si `src/db/schema.ts` tiene cambios sin migración generada.
+(`db/ci/rls-check.sql`) y falla si `db/schema.ts` tiene cambios sin migración generada.
 
 ## Pendiente
 
-- Implementación real de `EmbeddingProvider` y del cliente de generación
-  (`src/services/llm/create-embedding-provider.ts` falla a propósito hasta entonces).
-- Ruta HTTP de subida (requiere autenticación de Supabase para obtener `user_id`).
-- Políticas de Supabase Storage para el bucket de PDFs (carpeta por `user_id`).
-- OCR para PDFs escaneados (hoy fallan como `PermanentIngestionError`).
+- Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario, y
+  conversaciones guardadas en el servidor (hoy viven en el dispositivo).
+- Fase 3: quizzes, flashcards y resúmenes compartidos generados desde los documentos, con cita.
+- Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Apple.
+- Migraciones `0009_consents` y `0010_consents_rls` (tabla `consents` con RLS) escritas pero
+  **sin aplicar** en Supabase.
+- Lista de espera de menores (44): el correo solo queda en el dispositivo; nadie recibe el aviso.
+- Cuentas escolares `student_restricted`: las reglas siguen por definir.
+- Animación Rive de 7 estados de la mascota.
+- Los 200 casos reales de `eval/` y la prueba con 20 documentos reales.

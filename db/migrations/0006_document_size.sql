@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "size_bytes" bigint DEFAULT 0 NOT NULL;

@@ -1,13 +1,13 @@
-.next
 node_modules
-drizzle/meta
+db/migrations/meta
 package-lock.json
 coverage
 README.md
-mobile/.expo
-mobile/dist
-mobile/package-lock.json
-mobile/AGENTS.md
-mobile/dist-preview
+eval/out
+app/.expo
+app/dist
+app/package-lock.json
+app/AGENTS.md
+app/dist-preview
 # Skills de terceros (se mantienen tal cual vienen de su repositorio)
 .claude/skills

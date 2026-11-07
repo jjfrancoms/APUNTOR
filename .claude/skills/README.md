@@ -16,7 +16,7 @@ manda: lee `DESIGN.md` en la raíz antes de seguir cualquier propuesta de estas 
   binario que el lanzador descarga de GitHub. Aquí solo está la skill (comandos y guías). El
   detector (`scripts/impeccable detect`) descarga ese binario la primera vez que lo ejecutas a
   mano; verifica su suma con `scripts/engine-checksums.txt`. Trabaja sobre DOM/CSS, así que
-  solo sirve para la exportación web (`mobile/dist`).
+  solo sirve para la exportación web (`app/dist`).
 - **UI/UX Pro Max** trae un buscador local en Python (`scripts/search.py`, sin red) sobre sus
   datos. Para esta app: `--stack react-native`.
 - Para actualizar una skill, vuelve a copiar su carpeta desde el repositorio y cambia la
@@ -25,7 +25,8 @@ manda: lee `DESIGN.md` en la raíz antes de seguir cualquier propuesta de estas 
 ## No incluidas (a propósito)
 
 - `marvkr/better-design`: temas que copian la identidad de otras marcas (Linear, Stripe…) y
-  un servidor MCP externo; chocaría con la paleta propia de `DESIGN.md`.
+  un servidor MCP externo; chocaría con la paleta propia de `DESIGN.md`. Su guía solo está
+  disponible con ese servidor conectado.
 - `bergside/awesome-design-skills` (67 estilos) y `SlideSpeak/presentation-design-prompts`:
   estilos alternativos y plantillas de presentaciones, no aplican a la app.
 - `document-skills` (pptx, docx, xlsx, pdf de Anthropic): no son parte del producto; quien
