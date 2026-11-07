@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatCountdown, formatPercent } from '../src/lib/format';
+import {
+  formatBytes,
+  formatCount,
+  formatDate,
+  formatCountdown,
+  formatPercent,
+  labelFor,
+} from '../src/lib/format';
+import { en } from '../src/i18n/en';
+import { es } from '../src/i18n/es';
 import { splitMatch } from '../src/lib/text';
 import { isValidEmail, isWeakPassword, MIN_PASSWORD_LENGTH } from '../src/lib/validation';
 
@@ -142,5 +151,29 @@ describe('nueva contraseña y enlaces de regreso', () => {
       flowId: null,
       error: null,
     });
+  });
+});
+
+describe('formatos del panel', () => {
+  it('bytes en unidades de 1024', () => {
+    expect(formatBytes(0)).toBe('0 B');
+    expect(formatBytes(1536)).toBe('1.5 KB');
+    expect(formatBytes(1536, 'en')).toBe('1.5 KB');
+    expect(formatBytes(12 * 1024 * 1024)).toBe('12 MB');
+  });
+  it('fechas inválidas se muestran tal cual y los conteos con separador', () => {
+    expect(formatDate('no-es-fecha')).toBe('no-es-fecha');
+    expect(formatCount(1234, 'en')).toBe('1,234');
+  });
+});
+
+describe('acciones de la auditoría', () => {
+  it('traduce las conocidas en es/en y deja las desconocidas tal cual', () => {
+    expect(labelFor(es.admin.audit.actions, 'document.retry')).toBe('Reintentó un documento');
+    expect(labelFor(en.admin.audit.actions, 'user.delete')).toBe('Deleted an account');
+    expect(Object.keys(en.admin.audit.actions)).toEqual(Object.keys(es.admin.audit.actions));
+    expect(labelFor(es.admin.audit.actions, 'user.ban')).toBe('user.ban');
+    // Ni el prototipo del objeto se toma como traducción.
+    expect(labelFor(es.admin.audit.actions, 'constructor')).toBe('constructor');
   });
 });

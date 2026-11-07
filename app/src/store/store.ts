@@ -13,8 +13,13 @@ import {
   api,
   ApiRequestError,
   toErrorCode,
+  type ApiAdminAuditEntry,
+  type ApiAdminDocument,
+  type ApiAdminStats,
+  type ApiAdminUser,
   type ApiConsent,
   type ApiDocument,
+  type ApiDocumentStatus,
   type ApiUsage,
   type LegalDocument,
 } from '@/lib/api';
@@ -303,19 +308,22 @@ function startSession(user: User): Promise<void> {
   // Lo que se sabía del consentimiento solo vale para la misma sesión abierta.
   setState((s) => {
     const consent = s.session?.id === session.id ? s.consent : 'unknown';
+    // El permiso de administración tampoco pasa de una cuenta a otra.
+    const isAdmin = s.session?.id === session.id ? s.isAdmin : false;
     return s.ownerId === session.id
-      ? { ...s, session, consent }
+      ? { ...s, session, consent, isAdmin }
       : {
           ...s,
           session,
           consent,
+          isAdmin,
           ownerId: session.id,
           conversations: [],
           study: createInitialState().study,
           uploads: [],
         };
   });
-  return refreshAll();
+  return Promise.all([refreshAll(), refreshAdmin()]).then(() => undefined);
 }
 
 function endSession(): void {
@@ -653,6 +661,184 @@ export async function deleteAccount(): Promise<boolean> {
 
 export function joinWaitlist(email: string): void {
   setState((s) => ({ ...s, waitlist: [...new Set([...s.waitlist, email.trim()])] }));
+}
+
+// --- Panel de administración -------------------------------------------------------
+// Solo metadatos, conteos y estados: nada de esto pide ni muestra el contenido de documentos
+// o preguntas. Las listas viven en el estado de cada pantalla; aquí solo `isAdmin`.
+
+/** Pregunta al servidor si la cuenta es administradora. 403 o cualquier error → false. */
+export async function refreshAdmin(): Promise<boolean> {
+  if (!state.session) return false;
+  const sessionId = state.session.id;
+  setState((s) => ({ ...s, adminChecking: true }));
+  let admin = false;
+  try {
+    const me = await api.adminMe();
+    admin = me.admin === true;
+  } catch {
+    admin = false;
+  }
+  // Si la sesión cambió mientras tanto, la respuesta ya no es de esta cuenta.
+  setState((s) =>
+    s.session?.id === sessionId
+      ? { ...s, isAdmin: admin, adminChecking: false }
+      : { ...s, adminChecking: false },
+  );
+  return admin;
+}
+
+/** Errores del panel. Los tres primeros son de conexión o permiso; el resto, códigos de la API. */
+export type AdminError =
+  'offline' | 'forbidden' | 'failed' | 'DOC_STATE' | 'DOC_NOT_FOUND' | 'ADMIN_TARGET_IS_SELF';
+
+export type AdminResult<T> = { ok: true; data: T } | { ok: false; error: AdminError };
+
+/** Una página de una lista del panel (`items` acumula las páginas ya cargadas). */
+export interface AdminPage<T> {
+  items: T[];
+  page: number;
+  hasMore: boolean;
+}
+
+const ADMIN_CODES: readonly AdminError[] = ['DOC_STATE', 'DOC_NOT_FOUND', 'ADMIN_TARGET_IS_SELF'];
+
+/** Traduce el error de la API a uno del panel. Un 403 quita el acceso al panel al instante. */
+export function toAdminError(error: unknown): AdminError {
+  if (!(error instanceof ApiRequestError)) return 'failed';
+  if (error.code === 'NETWORK' || error.code === 'NOT_CONFIGURED') return 'offline';
+  if (error.status === 403 || error.code === 'FORBIDDEN') {
+    setState((s) => ({ ...s, isAdmin: false }));
+    return 'forbidden';
+  }
+  const known = ADMIN_CODES.find((c) => c === error.code);
+  return known ?? 'failed';
+}
+
+async function adminCall<T>(call: () => Promise<T>): Promise<AdminResult<T>> {
+  try {
+    return { ok: true, data: await call() };
+  } catch (error) {
+    return { ok: false, error: toAdminError(error) };
+  }
+}
+
+/**
+ * Junta la página nueva con las ya cargadas: la página 1 reemplaza todo y las siguientes se
+ * agregan al final sin repetir filas (si algo cambió entre páginas, no aparece dos veces).
+ */
+export function mergeAdminPage<T extends { id: string }>(
+  current: AdminPage<T> | null,
+  next: AdminPage<T>,
+): AdminPage<T> {
+  if (!current || next.page <= 1) return next;
+  const seen = new Set(current.items.map((i) => i.id));
+  return {
+    items: [...current.items, ...next.items.filter((i) => !seen.has(i.id))],
+    page: next.page,
+    hasMore: next.hasMore,
+  };
+}
+
+export function loadAdminStats(): Promise<AdminResult<ApiAdminStats>> {
+  return adminCall(() => api.adminStats());
+}
+
+export function loadAdminUsers(page = 1): Promise<AdminResult<AdminPage<ApiAdminUser>>> {
+  return adminCall(async () => {
+    const r = await api.adminUsers(page);
+    return { items: r.users, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+export type AdminDocumentFilter = 'all' | ApiDocumentStatus;
+
+export function loadAdminDocuments(
+  filter: AdminDocumentFilter,
+  page = 1,
+): Promise<AdminResult<AdminPage<ApiAdminDocument>>> {
+  return adminCall(async () => {
+    const r = await api.adminDocuments(filter === 'all' ? null : filter, page);
+    return { items: r.documents, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+export function loadAdminAudit(page = 1): Promise<AdminResult<AdminPage<ApiAdminAuditEntry>>> {
+  return adminCall(async () => {
+    const r = await api.adminAudit(page);
+    return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+/** Solo los documentos que fallaron se pueden reintentar. */
+export function canRetryDocument(doc: Pick<ApiAdminDocument, 'status'>): boolean {
+  return doc.status === 'failed';
+}
+
+/** Vuelve a encolar un documento que falló; el servidor responde 202 con `pending`. */
+export async function retryAdminDocument(
+  doc: Pick<ApiAdminDocument, 'id' | 'status'>,
+): Promise<AdminResult<{ id: string; status: 'pending' }>> {
+  if (!canRetryDocument(doc)) return { ok: false, error: 'DOC_STATE' };
+  return adminCall(() => api.adminRetryDocument(doc.id));
+}
+
+/** Refleja en la lista que el documento volvió a la cola (sin volver a pedir la página). */
+export function markDocumentRetried(
+  list: AdminPage<ApiAdminDocument>,
+  id: string,
+): AdminPage<ApiAdminDocument> {
+  return {
+    ...list,
+    items: list.items.map((d) =>
+      d.id === id ? { ...d, status: 'pending' as const, errorMessage: null } : d,
+    ),
+  };
+}
+
+/** La cuenta propia nunca se borra desde el panel (para eso está Perfil › Borrar cuenta). */
+export function isOwnAccount(
+  user: Pick<ApiAdminUser, 'id' | 'email'>,
+  s: AppState = state,
+): boolean {
+  if (!s.session) return false;
+  return (
+    user.id === s.session.id ||
+    (user.email !== null &&
+      user.email.trim().toLowerCase() === s.session.email.trim().toLowerCase())
+  );
+}
+
+/** Lo que hay que escribir para confirmar el borrado: el correo o, si no tiene, su id. */
+export function deleteConfirmationText(user: Pick<ApiAdminUser, 'id' | 'email'>): string {
+  return user.email ?? user.id;
+}
+
+/** La confirmación escrita debe ser el correo de ese usuario (sin importar mayúsculas). */
+export function deleteConfirmationMatches(
+  user: Pick<ApiAdminUser, 'id' | 'email'>,
+  typed: string,
+): boolean {
+  const expected = deleteConfirmationText(user).trim().toLowerCase();
+  return typed.trim().length > 0 && typed.trim().toLowerCase() === expected;
+}
+
+/** Borra la cuenta completa de otro usuario. Irreversible: exige escribir su correo. */
+export async function adminDeleteUser(
+  user: Pick<ApiAdminUser, 'id' | 'email'>,
+  typed: string,
+): Promise<AdminResult<null>> {
+  if (isOwnAccount(user)) return { ok: false, error: 'ADMIN_TARGET_IS_SELF' };
+  if (!deleteConfirmationMatches(user, typed)) return { ok: false, error: 'failed' };
+  return adminCall(async () => {
+    await api.adminDeleteUser(user.id);
+    return null;
+  });
+}
+
+/** Quita de la lista la cuenta recién borrada. */
+export function withoutUser(list: AdminPage<ApiAdminUser>, id: string): AdminPage<ApiAdminUser> {
+  return { ...list, items: list.items.filter((u) => u.id !== id) };
 }
 
 // --- Documentos y cursos ---------------------------------------------------------

@@ -4,8 +4,20 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import type { AuthUserDeleter } from './account';
-import type { Authenticator } from './auth';
+import { deleteUserAccount, type AuthUserDeleter } from './account';
+import {
+  authHasMore,
+  countAuthUsers,
+  createAdminGate,
+  DEFAULT_ADMIN_PER_PAGE,
+  DOCUMENT_STATUSES,
+  MAX_ADMIN_PER_PAGE,
+  type AdminAuditRecord,
+  type AdminDocumentRecord,
+  type AdminRepository,
+  type AuthUsersDirectory,
+} from './admin';
+import type { AuthSession, Authenticator } from './auth';
 import {
   CONSENT_DOCUMENTS,
   MAX_CONSENT_VERSION,
@@ -25,7 +37,7 @@ import { ApiError } from './errors';
 import type { ExternalSearch } from './external/tavily';
 import { loggerOptions, type LogStream } from './logging';
 import type { IngestionEnqueuer } from './queue';
-import { FREE_LIMITS, type QuotaService } from './quota';
+import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
 
@@ -56,6 +68,14 @@ export interface AppDeps {
   quota: QuotaService;
   answer: Omit<AnswerDeps, 'quota'>;
   deleteAuthUser: AuthUserDeleter;
+  /** Panel de administrador: solo metadatos y conteos, nunca contenido. */
+  admin: AdminRepository;
+  /** Usuarios de Supabase Auth (Admin API con la service role key). */
+  authUsers: AuthUsersDirectory;
+  /** Correos con acceso a /v1/admin/* (`ADMIN_EMAILS`); sin indicar, nadie es administrador. */
+  adminEmails?: readonly string[];
+  /** Cuánto se recuerda que una cuenta es admin verificada (por defecto 5 min). */
+  adminVerifyTtlMs?: number;
   /** Sin configurar, el contexto externo responde como no disponible. */
   externalSearch?: ExternalSearch;
   corsOrigins?: readonly string[];
@@ -90,6 +110,15 @@ const questionBody = z.object({
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
 });
 const externalBody = z.object({ question: z.string().trim().min(1).max(2000) });
+const pageQuery = {
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  perPage: z.coerce.number().int().min(1).max(MAX_ADMIN_PER_PAGE).default(DEFAULT_ADMIN_PER_PAGE),
+};
+const adminPageQuery = z.object(pageQuery);
+const adminDocumentsQuery = z.object({
+  ...pageQuery,
+  status: z.enum(DOCUMENT_STATUSES).optional(),
+});
 const consentBody = z.object({
   document: z.enum(CONSENT_DOCUMENTS),
   // Versión con formato de fecha ISO (`LEGAL_VERSION` de la app): evita filas basura.
@@ -130,6 +159,36 @@ function toPublicConsent(consent: ConsentRecord) {
     version: consent.version,
     acceptedAt: consent.acceptedAt.toISOString(),
   };
+}
+
+/** Metadatos del documento para el panel: sin ruta del archivo ni contenido. */
+function toAdminDocument(document: AdminDocumentRecord) {
+  return {
+    id: document.id,
+    userId: document.userId,
+    title: document.title,
+    sizeBytes: document.sizeBytes,
+    status: document.status,
+    totalPages: document.totalPages,
+    topicCount: document.topicCount,
+    errorMessage: document.errorMessage,
+    createdAt: document.createdAt.toISOString(),
+  };
+}
+
+function toAdminAudit(entry: AdminAuditRecord) {
+  return {
+    id: entry.id,
+    adminEmail: entry.adminEmail,
+    action: entry.action,
+    target: entry.target,
+    createdAt: entry.createdAt.toISOString(),
+  };
+}
+
+/** Pide un elemento de más para saber si hay otra página sin contar toda la tabla. */
+function paginate<T>(rows: T[], perPage: number): { items: T[]; hasMore: boolean } {
+  return { items: rows.slice(0, perPage), hasMore: rows.length > perPage };
 }
 
 function bearerToken(request: FastifyRequest): string | null {
@@ -186,8 +245,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   // Un token se verifica una sola vez por petición: lo usan el límite y las rutas.
-  const sessions = new WeakMap<FastifyRequest, Promise<string | null>>();
-  function sessionUser(request: FastifyRequest): Promise<string | null> {
+  const sessions = new WeakMap<FastifyRequest, Promise<AuthSession | null>>();
+  function sessionUser(request: FastifyRequest): Promise<AuthSession | null> {
     let session = sessions.get(request);
     if (!session) {
       const token = bearerToken(request);
@@ -198,9 +257,27 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   }
 
   async function requireUser(request: FastifyRequest): Promise<string> {
-    const userId = await sessionUser(request);
-    if (userId === null) throw new ApiError('AUTH_REQUIRED', 401);
-    return userId;
+    const session = await sessionUser(request);
+    if (session === null) throw new ApiError('AUTH_REQUIRED', 401);
+    return session.userId;
+  }
+
+  const adminGate = createAdminGate({
+    adminEmails: deps.adminEmails ?? [],
+    directory: deps.authUsers,
+    ...(deps.adminVerifyTtlMs === undefined ? {} : { ttlMs: deps.adminVerifyTtlMs }),
+  });
+
+  /**
+   * Sin sesión, 401. Con sesión, 403 salvo que el email del JWT esté en ADMIN_EMAILS y la
+   * Admin API confirme esa misma cuenta con el correo confirmado (`createAdminGate`).
+   */
+  async function requireAdmin(request: FastifyRequest): Promise<AuthSession & { email: string }> {
+    const session = await sessionUser(request);
+    if (session === null) throw new ApiError('AUTH_REQUIRED', 401);
+    const email = await adminGate.check(session);
+    if (email === null) throw new ApiError('FORBIDDEN', 403);
+    return { ...session, email };
   }
 
   const limits = deps.rateLimit ?? DEFAULT_RATE_LIMIT;
@@ -211,8 +288,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       timeWindow: limits.global.timeWindowMs,
       // Por usuario con sesión válida; sin ella, por IP. Un token inválido no da cupo propio.
       keyGenerator: async (request) => {
-        const userId = await sessionUser(request).catch(() => null);
-        return userId === null ? `ip:${request.ip}` : `user:${userId}`;
+        const session = await sessionUser(request).catch(() => null);
+        return session === null ? `ip:${request.ip}` : `user:${session.userId}`;
       },
       errorResponseBuilder: () => new ApiError('RATE_LIMITED', 429),
     });
@@ -257,11 +334,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // puede reintentar porque la sesión sigue siendo válida.
   app.delete('/v1/account', async (request, reply) => {
     const userId = await requireUser(request);
-    for (const document of await deps.documents.list(userId)) {
-      await deps.storage.delete(document.filePath);
-    }
-    await deps.documents.deleteAllForUser(userId);
-    await deps.deleteAuthUser(userId);
+    await deleteUserAccount(deps, userId);
     return reply.status(204).send();
   });
 
@@ -454,6 +527,111 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       request.log.warn(error);
       throw new ApiError('EXTERNAL_UNAVAILABLE', 503);
     }
+  });
+
+  // --- Panel de administrador ----------------------------------------------------
+  // Solo metadatos, conteos y estados: nunca fragmentos, preguntas, respuestas ni archivos.
+  // Toda acción que cambia algo queda en `admin_audit`. Usa el límite global de peticiones.
+
+  app.get('/v1/admin/me', async (request) => {
+    const admin = await requireAdmin(request);
+    return { admin: true, email: admin.email };
+  });
+
+  app.get('/v1/admin/stats', async (request) => {
+    await requireAdmin(request);
+    const [stats, users] = await Promise.all([
+      deps.admin.stats(periodFor('questions')),
+      countAuthUsers(deps.authUsers),
+    ]);
+    return { users, ...stats };
+  });
+
+  app.get('/v1/admin/users', async (request) => {
+    await requireAdmin(request);
+    const { page, perPage } = parse(adminPageQuery, request.query);
+    const result = await deps.authUsers.list(page, perPage);
+    const summaries = await deps.admin.userSummaries(
+      result.users.map((user) => user.id),
+      periodFor('questions'),
+    );
+    return {
+      users: result.users.map((user) => {
+        const summary = summaries.get(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          createdAt: user.createdAt.toISOString(),
+          lastSignInAt: user.lastSignInAt?.toISOString() ?? null,
+          provider: user.provider,
+          documents: summary?.documents ?? 0,
+          storageBytes: summary?.storageBytes ?? 0,
+          questionsToday: summary?.questionsToday ?? 0,
+          consentVersion: summary?.consentVersion ?? null,
+        };
+      }),
+      page,
+      hasMore: authHasMore(result, page, perPage),
+    };
+  });
+
+  app.get('/v1/admin/documents', async (request) => {
+    await requireAdmin(request);
+    const { page, perPage, status } = parse(adminDocumentsQuery, request.query);
+    const rows = await deps.admin.listDocuments({
+      ...(status === undefined ? {} : { status }),
+      limit: perPage + 1,
+      offset: (page - 1) * perPage,
+    });
+    const { items, hasMore } = paginate(rows, perPage);
+    return { documents: items.map(toAdminDocument), page, hasMore };
+  });
+
+  // Reintenta la ingesta de un documento fallido: vuelve a `pending` y se encola (202).
+  app.post('/v1/admin/documents/:id/retry', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    const result = await deps.admin.retryFailedDocument(id);
+    if (result === 'not_found') throw new ApiError('DOC_NOT_FOUND', 404);
+    if (result === 'not_failed') throw new ApiError('DOC_STATE', 409);
+    try {
+      await deps.enqueue(id);
+    } catch (error) {
+      // Sin encolar quedaría en `pending` para siempre: vuelve a fallido para reintentarlo.
+      await deps.documents.markFailed(id, 'No se pudo encolar el reintento');
+      throw error;
+    }
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'document.retry',
+      target: `document:${id}`,
+    });
+    return reply.status(202).send({ id, status: 'pending' });
+  });
+
+  // Misma lógica que DELETE /v1/account. Un administrador no se borra a sí mismo por aquí.
+  app.delete('/v1/admin/users/:id', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    if (id === admin.userId) throw new ApiError('ADMIN_TARGET_IS_SELF', 409);
+    await deleteUserAccount(deps, id);
+    adminGate.forget(id);
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'user.delete',
+      target: `user:${id}`,
+    });
+    return reply.status(204).send();
+  });
+
+  app.get('/v1/admin/audit', async (request) => {
+    await requireAdmin(request);
+    const { page, perPage } = parse(adminPageQuery, request.query);
+    const rows = await deps.admin.listAudit({ limit: perPage + 1, offset: (page - 1) * perPage });
+    const { items, hasMore } = paginate(rows, perPage);
+    return { entries: items.map(toAdminAudit), page, hasMore };
   });
 
   return app;

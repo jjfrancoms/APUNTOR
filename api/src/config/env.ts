@@ -28,6 +28,8 @@ const serverEnvSchema = z
     /** Opcional: sin clave, el contexto externo queda desactivado. */
     TAVILY_API_KEY: z.string().min(1).optional(),
     PORT: z.coerce.number().int().positive().default(3001),
+    /** Correos de los administradores (panel /v1/admin/*), separados por comas. */
+    ADMIN_EMAILS: z.string().default(''),
     /** Orígenes web permitidos, separados por comas. */
     CORS_ORIGINS: z.string().default(''),
   })

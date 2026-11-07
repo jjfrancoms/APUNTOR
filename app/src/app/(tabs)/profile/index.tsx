@@ -12,6 +12,8 @@ export default function Profile() {
   const { c } = useTheme();
   const session = useStore((st) => st.session);
   const st = useStore((x) => x.settings);
+  // Solo para cuentas que el servidor reconoce como administradoras (nunca se guarda).
+  const isAdmin = useStore((x) => x.isAdmin);
   const user = {
     fullName: session?.fullName ?? '',
     email: session?.email ?? '',
@@ -139,6 +141,17 @@ export default function Profile() {
           onPress={() => router.push('/profile/delete-account')}
         />
       </Card>
+      {isAdmin ? (
+        <Card style={styles.list}>
+          <ListRow
+            icon="shield"
+            title={s.admin.entry}
+            detail={s.admin.entryDetail}
+            divider={false}
+            onPress={() => router.push('/admin')}
+          />
+        </Card>
+      ) : null}
       <View style={styles.demo}>
         <TextLink
           label={s.demo.signOut}

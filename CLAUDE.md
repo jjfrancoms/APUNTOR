@@ -79,6 +79,22 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   e id; nunca el cuerpo (preguntas, títulos) ni `Authorization`. Los errores 4xx de Fastify (JSON
   mal formado) responden `REQ_INVALID` y no se registran.
 - Cabeceras de seguridad con `@fastify/helmet`.
+- **Panel de administrador** (`api/src/admin.ts`, rutas `/v1/admin/*`): es admin quien tenga en
+  el JWT un `email` incluido en `ADMIN_EMAILS` (separado por comas, sin distinguir mayúsculas)
+  **y** además la Admin API de Supabase (`AuthUsersDirectory.get`, `createAdminGate()`) confirma
+  que esa cuenta tiene el correo confirmado (`email_confirmed_at`) y que es ese mismo correo; el
+  resultado se recuerda 5 min por usuario. Sin sesión 401, con sesión no admin 403 `FORBIDDEN`.
+  **Privacidad (lo promete la política, sección 8):** el panel muestra nombres de archivo y
+  metadatos (correo, fechas, tamaños, estados, conteos y el motivo de error de la ingesta);
+  nunca el contenido de los documentos (fragmentos, títulos o resúmenes de temas), ni las
+  preguntas o respuestas, ni los archivos o sus rutas (lo verifican `tests/api/app.test.ts` y
+  `tests/db/admin.test.ts` con textos marcador). Rutas: `me`, `stats`, `users` (Admin API de
+  Supabase vía `AppDeps.authUsers`, nunca SQL sobre `auth.users`), `documents` (filtro
+  `status`), `POST documents/:id/retry` (solo fallidos → `pending` y se encola, 202),
+  `DELETE users/:id` (misma lógica que `DELETE /v1/account`, `deleteUserAccount()`; borrarse a
+  sí mismo es 409 `ADMIN_TARGET_IS_SELF`) y `audit`. Listas con `page`/`perPage` (máx. 100) y
+  `hasMore`. Toda acción que cambia algo se registra en `admin_audit` (RLS sin políticas: solo el
+  backend). Usan el límite global de peticiones.
 
 ### Reglas de producto (de `docs/producto/mvp-ux.md`)
 
@@ -117,7 +133,9 @@ api/src/
 ├── app.ts                # rutas Fastify (dependencias inyectadas)
 ├── index.ts              # entrada del proceso API
 ├── wiring.ts             # piezas reales compartidas con worker y eval
-├── auth.ts               # verificación de JWT de Supabase
+├── auth.ts               # verificación de JWT de Supabase (id y email)
+├── admin.ts              # panel de administrador: consultas de metadatos y Admin API de Auth
+├── account.ts            # borrado de cuenta compartido (usuario y panel)
 ├── documents.ts          # repositorio y reglas de subida
 ├── quota.ts              # cuotas atómicas
 ├── queue.ts              # productor pg-boss
@@ -219,6 +237,9 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 - Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Apple.
 - Migraciones `0009_consents` y `0010_consents_rls` (tabla `consents` con RLS) escritas pero
   **sin aplicar** en Supabase.
+- Migraciones `0011_admin_audit` y `0012_admin_audit_rls` escritas pero **sin aplicar** en
+  Supabase; falta definir `ADMIN_EMAILS` en Railway. El admin necesita el correo confirmado en
+  Supabase (se comprueba con la Admin API); mantener activada la confirmación de correo.
 - Lista de espera de menores (44): el correo solo queda en el dispositivo; nadie recibe el aviso.
 - Cuentas escolares `student_restricted`: las reglas siguen por definir.
 - Animación Rive de 7 estados de la mascota.

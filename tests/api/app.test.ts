@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { AdminAuditRecord, AuthUserIdentity, AuthUserRecord } from '../../api/src/admin';
 import { buildApp, type AppDeps } from '../../api/src/app';
 import type { ConsentRecord } from '../../api/src/consents';
 import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
@@ -9,6 +10,14 @@ const USER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
 const AUTH = { authorization: 'Bearer token-1' };
 const AUTH_OTHER = { authorization: 'Bearer token-2' };
+const ADMIN = '33333333-3333-4333-8333-333333333333';
+const AUTH_ADMIN = { authorization: 'Bearer token-admin' };
+const SESSIONS: Record<string, { userId: string; email: string | null }> = {
+  'token-1': { userId: USER, email: 'alumno@example.com' },
+  'token-2': { userId: OTHER, email: null },
+  // Mayúsculas distintas a ADMIN_EMAILS: la comparación no las distingue.
+  'token-admin': { userId: ADMIN, email: 'Admin@Example.com' },
+};
 
 type StoredDocument = DocumentRecord & { userId: string };
 type StoredCourse = CourseRecord & { userId: string };
@@ -24,6 +33,12 @@ interface World {
   enqueued: string[];
   deletedUsers: string[];
   quota: ReturnType<typeof fakeQuota>;
+  audit: (AdminAuditRecord & { adminUserId: string })[];
+  authUsers: AuthUserRecord[];
+  /** Lo que responde la Admin API por id (GET /auth/v1/admin/users/:id), editable por prueba. */
+  identities: Map<string, AuthUserIdentity>;
+  /** Ids consultados a la Admin API para verificar a un admin (para probar la caché). */
+  identityLookups: string[];
 }
 
 async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
@@ -35,13 +50,26 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const enqueued: string[] = [];
   const deletedUsers: string[] = [];
   const quota = fakeQuota(1000);
+  const audit: World['audit'] = [];
+  const authUsers: AuthUserRecord[] = [ADMIN, USER, OTHER].map((id, index) => ({
+    id,
+    email: `u${index}@example.com`,
+    createdAt: new Date(index * 1000),
+    lastSignInAt: null,
+    provider: index === 2 ? 'google' : 'email',
+  }));
+  // La cuenta admin tiene el correo confirmado y es el mismo del JWT (sin distinguir mayúsculas).
+  const identities = new Map<string, AuthUserIdentity>([
+    [ADMIN, { id: ADMIN, email: 'admin@example.com', emailConfirmedAt: new Date(0) }],
+    [USER, { id: USER, email: 'alumno@example.com', emailConfirmedAt: new Date(0) }],
+  ]);
+  const identityLookups: string[] = [];
   const own = (userId: string, id: string) => {
     const doc = docs.get(id);
     return doc?.userId === userId ? doc : null;
   };
   const app = await buildApp({
-    authenticate: (token) =>
-      Promise.resolve(token === 'token-1' ? USER : token === 'token-2' ? OTHER : null),
+    authenticate: (token) => Promise.resolve(SESSIONS[token] ?? null),
     documents: {
       create(input) {
         docs.set(input.id, {
@@ -133,20 +161,96 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       deletedUsers.push(userId);
       return Promise.resolve();
     },
+    adminEmails: [' admin@example.com'],
+    // Panel: en memoria, sobre los mismos datos (el SQL real se prueba en tests/db/admin.test.ts).
+    admin: {
+      stats: () =>
+        Promise.resolve({
+          documents: { total: docs.size, pending: 0, processing: 0, completed: 0, failed: 0 },
+          storageBytes: 0,
+          questionsToday: quota.used,
+          consents: { currentVersionUsers: 0 },
+        }),
+      userSummaries: (ids) =>
+        Promise.resolve(
+          new Map(
+            ids.map((id) => {
+              const own = [...docs.values()].filter((d) => d.userId === id);
+              return [
+                id,
+                {
+                  documents: own.length,
+                  storageBytes: own.reduce((total, d) => total + d.sizeBytes, 0),
+                  questionsToday: 0,
+                  consentVersion: null,
+                },
+              ];
+            }),
+          ),
+        ),
+      listDocuments: ({ status, limit, offset }) =>
+        Promise.resolve(
+          [...docs.values()]
+            .filter((d) => status === undefined || d.status === status)
+            .slice(offset, offset + limit)
+            .map((d) => ({ ...d, errorMessage: null })),
+        ),
+      retryFailedDocument(id) {
+        const doc = docs.get(id);
+        if (!doc) return Promise.resolve('not_found');
+        if (doc.status !== 'failed') return Promise.resolve('not_failed');
+        doc.status = 'pending';
+        return Promise.resolve('retried');
+      },
+      recordAudit(entry) {
+        audit.unshift({ ...entry, id: crypto.randomUUID(), createdAt: new Date() });
+        return Promise.resolve();
+      },
+      listAudit: ({ limit, offset }) => Promise.resolve(audit.slice(offset, offset + limit)),
+    },
+    authUsers: {
+      list: (page, perPage) =>
+        Promise.resolve({
+          users: authUsers.slice((page - 1) * perPage, page * perPage),
+          total: authUsers.length,
+        }),
+      get(id) {
+        identityLookups.push(id);
+        return Promise.resolve(identities.get(id) ?? null);
+      },
+    },
     ...overrides,
   });
-  return { app, docs, courses, consents, topics, objects, enqueued, deletedUsers, quota };
+  return {
+    app,
+    docs,
+    courses,
+    consents,
+    topics,
+    objects,
+    enqueued,
+    deletedUsers,
+    quota,
+    audit,
+    authUsers,
+    identities,
+    identityLookups,
+  };
 }
 
 function errorCode(response: { json: () => unknown }): unknown {
   return (response.json() as { error: { code: string } }).error.code;
 }
 
-async function createDocument(world: World, extra: Record<string, unknown> = {}): Promise<string> {
+async function createDocument(
+  world: World,
+  extra: Record<string, unknown> = {},
+  headers = AUTH,
+): Promise<string> {
   const response = await world.app.inject({
     method: 'POST',
     url: '/v1/documents',
-    headers: AUTH,
+    headers,
     payload: { fileName: 'apuntes.pdf', sizeBytes: 100, ...extra },
   });
   expect(response.statusCode).toBe(201);
@@ -775,5 +879,361 @@ describe('cabeceras y registro', () => {
     expect(response.statusCode).toBe(400);
     expect(errorCode(response)).toBe('REQ_INVALID');
     expect(lines.join('')).not.toContain('secreto');
+  });
+});
+
+describe('panel de administrador', () => {
+  const routes: { method: 'GET' | 'POST' | 'DELETE'; url: string }[] = [
+    { method: 'GET', url: '/v1/admin/me' },
+    { method: 'GET', url: '/v1/admin/stats' },
+    { method: 'GET', url: '/v1/admin/users' },
+    { method: 'GET', url: '/v1/admin/documents' },
+    { method: 'POST', url: `/v1/admin/documents/${USER}/retry` },
+    { method: 'DELETE', url: `/v1/admin/users/${OTHER}` },
+    { method: 'GET', url: '/v1/admin/audit' },
+  ];
+
+  it.each(routes)('$method $url: 401 sin sesión y 403 sin ser admin', async (route) => {
+    const world = await createWorld();
+    const anonymous = await world.app.inject(route);
+    expect(anonymous.statusCode).toBe(401);
+    expect(errorCode(anonymous)).toBe('AUTH_REQUIRED');
+    // Con correo que no es admin y sin correo en el token.
+    for (const headers of [AUTH, AUTH_OTHER]) {
+      const forbidden = await world.app.inject({ ...route, headers });
+      expect(forbidden.statusCode).toBe(403);
+      expect(errorCode(forbidden)).toBe('FORBIDDEN');
+    }
+    expect(world.deletedUsers).toEqual([]);
+    expect(world.audit).toEqual([]);
+  });
+
+  it('nadie es admin si ADMIN_EMAILS está vacío', async () => {
+    const { app } = await createWorld({ adminEmails: [] });
+    const response = await app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN });
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('/v1/admin/me confirma al admin sin distinguir mayúsculas', async () => {
+    const { app } = await createWorld();
+    const response = await app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN });
+    expect(response.statusCode).toBe(200);
+    // Devuelve el correo que confirma la Admin API, no el claim del JWT.
+    expect(response.json()).toEqual({ admin: true, email: 'admin@example.com' });
+  });
+
+  it('con correo en la lista pero sin confirmar en la Admin API: 403', async () => {
+    const world = await createWorld();
+    world.identities.set(ADMIN, { id: ADMIN, email: 'admin@example.com', emailConfirmedAt: null });
+    const response = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/me',
+      headers: AUTH_ADMIN,
+    });
+    expect(response.statusCode).toBe(403);
+    expect(errorCode(response)).toBe('FORBIDDEN');
+    expect(world.identityLookups).toEqual([ADMIN]);
+  });
+
+  it('con correo confirmado en la Admin API: 200', async () => {
+    const world = await createWorld();
+    const response = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/me',
+      headers: AUTH_ADMIN,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(world.identityLookups).toEqual([ADMIN]);
+  });
+
+  it('si el email del JWT no coincide con el de la Admin API: 403', async () => {
+    const world = await createWorld();
+    // El token dice admin@example.com, pero la cuenta ya tiene otro correo (aunque confirmado).
+    world.identities.set(ADMIN, {
+      id: ADMIN,
+      email: 'otro@example.com',
+      emailConfirmedAt: new Date(0),
+    });
+    const forbidden = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/me',
+      headers: AUTH_ADMIN,
+    });
+    expect(forbidden.statusCode).toBe(403);
+  });
+
+  it('si la Admin API tiene otro correo de la lista, tampoco basta', async () => {
+    const world = await createWorld({ adminEmails: ['admin@example.com', 'jefa@example.com'] });
+    world.identities.set(ADMIN, {
+      id: ADMIN,
+      email: 'jefa@example.com',
+      emailConfirmedAt: new Date(0),
+    });
+    const forbidden = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/me',
+      headers: AUTH_ADMIN,
+    });
+    expect(forbidden.statusCode).toBe(403);
+  });
+
+  it('sin el claim en la lista no consulta la Admin API; la cuenta no existe: 403', async () => {
+    const world = await createWorld();
+    await world.app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH });
+    expect(world.identityLookups).toEqual([]);
+    world.identities.delete(ADMIN);
+    const missing = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/me',
+      headers: AUTH_ADMIN,
+    });
+    expect(missing.statusCode).toBe(403);
+  });
+
+  it('recuerda la verificación unos minutos y luego vuelve a preguntar', async () => {
+    const world = await createWorld({ adminVerifyTtlMs: 60_000 });
+    for (let i = 0; i < 3; i += 1) {
+      const response = await world.app.inject({
+        method: 'GET',
+        url: '/v1/admin/stats',
+        headers: AUTH_ADMIN,
+      });
+      expect(response.statusCode).toBe(200);
+    }
+    expect(world.identityLookups).toEqual([ADMIN]);
+
+    const expired = await createWorld({ adminVerifyTtlMs: 0 });
+    for (let i = 0; i < 2; i += 1) {
+      await expired.app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN });
+    }
+    expect(expired.identityLookups).toEqual([ADMIN, ADMIN]);
+  });
+
+  it('si la Admin API falla, responde 500 y no lo recuerda', async () => {
+    let fail = true;
+    const world = await createWorld();
+    const base = world.identities;
+    const { app } = await createWorld({
+      authUsers: {
+        list: () => Promise.resolve({ users: [], total: 0 }),
+        get: (id) =>
+          fail
+            ? Promise.reject(new Error('Supabase caído'))
+            : Promise.resolve(base.get(id) ?? null),
+      },
+    });
+    const down = await app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN });
+    expect(down.statusCode).toBe(500);
+    fail = false;
+    const up = await app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN });
+    expect(up.statusCode).toBe(200);
+  });
+
+  it('stats suma el total de usuarios de Supabase Auth', async () => {
+    const world = await createWorld();
+    await createDocument(world);
+    const response = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/stats',
+      headers: AUTH_ADMIN,
+    });
+    expect(response.json()).toMatchObject({ users: 3, documents: { total: 1 } });
+  });
+
+  it('lista usuarios con sus conteos y pagina con hasMore', async () => {
+    const world = await createWorld();
+    await createDocument(world);
+    const first = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/users?page=1&perPage=2',
+      headers: AUTH_ADMIN,
+    });
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({
+      page: 1,
+      hasMore: true,
+      users: [
+        { id: ADMIN, documents: 0, provider: 'email', lastSignInAt: null, consentVersion: null },
+        { id: USER, documents: 1, storageBytes: 100, createdAt: new Date(1000).toISOString() },
+      ],
+    });
+    const last = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/users?page=2&perPage=2',
+      headers: AUTH_ADMIN,
+    });
+    expect(last.json()).toMatchObject({ page: 2, hasMore: false, users: [{ provider: 'google' }] });
+  });
+
+  it('valida la paginación y el filtro de estado', async () => {
+    const { app } = await createWorld();
+    for (const url of [
+      '/v1/admin/users?perPage=0',
+      '/v1/admin/users?perPage=101',
+      '/v1/admin/audit?page=0',
+      '/v1/admin/documents?status=borrado',
+    ]) {
+      const response = await app.inject({ method: 'GET', url, headers: AUTH_ADMIN });
+      expect(response.statusCode).toBe(400);
+    }
+  });
+
+  it('documentos: pagina con hasMore y no expone la ruta del archivo', async () => {
+    const world = await createWorld();
+    await createDocument(world);
+    await createDocument(world);
+    const response = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/documents?perPage=1',
+      headers: AUTH_ADMIN,
+    });
+    const body = response.json<{ documents: Record<string, unknown>[]; hasMore: boolean }>();
+    expect(body.hasMore).toBe(true);
+    expect(body.documents).toHaveLength(1);
+    expect(Object.keys(body.documents[0] ?? {}).sort()).toEqual(
+      [
+        'createdAt',
+        'errorMessage',
+        'id',
+        'sizeBytes',
+        'status',
+        'title',
+        'topicCount',
+        'totalPages',
+        'userId',
+      ].sort(),
+    );
+  });
+
+  it('reintenta solo documentos fallidos, los encola y lo audita', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const retry = () =>
+      world.app.inject({
+        method: 'POST',
+        url: `/v1/admin/documents/${id}/retry`,
+        headers: AUTH_ADMIN,
+      });
+
+    const pending = await retry();
+    expect(pending.statusCode).toBe(409);
+    expect(errorCode(pending)).toBe('DOC_STATE');
+    expect(world.enqueued).toEqual([]);
+
+    const doc = world.docs.get(id);
+    if (doc) doc.status = 'failed';
+    const retried = await retry();
+    expect(retried.statusCode).toBe(202);
+    expect(retried.json()).toEqual({ id, status: 'pending' });
+    expect(world.enqueued).toEqual([id]);
+    expect(world.audit.map((e) => [e.action, e.target, e.adminEmail, e.adminUserId])).toEqual([
+      ['document.retry', `document:${id}`, 'admin@example.com', ADMIN],
+    ]);
+
+    const missing = await world.app.inject({
+      method: 'POST',
+      url: `/v1/admin/documents/${OTHER}/retry`,
+      headers: AUTH_ADMIN,
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(errorCode(missing)).toBe('DOC_NOT_FOUND');
+  });
+
+  it('si no se puede encolar, el documento vuelve a fallido y no se audita', async () => {
+    const world = await createWorld({ enqueue: () => Promise.reject(new Error('cola caída')) });
+    const id = await createDocument(world);
+    const doc = world.docs.get(id);
+    if (doc) doc.status = 'failed';
+    const response = await world.app.inject({
+      method: 'POST',
+      url: `/v1/admin/documents/${id}/retry`,
+      headers: AUTH_ADMIN,
+    });
+    expect(response.statusCode).toBe(500);
+    expect(world.docs.get(id)?.status).toBe('failed');
+    expect(world.audit).toEqual([]);
+  });
+
+  it('borra un usuario (archivos, datos y Auth) sin tocar a otros y lo audita', async () => {
+    const world = await createWorld();
+    const mine = await createDocument(world);
+    const theirs = await createDocument(world, {}, AUTH_OTHER);
+    world.objects.set(`${USER}/${mine}.pdf`, 100);
+    world.objects.set(`${OTHER}/${theirs}.pdf`, 100);
+    const response = await world.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/users/${OTHER}`,
+      headers: AUTH_ADMIN,
+    });
+    expect(response.statusCode).toBe(204);
+    expect([...world.objects.keys()]).toEqual([`${USER}/${mine}.pdf`]);
+    expect([...world.docs.keys()]).toEqual([mine]);
+    expect(world.deletedUsers).toEqual([OTHER]);
+    expect(world.audit.map((e) => [e.action, e.target])).toEqual([
+      ['user.delete', `user:${OTHER}`],
+    ]);
+
+    const audit = await world.app.inject({
+      method: 'GET',
+      url: '/v1/admin/audit',
+      headers: AUTH_ADMIN,
+    });
+    expect(audit.json()).toMatchObject({
+      page: 1,
+      hasMore: false,
+      entries: [
+        { adminEmail: 'admin@example.com', action: 'user.delete', target: `user:${OTHER}` },
+      ],
+    });
+  });
+
+  it('un admin no puede borrarse a sí mismo desde el panel', async () => {
+    const world = await createWorld();
+    const response = await world.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/users/${ADMIN}`,
+      headers: AUTH_ADMIN,
+    });
+    expect(response.statusCode).toBe(409);
+    expect(errorCode(response)).toBe('ADMIN_TARGET_IS_SELF');
+    expect(world.deletedUsers).toEqual([]);
+    expect(world.audit).toEqual([]);
+  });
+
+  it('ninguna respuesta del panel contiene preguntas ni texto de fragmentos', async () => {
+    const world = await createWorld();
+    await createDocument(world);
+    const question = '¿Cuál es la pregunta MARCADOR-PREGUNTA-7?';
+    const asked = await world.app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload: { question },
+    });
+    expect(asked.statusCode).toBe(200);
+    expect(asked.body).toContain('mitocondria');
+    for (const route of routes.filter((r) => r.method === 'GET')) {
+      const response = await world.app.inject({ ...route, headers: AUTH_ADMIN });
+      expect(response.statusCode).toBe(200);
+      expect(response.body).not.toContain('MARCADOR-PREGUNTA-7');
+      expect(response.body).not.toContain(CHUNK.content);
+      expect(response.body).not.toContain('mitocondria');
+    }
+  });
+
+  it('las rutas del panel usan el límite global', async () => {
+    const { app } = await createWorld({
+      rateLimit: {
+        global: { max: 2, timeWindowMs: 60_000 },
+        strict: { max: 1, timeWindowMs: 60_000 },
+      },
+    });
+    const statuses: number[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      statuses.push(
+        (await app.inject({ method: 'GET', url: '/v1/admin/me', headers: AUTH_ADMIN })).statusCode,
+      );
+    }
+    expect(statuses).toEqual([200, 200, 429]);
   });
 });

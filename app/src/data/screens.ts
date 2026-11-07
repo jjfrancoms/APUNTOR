@@ -156,6 +156,15 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
       { n: 58, name: 'Confirmar mayoría de edad', href: '/confirm-age', designed: false },
     ],
   },
+  {
+    title: 'Panel de administración',
+    screens: [
+      { n: 59, name: 'Panel · Resumen', href: '/admin', designed: false },
+      { n: 60, name: 'Panel · Usuarios', href: '/admin/users', designed: false },
+      { n: 61, name: 'Panel · Documentos', href: '/admin/documents', designed: false },
+      { n: 62, name: 'Panel · Auditoría', href: '/admin/audit', designed: false },
+    ],
+  },
 ];
 
 export const allScreens: ScreenEntry[] = screenGroups.flatMap((g) => g.screens);
