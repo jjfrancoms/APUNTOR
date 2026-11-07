@@ -5,7 +5,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
 import { LEGAL_VERSION } from '@/i18n/legal';
@@ -108,15 +108,38 @@ async function persist(): Promise<void> {
   }
 }
 
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Igualdad superficial: mismos elementos (arreglos) o mismas claves y valores (objetos). */
+export function shallowEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  const ra = a as Record<string, unknown>;
+  const rb = b as Record<string, unknown>;
+  return ka.every((k) => Object.prototype.hasOwnProperty.call(rb, k) && Object.is(ra[k], rb[k]));
+}
+
+/**
+ * Lee una parte del estado. Si el selector arma un arreglo u objeto nuevo (p. ej. con `filter`),
+ * se devuelve el anterior mientras su contenido sea igual: `useSyncExternalStore` exige una
+ * lectura estable o entra en un bucle de renders ("Maximum update depth exceeded").
+ */
 export function useStore<T>(selector: (s: AppState) => T): T {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => selector(state),
-    () => selector(state),
-  );
+  const last = useRef<{ value: T } | null>(null);
+  const read = (): T => {
+    const next = selector(state);
+    if (last.current && shallowEqual(last.current.value, next)) return last.current.value;
+    last.current = { value: next };
+    return next;
+  };
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 // --- Selectores ------------------------------------------------------------------
