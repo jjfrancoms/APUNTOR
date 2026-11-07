@@ -13,9 +13,9 @@
 
 ### 1. Quién presta el servicio
 
-APUNTOR es una aplicación de estudio para web y celular que presta [RAZÓN SOCIAL], con RUC [RUC] y domicilio en [DOMICILIO], Perú ("APUNTOR", "nosotros").
+APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural con negocio, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú ("APUNTOR", "nosotros").
 
-Para cualquier consulta sobre estos términos puedes escribirnos a [CORREO DE PRIVACIDAD].
+Para cualquier consulta sobre estos términos puedes escribirnos a soporte@apuntor.com.
 
 ### 2. Aceptación y versión
 
@@ -83,7 +83,7 @@ Hoy APUNTOR no cobra nada. Los pagos se regirán por los Términos de suscripci�
 
 ### 11. Propiedad de APUNTOR
 
-La app, su diseño, la marca APUNTOR, la mascota Illari y el software son de [RAZÓN SOCIAL] o de sus licenciantes. Estos términos no te dan derechos sobre ellos más allá de usar la app.
+La app, su diseño, la marca APUNTOR, la mascota Illari y el software son de Juan Jhan Franco Monja Sanchez o de sus licenciantes. Estos términos no te dan derechos sobre ellos más allá de usar la app.
 
 ### 12. Responsabilidad
 
@@ -99,7 +99,7 @@ Podemos actualizar estos términos. Cada versión lleva un número y su fecha. S
 
 Estos términos se rigen por las leyes de la República del Perú.
 
-Si tienes un reclamo, escríbenos a [CORREO DE PRIVACIDAD]. También puedes acudir a las autoridades competentes, como el Indecopi en materia de consumo o la Autoridad Nacional de Protección de Datos Personales en lo relativo a tus datos.
+Si tienes un reclamo, escríbenos a soporte@apuntor.com. También puedes acudir a las autoridades competentes, como el Indecopi en materia de consumo o la Autoridad Nacional de Protección de Datos Personales en lo relativo a tus datos.
 
 ## Términos de suscripción (español)
 
@@ -117,15 +117,15 @@ Nunca te pasaremos a un plan de pago sin tu aceptación expresa.
 
 ### 3. Contacto
 
-Si tienes dudas sobre los planes, escríbenos a [CORREO DE PRIVACIDAD]. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.
+Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.
 
 ## Terms and Conditions (English)
 
 ### 1. Who provides the service
 
-APUNTOR is a study app for web and mobile provided by [LEGAL NAME], RUC (Peruvian tax ID) [RUC], with its address at [ADDRESS], Peru ("APUNTOR", "we").
+APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, a sole proprietor, RUC (Peruvian tax ID) 10762140859, with its address at Jr. Montevideo 706, Peru ("APUNTOR", "we").
 
-For any question about these terms, write to us at [PRIVACY EMAIL].
+For any question about these terms, write to us at soporte@apuntor.com.
 
 ### 2. Acceptance and version
 
@@ -193,7 +193,7 @@ Today APUNTOR charges nothing. Payments will be governed by the Subscription Ter
 
 ### 11. APUNTOR property
 
-The app, its design, the APUNTOR brand, the Illari mascot and the software belong to [LEGAL NAME] or its licensors. These terms give you no rights over them beyond using the app.
+The app, its design, the APUNTOR brand, the Illari mascot and the software belong to Juan Jhan Franco Monja Sanchez or its licensors. These terms give you no rights over them beyond using the app.
 
 ### 12. Liability
 
@@ -209,7 +209,7 @@ We may update these terms. Each version has a number and a date. If the change i
 
 These terms are governed by the laws of the Republic of Peru.
 
-If you have a complaint, write to us at [PRIVACY EMAIL]. You may also go to the competent authorities, such as Indecopi for consumer matters or the National Personal Data Protection Authority for matters concerning your data.
+If you have a complaint, write to us at soporte@apuntor.com. You may also go to the competent authorities, such as Indecopi for consumer matters or the National Personal Data Protection Authority for matters concerning your data.
 
 ## Subscription Terms (English)
 
@@ -227,4 +227,4 @@ We will never move you to a paid plan without your express acceptance.
 
 ### 3. Contact
 
-If you have questions about plans, write to us at [PRIVACY EMAIL]. This is version 2026-11-07, last updated on November 7, 2026.
+If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-07, last updated on November 7, 2026.

@@ -44,9 +44,17 @@ describe('textos legales', () => {
   );
 
   it('el aviso de borrador se apoya en los datos por completar entre corchetes', () => {
-    expect(hasPlaceholders(LEGAL.es.terms)).toBe(true);
+    expect(hasPlaceholders([{ title: 'Pendiente', paragraphs: ['RUC [RUC]'] }])).toBe(true);
     expect(hasPlaceholders([{ title: 'Listo', paragraphs: ['Sin datos pendientes.'] }])).toBe(
       false,
     );
+  });
+
+  it('no quedan datos del responsable por completar en ningún texto publicado', () => {
+    for (const lang of ['es', 'en'] as const) {
+      for (const doc of ['terms', 'privacy', 'subscription'] as const) {
+        expect(hasPlaceholders(LEGAL[lang][doc]), `${lang}/${doc}`).toBe(false);
+      }
+    }
   });
 });

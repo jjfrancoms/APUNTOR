@@ -13,9 +13,9 @@
 
 ### 1. Responsable del tratamiento
 
-El responsable de tus datos personales es [RAZÓN SOCIAL], con RUC [RUC] y domicilio en [DOMICILIO], Perú, titular del banco de datos de usuarios de APUNTOR.
+El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural con negocio, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú, titular del banco de datos de usuarios de APUNTOR.
 
-Para cualquier asunto sobre tus datos escríbenos a [CORREO DE PRIVACIDAD].
+Para cualquier asunto sobre tus datos escríbenos a soporte@apuntor.com.
 
 Esta política cumple con el deber de informarte que establece el artículo 18 de la Ley N.° 29733, Ley de Protección de Datos Personales.
 
@@ -87,7 +87,7 @@ Tienes derecho de Acceso a tus datos, de Rectificación (actualización e inclus
 
 Desde Perfil puedes descargar tus datos y borrar tu cuenta tú mismo, en cualquier momento.
 
-Para ejercer cualquier otro derecho, escríbenos a [CORREO DE PRIVACIDAD] desde el correo de tu cuenta, indicando qué derecho quieres ejercer. Podemos pedirte datos para confirmar tu identidad. Responderemos dentro de [PLAZO DE RESPUESTA], según el reglamento de la ley.
+Para ejercer cualquier otro derecho, escríbenos a soporte@apuntor.com desde el correo de tu cuenta, indicando qué derecho quieres ejercer. Podemos pedirte datos para confirmar tu identidad. Responderemos dentro de los plazos que fija el reglamento de la ley.
 
 ### 10. Reclamos ante la autoridad
 
@@ -105,9 +105,9 @@ Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si la cam
 
 ### 1. Data controller
 
-The controller of your personal data is [LEGAL NAME], RUC [RUC], with its address at [ADDRESS], Peru, owner of the APUNTOR user database.
+The controller of your personal data is Juan Jhan Franco Monja Sanchez, a sole proprietor, RUC 10762140859, with its address at Jr. Montevideo 706, Peru, owner of the APUNTOR user database.
 
-For any matter about your data, write to us at [PRIVACY EMAIL].
+For any matter about your data, write to us at soporte@apuntor.com.
 
 This policy fulfills the duty to inform you set out in article 18 of Law No. 29733, the Personal Data Protection Law of Peru. The Spanish version prevails over this translation.
 
@@ -179,7 +179,7 @@ You have the right of Access to your data, Rectification (updating and inclusion
 
 From Profile you can download your data and delete your account yourself, at any time.
 
-To exercise any other right, write to [PRIVACY EMAIL] from your account email, stating which right you want to exercise. We may ask for information to confirm your identity. We will reply within [RESPONSE PERIOD], as set out in the regulations of the law.
+To exercise any other right, write to soporte@apuntor.com from your account email, stating which right you want to exercise. We may ask for information to confirm your identity. We will reply within the time limits set by the regulations of the law.
 
 ### 10. Complaints to the authority
 

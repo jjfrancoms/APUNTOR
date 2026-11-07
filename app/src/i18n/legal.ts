@@ -4,7 +4,7 @@ import type { Language } from './language';
  * Textos legales de APUNTOR: términos, privacidad y suscripción, en español e inglés.
  *
  * Fuente de verdad de lo que ve el usuario; `docs/legal/*.md` reproduce este mismo texto con notas
- * para la revisión legal. Los corchetes (`[RAZÓN SOCIAL]`, `[RUC]`…) son datos que el titular
+ * para la revisión legal. Los corchetes (`Juan Jhan Franco Monja Sanchez`, `10762140859`…) son datos que el titular
  * debe completar: mientras quede alguno, la pantalla muestra el aviso de borrador.
  *
  * Cambiar el contenido obliga a subir `LEGAL_VERSION` (fecha ISO) y `LEGAL_UPDATED`: la
@@ -43,8 +43,8 @@ const es: LegalTexts = {
     {
       title: '1. Quién presta el servicio',
       paragraphs: [
-        'APUNTOR es una aplicación de estudio para web y celular que presta [RAZÓN SOCIAL], con RUC [RUC] y domicilio en [DOMICILIO], Perú ("APUNTOR", "nosotros").',
-        'Para cualquier consulta sobre estos términos puedes escribirnos a [CORREO DE PRIVACIDAD].',
+        'APUNTOR es una aplicación de estudio para web y celular que presta Juan Jhan Franco Monja Sanchez, persona natural con negocio, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú ("APUNTOR", "nosotros").',
+        'Para cualquier consulta sobre estos términos puedes escribirnos a soporte@apuntor.com.',
       ],
     },
     {
@@ -118,7 +118,7 @@ const es: LegalTexts = {
     {
       title: '11. Propiedad de APUNTOR',
       paragraphs: [
-        'La app, su diseño, la marca APUNTOR, la mascota Illari y el software son de [RAZÓN SOCIAL] o de sus licenciantes. Estos términos no te dan derechos sobre ellos más allá de usar la app.',
+        'La app, su diseño, la marca APUNTOR, la mascota Illari y el software son de Juan Jhan Franco Monja Sanchez o de sus licenciantes. Estos términos no te dan derechos sobre ellos más allá de usar la app.',
       ],
     },
     {
@@ -138,7 +138,7 @@ const es: LegalTexts = {
       title: '14. Ley aplicable y reclamos',
       paragraphs: [
         'Estos términos se rigen por las leyes de la República del Perú.',
-        'Si tienes un reclamo, escríbenos a [CORREO DE PRIVACIDAD]. También puedes acudir a las autoridades competentes, como el Indecopi en materia de consumo o la Autoridad Nacional de Protección de Datos Personales en lo relativo a tus datos.',
+        'Si tienes un reclamo, escríbenos a soporte@apuntor.com. También puedes acudir a las autoridades competentes, como el Indecopi en materia de consumo o la Autoridad Nacional de Protección de Datos Personales en lo relativo a tus datos.',
       ],
     },
   ],
@@ -146,8 +146,8 @@ const es: LegalTexts = {
     {
       title: '1. Responsable del tratamiento',
       paragraphs: [
-        'El responsable de tus datos personales es [RAZÓN SOCIAL], con RUC [RUC] y domicilio en [DOMICILIO], Perú, titular del banco de datos de usuarios de APUNTOR.',
-        'Para cualquier asunto sobre tus datos escríbenos a [CORREO DE PRIVACIDAD].',
+        'El responsable de tus datos personales es Juan Jhan Franco Monja Sanchez, persona natural con negocio, con RUC 10762140859 y domicilio en Jr. Montevideo 706, Perú, titular del banco de datos de usuarios de APUNTOR.',
+        'Para cualquier asunto sobre tus datos escríbenos a soporte@apuntor.com.',
         'Esta política cumple con el deber de informarte que establece el artículo 18 de la Ley N.° 29733, Ley de Protección de Datos Personales.',
       ],
     },
@@ -215,7 +215,7 @@ const es: LegalTexts = {
       paragraphs: [
         'Tienes derecho de Acceso a tus datos, de Rectificación (actualización e inclusión), de Cancelación (supresión) y de Oposición: los derechos ARCO (artículos 19, 20 y 22 de la Ley N.° 29733). También tienes derecho a ser informado (artículo 18), a impedir que tus datos se suministren a terceros (artículo 21), a un tratamiento objetivo (artículo 23) y a revocar tu consentimiento.',
         'Desde Perfil puedes descargar tus datos y borrar tu cuenta tú mismo, en cualquier momento.',
-        'Para ejercer cualquier otro derecho, escríbenos a [CORREO DE PRIVACIDAD] desde el correo de tu cuenta, indicando qué derecho quieres ejercer. Podemos pedirte datos para confirmar tu identidad. Responderemos dentro de [PLAZO DE RESPUESTA], según el reglamento de la ley.',
+        'Para ejercer cualquier otro derecho, escríbenos a soporte@apuntor.com desde el correo de tu cuenta, indicando qué derecho quieres ejercer. Podemos pedirte datos para confirmar tu identidad. Responderemos dentro de los plazos que fija el reglamento de la ley.',
       ],
     },
     {
@@ -255,7 +255,7 @@ const es: LegalTexts = {
     {
       title: '3. Contacto',
       paragraphs: [
-        'Si tienes dudas sobre los planes, escríbenos a [CORREO DE PRIVACIDAD]. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.',
+        'Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.',
       ],
     },
   ],
@@ -266,8 +266,8 @@ const en: LegalTexts = {
     {
       title: '1. Who provides the service',
       paragraphs: [
-        'APUNTOR is a study app for web and mobile provided by [LEGAL NAME], RUC (Peruvian tax ID) [RUC], with its address at [ADDRESS], Peru ("APUNTOR", "we").',
-        'For any question about these terms, write to us at [PRIVACY EMAIL].',
+        'APUNTOR is a study app for web and mobile provided by Juan Jhan Franco Monja Sanchez, a sole proprietor, RUC (Peruvian tax ID) 10762140859, with its address at Jr. Montevideo 706, Peru ("APUNTOR", "we").',
+        'For any question about these terms, write to us at soporte@apuntor.com.',
       ],
     },
     {
@@ -341,7 +341,7 @@ const en: LegalTexts = {
     {
       title: '11. APUNTOR property',
       paragraphs: [
-        'The app, its design, the APUNTOR brand, the Illari mascot and the software belong to [LEGAL NAME] or its licensors. These terms give you no rights over them beyond using the app.',
+        'The app, its design, the APUNTOR brand, the Illari mascot and the software belong to Juan Jhan Franco Monja Sanchez or its licensors. These terms give you no rights over them beyond using the app.',
       ],
     },
     {
@@ -361,7 +361,7 @@ const en: LegalTexts = {
       title: '14. Governing law and complaints',
       paragraphs: [
         'These terms are governed by the laws of the Republic of Peru.',
-        'If you have a complaint, write to us at [PRIVACY EMAIL]. You may also go to the competent authorities, such as Indecopi for consumer matters or the National Personal Data Protection Authority for matters concerning your data.',
+        'If you have a complaint, write to us at soporte@apuntor.com. You may also go to the competent authorities, such as Indecopi for consumer matters or the National Personal Data Protection Authority for matters concerning your data.',
       ],
     },
   ],
@@ -369,8 +369,8 @@ const en: LegalTexts = {
     {
       title: '1. Data controller',
       paragraphs: [
-        'The controller of your personal data is [LEGAL NAME], RUC [RUC], with its address at [ADDRESS], Peru, owner of the APUNTOR user database.',
-        'For any matter about your data, write to us at [PRIVACY EMAIL].',
+        'The controller of your personal data is Juan Jhan Franco Monja Sanchez, a sole proprietor, RUC 10762140859, with its address at Jr. Montevideo 706, Peru, owner of the APUNTOR user database.',
+        'For any matter about your data, write to us at soporte@apuntor.com.',
         'This policy fulfills the duty to inform you set out in article 18 of Law No. 29733, the Personal Data Protection Law of Peru. The Spanish version prevails over this translation.',
       ],
     },
@@ -438,7 +438,7 @@ const en: LegalTexts = {
       paragraphs: [
         'You have the right of Access to your data, Rectification (updating and inclusion), Cancellation (erasure) and Objection: the ARCO rights (articles 19, 20 and 22 of Law No. 29733). You also have the right to be informed (article 18), to prevent your data from being supplied to third parties (article 21), to objective processing (article 23) and to withdraw your consent.',
         'From Profile you can download your data and delete your account yourself, at any time.',
-        'To exercise any other right, write to [PRIVACY EMAIL] from your account email, stating which right you want to exercise. We may ask for information to confirm your identity. We will reply within [RESPONSE PERIOD], as set out in the regulations of the law.',
+        'To exercise any other right, write to soporte@apuntor.com from your account email, stating which right you want to exercise. We may ask for information to confirm your identity. We will reply within the time limits set by the regulations of the law.',
       ],
     },
     {
@@ -478,7 +478,7 @@ const en: LegalTexts = {
     {
       title: '3. Contact',
       paragraphs: [
-        'If you have questions about plans, write to us at [PRIVACY EMAIL]. This is version 2026-11-07, last updated on November 7, 2026.',
+        'If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-07, last updated on November 7, 2026.',
       ],
     },
   ],
