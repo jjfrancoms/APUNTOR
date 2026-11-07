@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  chooseGenAiBackend,
   formatEmbeddingInput,
   VertexEmbeddingProvider,
   VertexGenerator,
@@ -72,5 +73,27 @@ describe('VertexGenerator', () => {
     expect(seen?.config.responseMimeType).toBe('application/json');
     expect(seen?.config.temperature).toBe(0);
     expect(result.usage).toEqual({ promptTokens: 11, outputTokens: 7, thoughtsTokens: 3 });
+  });
+});
+
+describe('chooseGenAiBackend', () => {
+  it('usa la API de Gemini si hay clave, aunque también haya proyecto de Vertex', () => {
+    expect(
+      chooseGenAiBackend({
+        GEMINI_API_KEY: 'k',
+        GOOGLE_CLOUD_PROJECT: 'apuntor',
+        GOOGLE_CLOUD_LOCATION: 'us-central1',
+      }),
+    ).toEqual({ kind: 'gemini-api', apiKey: 'k' });
+  });
+
+  it('sin clave usa Vertex AI', () => {
+    expect(
+      chooseGenAiBackend({ GOOGLE_CLOUD_PROJECT: 'apuntor', GOOGLE_CLOUD_LOCATION: 'us-central1' }),
+    ).toEqual({ kind: 'vertex', project: 'apuntor', location: 'us-central1' });
+  });
+
+  it('sin ninguno de los dos, falla con un mensaje claro', () => {
+    expect(() => chooseGenAiBackend({})).toThrow('GEMINI_API_KEY');
   });
 });

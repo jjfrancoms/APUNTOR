@@ -1,7 +1,12 @@
 import { createDatabase, type Database } from '../../db/client';
 import { EMBEDDING_DIMENSIONS } from '../../db/schema';
 import type { ServerEnv } from './config/env';
-import { createVertexModels, VertexEmbeddingProvider, VertexGenerator } from './llm/vertex';
+import {
+  chooseGenAiBackend,
+  createGenAiModels,
+  VertexEmbeddingProvider,
+  VertexGenerator,
+} from './llm/vertex';
 import { createChunkSearch } from './rag/retriever';
 import { R2FileStorage } from './storage/file-storage';
 
@@ -11,7 +16,7 @@ export function createInfrastructure(env: ServerEnv, options: { maxConnections?:
     env.DATABASE_URL,
     options.maxConnections === undefined ? {} : { max: options.maxConnections },
   );
-  const models = createVertexModels(env.GOOGLE_CLOUD_PROJECT, env.GOOGLE_CLOUD_LOCATION);
+  const models = createGenAiModels(chooseGenAiBackend(env));
   return {
     db,
     models,

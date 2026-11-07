@@ -61,8 +61,35 @@ interface InlineData {
   data: string;
 }
 
-export function createVertexModels(project: string, location: string): GenAiModels {
-  return new GoogleGenAI({ vertexai: true, project, location }).models;
+export type GenAiBackend =
+  { kind: 'gemini-api'; apiKey: string } | { kind: 'vertex'; project: string; location: string };
+
+/** Qué servicio usar: la clave de la API de Gemini tiene prioridad sobre Vertex AI. */
+export function chooseGenAiBackend(env: {
+  GEMINI_API_KEY?: string | undefined;
+  GOOGLE_CLOUD_PROJECT?: string | undefined;
+  GOOGLE_CLOUD_LOCATION?: string | undefined;
+}): GenAiBackend {
+  if (env.GEMINI_API_KEY) return { kind: 'gemini-api', apiKey: env.GEMINI_API_KEY };
+  if (env.GOOGLE_CLOUD_PROJECT && env.GOOGLE_CLOUD_LOCATION) {
+    return {
+      kind: 'vertex',
+      project: env.GOOGLE_CLOUD_PROJECT,
+      location: env.GOOGLE_CLOUD_LOCATION,
+    };
+  }
+  throw new Error('Falta GEMINI_API_KEY o GOOGLE_CLOUD_PROJECT + GOOGLE_CLOUD_LOCATION');
+}
+
+/** Los mismos modelos y llamadas sirven para ambos servicios; solo cambia la conexión. */
+export function createGenAiModels(backend: GenAiBackend): GenAiModels {
+  return backend.kind === 'gemini-api'
+    ? new GoogleGenAI({ apiKey: backend.apiKey }).models
+    : new GoogleGenAI({
+        vertexai: true,
+        project: backend.project,
+        location: backend.location,
+      }).models;
 }
 
 /**

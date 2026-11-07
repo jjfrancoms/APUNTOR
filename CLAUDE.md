@@ -19,6 +19,9 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   es un proceso aparte (`worker/src/index.ts`).
 - **Archivos**: Cloudflare R2 con URLs prefirmadas. **IA**: `gemini-embedding-2` (768 dims) y
   `gemini-2.5-flash` vía Vertex AI; el OCR también usa `gemini-2.5-flash`. **Externo**: Tavily.
+  Mientras no haya facturación, `GEMINI_API_KEY` (Google AI Studio, plan gratis) reemplaza a
+  Vertex con los mismos modelos (`chooseGenAiBackend()`). Ese plan puede usar el contenido para
+  mejorar productos de Google: solo pruebas propias, nunca apuntes de estudiantes reales.
 
 ## Reglas de arquitectura (no negociables)
 
