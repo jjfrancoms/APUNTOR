@@ -69,9 +69,9 @@ export default function UploadProblems() {
       case 'UP_LANGUAGE':
         return {
           title: s.language.title,
-          body: s.language.detected('un idioma no compatible'),
+          body: s.language.detected(s.language.unsupportedLanguage),
           action: p.chooseOther,
-          onPress: () => router.push('/upload/language'),
+          onPress: () => router.push('/upload'),
         };
       default:
         return {

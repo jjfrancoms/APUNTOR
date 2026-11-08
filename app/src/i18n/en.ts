@@ -29,7 +29,7 @@ export const en: Strings = {
     AUTH_PASSWORD_MISMATCH: "The passwords don't match.",
     AUTH_BIRTHDATE_INVALID: 'Enter a valid date (DD/MM/YYYY).',
     AUTH_MINOR: 'For now the app is only for people 18 and over.',
-    UP_FORMAT: 'For now we accept PDF, Word, PowerPoint and text.',
+    UP_FORMAT: 'For now we accept PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos (JPG, PNG, HEIC).',
     UP_SIZE: 'It goes over the 50 MB limit.',
     UP_QUOTA: 'Your storage is 96 % full. Free up space or change your plan.',
     UP_NETWORK: 'The connection dropped during the upload. Nothing was lost.',
@@ -326,7 +326,7 @@ export const en: Strings = {
   upload: {
     header: 'Upload documents',
     dropTitle: 'Tap to choose files',
-    dropDetail: 'PDF, Word, PowerPoint, images and text · max. 50 MB',
+    dropDetail: 'PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos · max. 50 MB',
     processing: (n: number) => `Processing · ${n} files`,
     status: {
       ready: 'Ready',
@@ -358,7 +358,7 @@ export const en: Strings = {
     saved: (n: number) => `The others (${n}) are already saved.`,
     formatTitle: 'Format not supported',
     formatBody:
-      'For now we accept PDF, Word, PowerPoint and text. Unzip the file and upload what’s inside.',
+      'For now we accept PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos (JPG, PNG, HEIC). If it’s an old .doc or .ppt, save it as .docx or .pptx; if it’s a .zip, unzip it and upload what’s inside.',
     chooseOther: 'Choose another file',
     sizeTitle: 'Over the 50 MB limit',
     sizeBody: (mb: number) =>
@@ -404,6 +404,12 @@ export const en: Strings = {
     mixed: 'If your document mixes languages, we process the one that appears most.',
     notify: 'Let me know when there are more languages',
     back: 'Back to uploading',
+    spanish: 'Español',
+    english: 'English',
+    // Textos de ejemplo: la pantalla 41 solo se ve en la vista previa (no hay detector real).
+    sampleFile: 'Summary_chinese.pdf',
+    sampleLanguage: 'Chinese',
+    unsupportedLanguage: 'an unsupported language',
   },
   scanner: {
     header: 'Scan notes',
@@ -730,7 +736,7 @@ export const en: Strings = {
   },
   helpView: {
     answers: [
-      'You can upload PDF, Word, PowerPoint, text and photos of your notes, up to 50 MB each.',
+      'You can upload PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos (JPG, PNG, HEIC), up to 50 MB each. Old .doc and .ppt files can’t be read: save them as .docx or .pptx.',
       'Filing compares the name and the content with your courses. If it got it wrong, fix it in Review filing or in the document details with "Change".',
       'In Profile › Download or delete my data you can download it or delete your account right away.',
       "It's information from the internet, shown separately, in violet and always with its source. You can turn it off in Profile.",

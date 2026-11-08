@@ -32,7 +32,7 @@ export const es = {
     AUTH_PASSWORD_MISMATCH: 'Las contraseñas no coinciden.',
     AUTH_BIRTHDATE_INVALID: 'Escribe una fecha válida (DD/MM/AAAA).',
     AUTH_MINOR: 'Por ahora la app es solo para mayores de 18 años.',
-    UP_FORMAT: 'Por ahora aceptamos PDF, Word, PowerPoint y texto.',
+    UP_FORMAT: 'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC).',
     UP_SIZE: 'Supera el límite de 50 MB.',
     UP_QUOTA: 'Tu espacio está al 96 %. Libera espacio o cambia de plan.',
     UP_NETWORK: 'Sin conexión durante la subida. No se perdió nada.',
@@ -321,7 +321,7 @@ export const es = {
   upload: {
     header: 'Subir documentos',
     dropTitle: 'Toca para elegir archivos',
-    dropDetail: 'PDF, Word, PowerPoint, imágenes y texto · máx. 50 MB',
+    dropDetail: 'PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos · máx. 50 MB',
     processing: (n: number) => `Procesando · ${n} archivos`,
     status: {
       ready: 'Listo',
@@ -353,7 +353,7 @@ export const es = {
     saved: (n: number) => `Los demás (${n}) ya están guardados.`,
     formatTitle: 'Formato no compatible',
     formatBody:
-      'Por ahora aceptamos PDF, Word, PowerPoint y texto. Descomprime el archivo y sube su contenido.',
+      'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC). Si es un .doc o .ppt antiguo, guárdalo como .docx o .pptx; si es un .zip, descomprímelo y sube su contenido.',
     chooseOther: 'Elegir otro archivo',
     sizeTitle: 'Supera el límite de 50 MB',
     sizeBody: (mb: number) =>
@@ -400,6 +400,12 @@ export const es = {
     mixed: 'Si tu documento mezcla idiomas, se procesa el idioma que más aparece.',
     notify: 'Avísame cuando haya más idiomas',
     back: 'Volver a subir documentos',
+    spanish: 'Español',
+    english: 'English',
+    // Textos de ejemplo: la pantalla 41 solo se ve en la vista previa (no hay detector real).
+    sampleFile: 'Resumen_chino.pdf',
+    sampleLanguage: 'chino',
+    unsupportedLanguage: 'un idioma no compatible',
   },
   scanner: {
     header: 'Escanear apunte',
@@ -726,7 +732,7 @@ export const es = {
   },
   helpView: {
     answers: [
-      'Puedes subir PDF, Word, PowerPoint, texto y fotos de tus apuntes, de hasta 50 MB cada uno.',
+      'Puedes subir PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC), de hasta 50 MB cada uno. Los formatos antiguos .doc y .ppt no se leen: guárdalos como .docx o .pptx.',
       'La clasificación compara el nombre y el contenido con tus cursos. Si se equivocó, corrígela en Revisar clasificación o en el detalle del documento con "Cambiar".',
       'En Perfil › Descargar o borrar mis datos puedes descargarlos o borrar tu cuenta de inmediato.',
       'Es información de internet que se muestra aparte, en violeta y siempre con su fuente. Puedes apagarla en Perfil.',
