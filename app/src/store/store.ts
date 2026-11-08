@@ -17,6 +17,7 @@ import {
   type ApiAdminDocument,
   type ApiAdminStats,
   type ApiAdminUser,
+  type ApiAdminWaitlistEntry,
   type ApiConsent,
   type ApiDocument,
   type ApiDocumentStatus,
@@ -659,8 +660,26 @@ export async function deleteAccount(): Promise<boolean> {
   return true;
 }
 
-export function joinWaitlist(email: string): void {
-  setState((s) => ({ ...s, waitlist: [...new Set([...s.waitlist, email.trim()])] }));
+export type WaitlistResult = 'ok' | 'invalid' | 'limited' | 'failed';
+
+/**
+ * Inscribe un correo en la lista de espera (44). Se guarda solo en el servidor: nada de esto
+ * queda en el dispositivo. Sin consentimiento expreso no se envía.
+ */
+export async function joinWaitlist(
+  email: string,
+  consent: boolean,
+  source: 'app' | 'web',
+): Promise<WaitlistResult> {
+  if (!consent || !isValidEmail(email)) return 'invalid';
+  try {
+    await api.joinWaitlist({ email: email.trim(), consent: true, source });
+    return 'ok';
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.code === 'REQ_INVALID') return 'invalid';
+    if (error instanceof ApiRequestError && error.code === 'RATE_LIMITED') return 'limited';
+    return 'failed';
+  }
 }
 
 // --- Panel de administración -------------------------------------------------------
@@ -690,7 +709,13 @@ export async function refreshAdmin(): Promise<boolean> {
 
 /** Errores del panel. Los tres primeros son de conexión o permiso; el resto, códigos de la API. */
 export type AdminError =
-  'offline' | 'forbidden' | 'failed' | 'DOC_STATE' | 'DOC_NOT_FOUND' | 'ADMIN_TARGET_IS_SELF';
+  | 'offline'
+  | 'forbidden'
+  | 'failed'
+  | 'DOC_STATE'
+  | 'DOC_NOT_FOUND'
+  | 'ADMIN_TARGET_IS_SELF'
+  | 'WAITLIST_NOT_FOUND';
 
 export type AdminResult<T> = { ok: true; data: T } | { ok: false; error: AdminError };
 
@@ -701,7 +726,12 @@ export interface AdminPage<T> {
   hasMore: boolean;
 }
 
-const ADMIN_CODES: readonly AdminError[] = ['DOC_STATE', 'DOC_NOT_FOUND', 'ADMIN_TARGET_IS_SELF'];
+const ADMIN_CODES: readonly AdminError[] = [
+  'DOC_STATE',
+  'DOC_NOT_FOUND',
+  'ADMIN_TARGET_IS_SELF',
+  'WAITLIST_NOT_FOUND',
+];
 
 /** Traduce el error de la API a uno del panel. Un 403 quita el acceso al panel al instante. */
 export function toAdminError(error: unknown): AdminError {
@@ -767,6 +797,23 @@ export function loadAdminAudit(page = 1): Promise<AdminResult<AdminPage<ApiAdmin
   return adminCall(async () => {
     const r = await api.adminAudit(page);
     return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+export function loadAdminWaitlist(
+  page = 1,
+): Promise<AdminResult<AdminPage<ApiAdminWaitlistEntry>>> {
+  return adminCall(async () => {
+    const r = await api.adminWaitlist(page);
+    return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+/** Borra una inscripción de la lista de espera, cuando la persona lo pide. */
+export function adminDeleteWaitlistEntry(id: string): Promise<AdminResult<null>> {
+  return adminCall(async () => {
+    await api.adminDeleteWaitlistEntry(id);
+    return null;
   });
 }
 

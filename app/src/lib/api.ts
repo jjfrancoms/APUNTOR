@@ -137,6 +137,14 @@ export interface ApiAdminAuditEntry {
   createdAt: string;
 }
 
+export interface ApiAdminWaitlistEntry {
+  id: string;
+  email: string;
+  consent: boolean;
+  source: string;
+  createdAt: string;
+}
+
 /** Tamaño de página de las listas del panel. */
 export const ADMIN_PER_PAGE = 50;
 
@@ -198,6 +206,9 @@ export const api = {
   acceptConsent: (document: LegalDocument, version: string) =>
     request<ApiConsent>('POST', '/v1/consents', { document, version }),
   consents: () => request<{ consents: ApiConsent[] }>('GET', '/v1/consents'),
+  /** Pública (no hace falta sesión) e idempotente: repetir el correo no lo duplica. */
+  joinWaitlist: (input: { email: string; consent: true; source: 'app' | 'web' }) =>
+    request<{ status: 'joined' }>('POST', '/v1/waitlist', input),
   /** 200 si la cuenta es administradora; 403 FORBIDDEN si no. */
   adminMe: () => request<ApiAdminMe>('GET', '/v1/admin/me'),
   adminStats: () => request<ApiAdminStats>('GET', '/v1/admin/stats'),
@@ -220,6 +231,14 @@ export const api = {
   /** 204: borra la cuenta completa de ese usuario (irreversible). */
   adminDeleteUser: (id: string) =>
     request<void>('DELETE', `/v1/admin/users/${encodeURIComponent(id)}`),
+  adminWaitlist: (page: number) =>
+    request<{ entries: ApiAdminWaitlistEntry[]; page: number; hasMore: boolean }>(
+      'GET',
+      `/v1/admin/waitlist${pageQuery(page)}`,
+    ),
+  /** 204: borra esa inscripción de la lista de espera. */
+  adminDeleteWaitlistEntry: (id: string) =>
+    request<void>('DELETE', `/v1/admin/waitlist/${encodeURIComponent(id)}`),
   adminAudit: (page: number) =>
     request<{ entries: ApiAdminAuditEntry[]; page: number; hasMore: boolean }>(
       'GET',

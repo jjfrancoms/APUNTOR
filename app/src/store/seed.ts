@@ -155,7 +155,6 @@ export interface AppState {
   /** true mientras se consulta `isAdmin` (el panel espera en vez de redirigir). */
   adminChecking: boolean;
   shares: ShareLink[];
-  waitlist: string[];
   study: {
     known: string[];
     unknown: string[];
@@ -215,7 +214,6 @@ export function createInitialState(): AppState {
     isAdmin: false,
     adminChecking: false,
     shares: [],
-    waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null, boxes: {} },
     payments: [],
     notices: { languages: false, reported: [] },

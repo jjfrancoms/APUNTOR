@@ -9,6 +9,7 @@ import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
 import { createQuotaService } from './quota';
+import { createWaitlistRepository } from './waitlist';
 import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    waitlist: createWaitlistRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),

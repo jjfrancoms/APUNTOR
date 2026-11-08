@@ -40,6 +40,12 @@ import type { IngestionEnqueuer } from './queue';
 import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
+import {
+  MAX_WAITLIST_EMAIL,
+  WAITLIST_SOURCES,
+  type WaitlistRecord,
+  type WaitlistRepository,
+} from './waitlist';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
 export interface RateLimitRule {
@@ -52,7 +58,12 @@ export interface RateLimitConfig {
   global: RateLimitRule;
   /** Rutas caras: preguntas, contexto externo y registro de subidas. */
   strict: RateLimitRule;
+  /** Lista de espera pública (por IP); sin indicar usa `DEFAULT_WAITLIST_LIMIT`. */
+  waitlist?: RateLimitRule;
 }
+
+/** Ruta sin sesión que escribe en la base: pocas inscripciones por IP y hora. */
+export const DEFAULT_WAITLIST_LIMIT: RateLimitRule = { max: 10, timeWindowMs: 60 * 60_000 };
 
 export const DEFAULT_RATE_LIMIT: RateLimitConfig = {
   global: { max: 300, timeWindowMs: 60_000 },
@@ -63,6 +74,8 @@ export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
   consents: ConsentsRepository;
+  /** Lista de espera de menores: solo la escribe y lee el backend. */
+  waitlist: WaitlistRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -128,6 +141,12 @@ const consentBody = z.object({
     .max(MAX_CONSENT_VERSION)
     .regex(/^\d{4}-\d{2}-\d{2}$/u),
 });
+const waitlistBody = z.object({
+  email: z.string().trim().max(MAX_WAITLIST_EMAIL).toLowerCase().pipe(z.email()),
+  // Sin consentimiento expreso no se guarda nada.
+  consent: z.literal(true),
+  source: z.enum(WAITLIST_SOURCES).default('app'),
+});
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
@@ -182,6 +201,16 @@ function toAdminAudit(entry: AdminAuditRecord) {
     adminEmail: entry.adminEmail,
     action: entry.action,
     target: entry.target,
+    createdAt: entry.createdAt.toISOString(),
+  };
+}
+
+function toAdminWaitlist(entry: WaitlistRecord) {
+  return {
+    id: entry.id,
+    email: entry.email,
+    consent: entry.consent,
+    source: entry.source,
     createdAt: entry.createdAt.toISOString(),
   };
 }
@@ -301,6 +330,20 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       : {
           config: { rateLimit: { max: limits.strict.max, timeWindow: limits.strict.timeWindowMs } },
         };
+  /** Solo por IP: esta ruta es pública y no debe depender de ningún token. */
+  const waitlistRule = limits === false ? null : (limits.waitlist ?? DEFAULT_WAITLIST_LIMIT);
+  const waitlistLimit =
+    waitlistRule === null
+      ? {}
+      : {
+          config: {
+            rateLimit: {
+              max: waitlistRule.max,
+              timeWindow: waitlistRule.timeWindowMs,
+              keyGenerator: (request: FastifyRequest) => `ip:${request.ip}`,
+            },
+          },
+        };
 
   async function requireDocument(userId: string, params: unknown): Promise<DocumentRecord> {
     const { id } = parse(idParams, params);
@@ -351,6 +394,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/v1/consents', async (request) => {
     const userId = await requireUser(request);
     return { consents: (await deps.consents.list(userId)).map(toPublicConsent) };
+  });
+
+  // --- Lista de espera de menores (44) --------------------------------------------
+
+  // Pública, sin sesión. Responde igual si el correo ya estaba: no revela quién está inscrito.
+  app.post('/v1/waitlist', waitlistLimit, async (request, reply) => {
+    const { email, consent, source } = parse(waitlistBody, request.body);
+    await deps.waitlist.join({ email, consent, source });
+    return reply.status(201).send({ status: 'joined' });
   });
 
   // --- Cursos ----------------------------------------------------------------------
@@ -622,6 +674,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       adminEmail: admin.email,
       action: 'user.delete',
       target: `user:${id}`,
+    });
+    return reply.status(204).send();
+  });
+
+  // El correo de la lista es un metadato: el panel lo muestra y lo borra si lo piden.
+  app.get('/v1/admin/waitlist', async (request) => {
+    await requireAdmin(request);
+    const { page, perPage } = parse(adminPageQuery, request.query);
+    const rows = await deps.waitlist.list({ limit: perPage + 1, offset: (page - 1) * perPage });
+    const { items, hasMore } = paginate(rows, perPage);
+    return { entries: items.map(toAdminWaitlist), page, hasMore };
+  });
+
+  // La auditoría guarda solo el id: borrar el correo lo borra de verdad.
+  app.delete('/v1/admin/waitlist/:id', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    if (!(await deps.waitlist.remove(id))) throw new ApiError('WAITLIST_NOT_FOUND', 404);
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'waitlist.delete',
+      target: `waitlist:${id}`,
     });
     return reply.status(204).send();
   });

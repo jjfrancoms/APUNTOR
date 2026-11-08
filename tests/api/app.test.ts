@@ -4,7 +4,7 @@ import type { AdminAuditRecord, AuthUserIdentity, AuthUserRecord } from '../../a
 import { buildApp, type AppDeps } from '../../api/src/app';
 import type { ConsentRecord } from '../../api/src/consents';
 import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
-import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from './helpers';
+import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, fakeWaitlist, VALID_ANSWER } from './helpers';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -126,6 +126,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         return Promise.resolve();
       },
     },
+    waitlist: fakeWaitlist(),
     consents: {
       accept(userId, document, version) {
         const found = consents.find(
