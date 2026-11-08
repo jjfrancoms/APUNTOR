@@ -1,6 +1,5 @@
 import { manifestKey, pageImageKey, type PageManifest } from '../../../api/src/page-manifest';
 import type { FileStorage } from '../../../api/src/storage/file-storage';
-import { detectFormat } from './extractors';
 import { normalizePageText, type ParsedDocument } from './pdf-parser';
 
 /** Ancho de las imágenes de página: nítidas en pantallas grandes, ~100 KB por página. */
@@ -20,11 +19,14 @@ export interface PageRenderer {
   render(data: Uint8Array, onPage: (page: RenderedPage) => Promise<void>): Promise<void>;
 }
 
+const isPdf = (data: Uint8Array): boolean =>
+  Buffer.from(data.subarray(0, 4)).toString('latin1') === '%PDF';
+
 /** Páginas de PDF con pdf.js + @napi-rs/canvas. Otros formatos no se dibujan (Word y PowerPoint
  * necesitarían LibreOffice): su contenido se muestra como texto. */
 export class PdfPageRenderer implements PageRenderer {
   async render(data: Uint8Array, onPage: (page: RenderedPage) => Promise<void>): Promise<void> {
-    if ((await detectFormat(data)).kind !== 'pdf') return;
+    if (!isPdf(data)) return;
     const { getDocumentProxy, renderPageAsImage } = await import('unpdf');
     const pdf = await getDocumentProxy(data.slice());
     try {

@@ -139,7 +139,7 @@ export async function processDocument(
     await onProgress({ stage: 'parsing', processedChunks: 0, totalChunks: 0 });
 
     const bytes = await storage.download(document.filePath);
-    const parsed = await extractor.extractPages(bytes);
+    const parsed = await extractor.extractPages(bytes, document.filePath);
     if (parsed.totalPages <= 0) throw new PermanentIngestionError('El documento no tiene páginas');
 
     const chunks = chunkPages(parsed.pages, deps.chunking ?? DEFAULT_CHUNKING_OPTIONS);

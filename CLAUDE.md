@@ -71,6 +71,14 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   de letra en PDF; tamaño, negrita, color y estilos en Word; título de diapositiva en PowerPoint),
   comparado con la letra "normal" del documento; si no hay formato, por texto, sin filas de
   tablas, fórmulas ni encabezados repetidos en cada página. Sin IA.
+- **Formatos y topes de la ingesta** (`worker/src/ingestion/extractors.ts`): `.txt` y `.md` no
+  tienen firma, así que se aceptan por extensión + UTF-8 válido; sus "páginas" son saltos de
+  página (form feed) o tramos de ~3000 caracteres por párrafos, y `#` da los temas. En Word cada
+  fila de tabla es una línea `| a | b |`. En PowerPoint las notas del orador van bajo "Notas:" en
+  su diapositiva y una diapositiva sin texto pasa sus imágenes por OCR. **Topes de OCR por
+  documento:** `MAX_OCR_PAGES` = 120 páginas escaneadas de PDF (si se pasa, error permanente sin
+  gastar ninguna llamada) y `MAX_OCR_SLIDE_IMAGES` = 30 imágenes de diapositivas (las que sobran
+  se omiten, sin fallar).
 - **Archivos derivados** en R2, dentro de la carpeta del usuario (`derivedPrefix()`:
   `usuario/doc.pdf` → `usuario/doc/`): `pages.json` (texto normalizado por página, el mismo de
   los offsets `charStart/charEnd`) y `page-N.png` (página de PDF dibujada con

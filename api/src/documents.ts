@@ -13,11 +13,13 @@ import { buildTopicContent, type TopicContent } from './topic-content';
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const MAX_COURSE_TITLE = 80;
 
-/** Formatos del README: PDF, PPTX, DOCX y fotos. */
+/** Formatos del README: PDF, PPTX, DOCX, texto (TXT y Markdown) y fotos. */
 export const UPLOAD_CONTENT_TYPES: Readonly<Record<string, string>> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+  md: 'text/markdown',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   png: 'image/png',
