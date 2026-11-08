@@ -22,6 +22,8 @@ const serverEnvSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     /** Modelo de respuestas y OCR; por defecto el de la especificación (gemini-2.5-flash). */
     GENERATION_MODEL: z.string().min(1).optional(),
+    /** Modelo de los resúmenes de tema (por defecto, el de generación). */
+    SUMMARY_MODEL: z.string().min(1).optional(),
     GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
     /** Sin valor por defecto: la disponibilidad por región sigue sin verificarse. */
     GOOGLE_CLOUD_LOCATION: z.string().min(1).optional(),

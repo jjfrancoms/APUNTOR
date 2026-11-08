@@ -71,8 +71,17 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   los offsets `charStart/charEnd`) y `page-N.png` (página de PDF dibujada con
   `@napi-rs/canvas`). Los genera el worker sin bloquear la ingesta si fallan; se borran con el
   documento y con la cuenta (`deletePrefix`). Se ven solo con enlaces temporales.
-- **Contenido de un tema** (`GET /v1/documents/:id/topics/:topicId`, pantalla 63): texto del
-  documento bajo el tema, por página, con su estructura, más las imágenes de página. Sin LLM.
+- **Resumen de un tema** (`GET /v1/documents/:id/topics/:topicId/summary`, pantalla 63,
+  `api/src/topic-summary.ts`): Gemini resume el tema SOLO con sus páginas (imagen + texto) y
+  escribe Markdown (`summary-markdown.ts` lo lleva a bloques: título, párrafo, lista, tabla,
+  fórmula con ">>", figura con caja 0–1000 que el servidor recorta de la página). Se descartan
+  páginas que el modelo no vio y figuras de más de media página. Se genera una vez y se guarda
+  en `usuario/doc/summaries/` (se borra con el documento). Tope `maxOutputTokens` (corta bucles).
+  `SUMMARY_MODEL` (por defecto el de generación): en el plan gratis, `gemini-flash-lite-latest`
+  responde en segundos; los "flash" normales pueden tardar minutos. La app muestra cada parte
+  con su página, que abre la página original para comprobarla.
+- El índice de temas de la app (`TopicOutline`) es desplegable: solo se ven los temas raíz y al
+  tocar uno se muestran sus secciones (al cerrarlo se cierran también sus subtemas).
 - `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
   (`formatEmbeddingInput()`).
 - **Consentimientos con versión**: la tabla `consents` guarda documento (`terms`/`privacy`),

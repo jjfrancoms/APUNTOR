@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
 import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
+import { GENERATION_MODEL } from './llm/vertex';
+import { createTopicSummarizer } from './topic-summary';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
@@ -13,7 +15,7 @@ import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
   const env = getServerEnv();
-  const { db, embedder, generator, search, storage } = createInfrastructure(env);
+  const { db, models, embedder, generator, search, storage } = createInfrastructure(env);
 
   const boss = createQueueClient(env.QUEUE_DATABASE_URL);
   boss.on('error', (error) => {
@@ -30,6 +32,11 @@ async function main(): Promise<void> {
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),
     answer: { embedder, search, generator },
+    summaries: createTopicSummarizer({
+      models,
+      model: env.SUMMARY_MODEL ?? env.GENERATION_MODEL ?? GENERATION_MODEL,
+      storage,
+    }),
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
     admin: createAdminRepository(db),
     authUsers: createSupabaseUsersDirectory(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),

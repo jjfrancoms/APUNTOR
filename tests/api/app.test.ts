@@ -569,6 +569,82 @@ describe('documentos', () => {
     expect([...world.files.keys()].filter((k) => k.startsWith(`${base}/`))).toEqual([]);
   });
 
+  it('el resumen de un tema trae su estructura y enlaces a las figuras y páginas', async () => {
+    const calls: string[] = [];
+    const world = await createWorld({
+      summaries: {
+        get(input) {
+          calls.push(input.topic.id);
+          return Promise.resolve({
+            version: 1,
+            topicId: input.topic.id,
+            model: 'lite',
+            blocks: [
+              { type: 'heading', text: 'Límites' },
+              { type: 'table', header: ['x', 'f(x)'], rows: [['1', '2']], pages: [2] },
+              {
+                type: 'figure',
+                page: 2,
+                caption: 'Gráfica',
+                key: 'u/doc/summaries/t-fig-0.png',
+                width: 400,
+                height: 300,
+              },
+            ],
+          });
+        },
+      },
+    });
+    const id = await createDocument(world);
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const url = `/v1/documents/${id}/topics/${topicId}/summary`;
+    const res = await world.app.inject({ method: 'GET', url, headers: AUTH });
+    expect(res.statusCode).toBe(200);
+    const body: unknown = res.json();
+    expect(body).toMatchObject({
+      blocks: [
+        { type: 'heading' },
+        { type: 'table', header: ['x', 'f(x)'] },
+        { type: 'figure', url: 'https://r2.example/get/u/doc/summaries/t-fig-0.png' },
+      ],
+      pageImages: [],
+    });
+    // La clave interna del archivo no sale en la respuesta.
+    expect(JSON.stringify(body)).not.toContain('"key"');
+    const theirs = await world.app.inject({ method: 'GET', url, headers: AUTH_OTHER });
+    expect(theirs.statusCode).toBe(404);
+    expect(calls).toEqual([topicId]);
+  });
+
+  it('el resumen avisa si la IA no está o está saturada', async () => {
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    const without = await createWorld();
+    const id = await createDocument(without);
+    without.topics.set(id, [{ id: topicId, parentId: null, title: 'T', sourcePages: [1] }]);
+    const off = await without.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/${topicId}/summary`,
+      headers: AUTH,
+    });
+    expect(off.statusCode).toBe(503);
+
+    const busy = await createWorld({
+      summaries: {
+        get: () =>
+          Promise.reject(new Error('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}')),
+      },
+    });
+    const busyId = await createDocument(busy);
+    busy.topics.set(busyId, [{ id: topicId, parentId: null, title: 'T', sourcePages: [1] }]);
+    const res = await busy.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${busyId}/topics/${topicId}/summary`,
+      headers: AUTH,
+    });
+    expect(errorCode(res)).toBe('RATE_LIMITED');
+  });
+
   it('otro usuario no ve, completa, cambia ni borra el documento', async () => {
     const world = await createWorld();
     const id = await createDocument(world);

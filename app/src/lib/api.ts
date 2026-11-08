@@ -44,14 +44,21 @@ export interface ApiCourse {
   createdAt: string;
 }
 
-/** Texto del documento bajo un tema, por página (la página sale del fragmento). */
-export interface ApiTopicContent {
+/** Bloque del resumen de un tema (la estructura del original: tablas, fórmulas, figuras). */
+export type ApiSummaryBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string; pages: number[] }
+  | { type: 'list'; items: string[]; pages: number[] }
+  | { type: 'table'; header: string[]; rows: string[][]; pages: number[] }
+  | { type: 'formula'; text: string; pages: number[] }
+  | { type: 'figure'; page: number; caption: string; url: string; width: number; height: number };
+
+export interface ApiTopicSummary {
   topic: ApiTopic;
   path: string[];
-  blocks: { pageNumber: number; sectionPath: string[]; text: string }[];
-  /** Páginas como se ven en el documento (PDF): enlaces temporales. */
+  blocks: ApiSummaryBlock[];
+  /** Páginas citadas, para comprobarlas en el original (enlaces temporales). */
   pageImages: { pageNumber: number; url: string; width: number; height: number }[];
-  truncated: boolean;
   document: { id: string; title: string };
 }
 
@@ -197,8 +204,8 @@ export const api = {
   documents: () => request<{ documents: ApiDocument[] }>('GET', '/v1/documents'),
   document: (id: string) => request<ApiDocument>('GET', `/v1/documents/${id}`),
   topics: (id: string) => request<{ topics: ApiTopic[] }>('GET', `/v1/documents/${id}/topics`),
-  topicContent: (documentId: string, topicId: string) =>
-    request<ApiTopicContent>('GET', `/v1/documents/${documentId}/topics/${topicId}`),
+  topicSummary: (documentId: string, topicId: string) =>
+    request<ApiTopicSummary>('GET', `/v1/documents/${documentId}/topics/${topicId}/summary`),
   createDocument: (input: { fileName: string; sizeBytes: number; courseId?: string }) =>
     request<ApiUploadTicket>('POST', '/v1/documents', input),
   completeDocument: (id: string) => request<unknown>('POST', `/v1/documents/${id}/complete`),

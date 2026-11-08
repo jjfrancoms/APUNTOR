@@ -42,6 +42,8 @@ import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { createManifestCache } from './page-manifest';
 import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
 import { withPageStructure } from './topic-content';
+import type { SummaryBlock, TopicSummarizer } from './topic-summary';
+import { isTransientAiError } from './llm/retry';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
 export interface RateLimitRule {
@@ -80,6 +82,8 @@ export interface AppDeps {
   adminVerifyTtlMs?: number;
   /** Sin configurar, el contexto externo responde como no disponible. */
   externalSearch?: ExternalSearch;
+  /** Resúmenes de tema con IA (sin configurar, la ruta responde como no disponible). */
+  summaries?: TopicSummarizer;
   corsOrigins?: readonly string[];
   /** `true` escribe en stdout; con `{ stream }` escribe ahí (pruebas). */
   logger?: boolean | { stream: LogStream };
@@ -507,6 +511,71 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       })),
       pageImages,
       truncated: content.truncated,
+      document: { id: document.id, title: document.title },
+    };
+  });
+
+  // Resumen del tema con su estructura (tablas, fórmulas, figuras recortadas). Se genera una
+  // vez con la IA y se guarda; las figuras se ven con enlaces temporales.
+  app.get('/v1/documents/:id/topics/:topicId/summary', strictLimit, async (request) => {
+    const userId = await requireUser(request);
+    const document = await requireDocument(userId, request.params);
+    const { topicId } = parse(topicParams, request.params);
+    const content = await deps.documents.topicContent(userId, document.id, topicId);
+    if (!content) throw new ApiError('DOC_NOT_FOUND', 404);
+    if (!deps.summaries) throw new ApiError('CHAT_FAILED', 503);
+    const manifest = await pageManifests.get(document.id, document.filePath);
+    const blocks = withPageStructure(
+      content.blocks,
+      new Map((manifest?.pages ?? []).map((p) => [p.pageNumber, p.text])),
+    );
+    let summary;
+    try {
+      summary = await deps.summaries.get({
+        filePath: document.filePath,
+        topic: content.topic,
+        path: content.path,
+        blocks,
+        manifest,
+      });
+    } catch (error) {
+      if (isTransientAiError(error)) throw new ApiError('RATE_LIMITED', 429);
+      request.log.error({ err: error instanceof Error ? error.message : 'error' }, 'resumen');
+      throw new ApiError('CHAT_FAILED', 502);
+    }
+    const out = await Promise.all(
+      summary.blocks.map(async (block: SummaryBlock) => {
+        if (block.type !== 'figure') return block;
+        const { key, ...rest } = block;
+        return { ...rest, url: await deps.storage.createDownloadUrl(key) };
+      }),
+    );
+    // Páginas citadas por el resumen, para comprobarlo contra el original.
+    const cited = new Set<number>();
+    for (const block of summary.blocks) {
+      if (block.type === 'figure') cited.add(block.page);
+      else if ('pages' in block) block.pages.forEach((p) => cited.add(p));
+    }
+    const images = new Map((manifest?.pages ?? []).map((p) => [p.pageNumber, p.image]));
+    const pageImages = await Promise.all(
+      [...cited]
+        .sort((a, b) => a - b)
+        .flatMap((pageNumber) => {
+          const image = images.get(pageNumber);
+          return image
+            ? [
+                deps.storage
+                  .createDownloadUrl(image.key)
+                  .then((url) => ({ pageNumber, url, width: image.width, height: image.height })),
+              ]
+            : [];
+        }),
+    );
+    return {
+      topic: content.topic,
+      path: content.path,
+      blocks: out,
+      pageImages,
       document: { id: document.id, title: document.title },
     };
   });

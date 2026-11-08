@@ -167,7 +167,7 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
   },
   {
     title: 'Contenido',
-    screens: [{ n: 63, name: 'Contenido del tema', href: '/topic', designed: false }],
+    screens: [{ n: 63, name: 'Resumen del tema', href: '/topic', designed: false }],
   },
 ];
 

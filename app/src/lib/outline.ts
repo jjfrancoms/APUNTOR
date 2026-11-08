@@ -1,31 +1,5 @@
 import type { DocTopic } from '@/store/seed';
 
-export interface OutlineSection {
-  topic: DocTopic;
-  children: DocTopic[];
-}
-
-/** Índice de temas del documento en dos niveles: cada tema raíz con sus subtemas (todos). */
-export function outlineSections(outline: readonly DocTopic[]): OutlineSection[] {
-  const roots = outline.filter((t) => t.depth === 1);
-  return roots.map((topic) => ({
-    topic,
-    children: outline.filter((t) => t.depth > 1 && descendsFrom(outline, t, topic.id)),
-  }));
-}
-
-function descendsFrom(outline: readonly DocTopic[], topic: DocTopic, rootId: string): boolean {
-  const byId = new Map(outline.map((t) => [t.id, t]));
-  let current: DocTopic | undefined = topic;
-  const seen = new Set<string>();
-  while (current?.parentId && !seen.has(current.id)) {
-    if (current.parentId === rootId) return true;
-    seen.add(current.id);
-    current = byId.get(current.parentId);
-  }
-  return false;
-}
-
 /** Profundidad de cada tema (1 = raíz) a partir de `parentId`, en el orden recibido. */
 export function withDepth(
   topics: readonly { id: string; parentId: string | null; title: string; sourcePages: number[] }[],
@@ -68,4 +42,38 @@ export function formatPageRanges(pages: readonly number[]): string {
     prev = page;
   }
   return parts.join(', ');
+}
+
+export interface OutlineNode {
+  topic: DocTopic;
+  children: OutlineNode[];
+}
+
+/** Árbol de temas (cualquier profundidad), en el orden del documento. */
+export function outlineTree(outline: readonly DocTopic[]): OutlineNode[] {
+  const nodes = new Map(outline.map((t) => [t.id, { topic: t, children: [] as OutlineNode[] }]));
+  const roots: OutlineNode[] = [];
+  for (const topic of outline) {
+    const node = nodes.get(topic.id);
+    if (!node) continue;
+    const parent = topic.parentId === null ? undefined : nodes.get(topic.parentId);
+    if (parent && parent !== node) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+/** Abre o cierra un tema; al cerrarlo se cierran también sus subtemas abiertos. */
+export function toggleExpanded(expanded: ReadonlySet<string>, node: OutlineNode): Set<string> {
+  const next = new Set(expanded);
+  if (!next.delete(node.topic.id)) {
+    next.add(node.topic.id);
+    return next;
+  }
+  const close = (n: OutlineNode): void => {
+    next.delete(n.topic.id);
+    n.children.forEach(close);
+  };
+  close(node);
+  return next;
 }

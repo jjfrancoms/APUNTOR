@@ -46,6 +46,10 @@ export interface GenAiModels {
       temperature: number;
       responseMimeType?: string;
       responseSchema?: object;
+      /** Tope de la respuesta: corta un bucle de repetición del modelo. */
+      maxOutputTokens?: number;
+      /** Tokens de razonamiento previo: poco basta para resumir y responde mucho antes. */
+      thinkingConfig?: { thinkingBudget?: number };
     };
   }): Promise<{
     text?: string;

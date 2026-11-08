@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPageRanges, outlineSections, withDepth } from '../src/lib/outline';
+import { formatPageRanges, outlineTree, toggleExpanded, withDepth } from '../src/lib/outline';
 
 const topics = withDepth([
   { id: 'cap', parentId: null, title: 'Capítulo I', sourcePages: [1, 2, 3] },
@@ -18,11 +18,21 @@ describe('índice de temas del documento', () => {
     ]);
   });
 
-  it('agrupa cada tema raíz con todos sus subtemas', () => {
-    expect(outlineSections(topics).map((s) => [s.topic.id, s.children.map((c) => c.id)])).toEqual([
-      ['cap', ['tema1', 't11']],
-      ['ej', []],
-    ]);
+  it('arma el árbol con sus subtemas en orden', () => {
+    const tree = outlineTree(topics);
+    expect(tree.map((n) => n.topic.id)).toEqual(['cap', 'ej']);
+    expect(tree[0]?.children[0]?.children.map((n) => n.topic.id)).toEqual(['t11']);
+  });
+
+  it('abre y cierra un tema; al cerrarlo se cierran sus subtemas', () => {
+    const [cap] = outlineTree(topics);
+    if (!cap) throw new Error('sin árbol');
+    const tema = cap.children[0];
+    if (!tema) throw new Error('sin tema');
+    let open = toggleExpanded(new Set(), cap);
+    open = toggleExpanded(open, tema);
+    expect([...open]).toEqual(['cap', 'tema1']);
+    expect([...toggleExpanded(open, cap)]).toEqual([]);
   });
 
   it('une páginas consecutivas', () => {
