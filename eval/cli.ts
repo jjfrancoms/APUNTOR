@@ -25,8 +25,9 @@ function required(value: string | undefined, name: string): string {
 
 async function run(casesPath: string, outPath: string): Promise<void> {
   const cases = parseJsonl(readFileSync(casesPath, 'utf8'), evalCaseSchema);
-  const { embedder, search, generator } = createInfrastructure(getServerEnv());
-  const results = await runEvaluation(cases, { embedder, search, generator }, (result) => {
+  const { embedder, search, generator, fallbackGenerator } = createInfrastructure(getServerEnv());
+  const deps = { embedder, search, generator, ...(fallbackGenerator ? { fallbackGenerator } : {}) };
+  const results = await runEvaluation(cases, deps, (result) => {
     console.info(`${result.id}: ${result.status}`);
   });
   mkdirSync(dirname(outPath), { recursive: true });

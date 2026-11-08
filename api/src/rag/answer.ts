@@ -1,14 +1,18 @@
 import { ApiError } from '../errors';
 import type { EmbeddingProvider } from '../llm/embedding-provider';
-import type { JsonGenerator, TokenUsage } from '../llm/vertex';
+import { isTransientAiError } from '../llm/retry';
+import type { JsonGenerator, LlmResult, TokenUsage } from '../llm/vertex';
 import type { QuotaService } from '../quota';
 import { ANSWER_JSON_SCHEMA, validateAnswer, type VerifiedClaim } from './citations';
+import { detectSmallTalk, type SmallTalk } from './small-talk';
 import { ABSTENTION_MESSAGE, buildRagPrompt, type ChunkSearch } from './retriever';
 
 export type AbstentionReason = 'empty_question' | 'no_matches' | 'validation_failed';
 
 export type QuestionResult =
   | { status: 'answered'; claims: VerifiedClaim[]; usage: TokenUsage }
+  /** Saludo o cortesía: la app responde con su propio texto, sin buscar ni gastar cuota. */
+  | { status: 'small_talk'; kind: SmallTalk }
   | {
       status: 'abstained';
       message: string;
@@ -21,8 +25,28 @@ export type QuestionResult =
 export interface AnswerDeps {
   embedder: EmbeddingProvider;
   search: ChunkSearch;
+  /** Modelo rápido: el primer intento (el estudiante está esperando). */
   generator: JsonGenerator;
+  /**
+   * Modelo alto: un solo segundo intento si la respuesta del modelo medio no pasa el validador de citas
+   * o la llamada falla con un error no pasajero. Sin él, se abstiene directamente.
+   */
+  fallbackGenerator?: JsonGenerator;
   quota: Pick<QuotaService, 'consume' | 'release'>;
+}
+
+const addUsage = (a: TokenUsage, b: TokenUsage): TokenUsage => ({
+  promptTokens: a.promptTokens + b.promptTokens,
+  outputTokens: a.outputTokens + b.outputTokens,
+  thoughtsTokens: a.thoughtsTokens + b.thoughtsTokens,
+});
+
+function toResult(
+  validation: ReturnType<typeof validateAnswer>,
+  usage: TokenUsage,
+): QuestionResult {
+  if (!validation.valid) return abstain('validation_failed', { detail: validation.reason, usage });
+  return { status: 'answered', claims: validation.claims, usage };
 }
 
 function abstain(reason: AbstentionReason, extra: { detail?: string; usage?: TokenUsage } = {}) {
@@ -32,13 +56,24 @@ function abstain(reason: AbstentionReason, extra: { detail?: string; usage?: Tok
 /**
  * pregunta → embedding → match_user_chunks → LLM en JSON → validador de citas.
  * Sin coincidencias se abstiene sin llamar al LLM y devuelve la pregunta a la cuota.
+ * Primero responde el modelo medio; si su respuesta no pasa el validador (o falla con un error
+ * que no es pasajero), se intenta UNA vez con el alto antes de abstenerse. Sigue siendo una
+ * sola pregunta de la cuota, y se devuelve si ningún modelo llegó a responder.
  */
 export async function answerQuestion(
   deps: AnswerDeps,
-  params: { userId: string; question: string; documentIds?: readonly string[] },
+  params: {
+    userId: string;
+    question: string;
+    documentIds?: readonly string[];
+    /** El estudiante detuvo la pregunta: se corta la IA y la pregunta no cuenta. */
+    signal?: AbortSignal;
+  },
 ): Promise<QuestionResult> {
   const question = params.question.trim();
   if (question.length === 0) return abstain('empty_question');
+  const smallTalk = detectSmallTalk(question);
+  if (smallTalk) return { status: 'small_talk', kind: smallTalk };
 
   if (!(await deps.quota.consume(params.userId, 'questions', 1))) {
     throw new ApiError('CHAT_DAILY_LIMIT', 429);
@@ -61,17 +96,45 @@ export async function answerQuestion(
     }
 
     const prompt = buildRagPrompt(question, chunks);
-    const { text, usage } = await deps.generator.generateJson({
+    if (params.signal?.aborted) throw new Error('Pregunta detenida');
+    const request = {
       ...prompt,
       schema: ANSWER_JSON_SCHEMA,
-    });
-    llmCompleted = true;
+      ...(params.signal ? { signal: params.signal } : {}),
+    };
+    const fallback = deps.fallbackGenerator;
 
-    const validation = validateAnswer(text, chunks);
-    if (!validation.valid) {
-      return abstain('validation_failed', { detail: validation.reason, usage });
+    // Primer intento con el modelo medio.
+    let first: LlmResult;
+    try {
+      first = await deps.generator.generateJson(request);
+    } catch (error) {
+      // Detenida, límite de uso o sin modelo alto: se propaga y la pregunta no cuenta.
+      if (!fallback || params.signal?.aborted || isTransientAiError(error)) throw error;
+      const second = await fallback.generateJson(request);
+      llmCompleted = true;
+      return toResult(validateAnswer(second.text, chunks), second.usage);
     }
-    return { status: 'answered', claims: validation.claims, usage };
+    const validation = validateAnswer(first.text, chunks);
+    if (validation.valid || !fallback) {
+      llmCompleted = true;
+      return toResult(validation, first.usage);
+    }
+
+    // La respuesta del modelo medio no pasó el validador: un segundo intento con el modelo alto.
+    if (params.signal?.aborted) throw new Error('Pregunta detenida');
+    let second: LlmResult;
+    try {
+      second = await fallback.generateJson(request);
+    } catch (error) {
+      if (params.signal?.aborted) throw error;
+      // Un fallo del segundo intento no se reintenta más.
+      // El modelo medio sí respondió: la pregunta cuenta y se abstiene con su motivo.
+      llmCompleted = true;
+      return abstain('validation_failed', { detail: validation.reason, usage: first.usage });
+    }
+    llmCompleted = true;
+    return toResult(validateAnswer(second.text, chunks), addUsage(first.usage, second.usage));
   } finally {
     // Si algo falló antes de responder, la pregunta no cuenta.
     if (!llmCompleted) await deps.quota.release(params.userId, 'questions', 1);

@@ -14,6 +14,11 @@ import {
 } from '../../worker/src/ingestion/queue-worker';
 import type { EmbeddingProvider } from '../../api/src/llm/embedding-provider';
 import type { FlatTopic } from '../../worker/src/topics/topic-tree';
+import type { TopicRow } from '../../api/src/topic-content';
+import type {
+  SummaryPregenerationInput,
+  SummaryPregenerator,
+} from '../../worker/src/ingestion/topic-summaries';
 
 const DOC_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -42,6 +47,16 @@ class InMemoryRepository implements IngestionRepository {
     this.events.push(`topics:${topics.length}`);
     this.topics = [...topics];
     return Promise.resolve();
+  }
+  listTopics(): Promise<TopicRow[]> {
+    return Promise.resolve(
+      this.topics.map((t, i) => ({
+        id: `t${i}`,
+        parentId: t.parentIndex === null ? null : `t${t.parentIndex}`,
+        title: t.title,
+        sourcePages: t.sourcePages,
+      })),
+    );
   }
   markCompleted(_id: string, totalPages: number): Promise<void> {
     this.events.push(`completed:${totalPages}`);
@@ -78,6 +93,9 @@ function makeDeps(
       sizeOf: () => Promise.resolve(1),
       delete: () => Promise.resolve(),
       createUploadUrl: () => Promise.resolve(''),
+      upload: () => Promise.resolve(),
+      createDownloadUrl: () => Promise.resolve(''),
+      deletePrefix: () => Promise.resolve(),
     },
     extractor,
     embedder,
@@ -157,6 +175,63 @@ describe('processDocument', () => {
     const result = await processDocument(DOC_ID, makeDeps({ totalPages: 1, pages: [] }, repo));
     expect(result.skipped).toBe(true);
     expect(repo.events).toEqual([]);
+  });
+});
+
+describe('resúmenes generados de antemano', () => {
+  const pages = [
+    { pageNumber: 1, text: '1. La célula\nLa célula es la unidad básica de la vida.' },
+    { pageNumber: 2, text: '1.1 Mitocondria\nProduce ATP.' },
+  ];
+
+  it('se generan después de marcar completed, con los temas y fragmentos del documento', async () => {
+    const repo = new InMemoryRepository(pendingDoc);
+    const inputs: SummaryPregenerationInput[] = [];
+    const summaries: SummaryPregenerator = {
+      generate(input) {
+        repo.events.push('summaries');
+        inputs.push(input);
+        return Promise.resolve({ generated: 2, failed: 0, skipped: 0 });
+      },
+    };
+    const deps = { ...makeDeps({ totalPages: 2, pages }, repo), summaries };
+    const result = await processDocument(DOC_ID, deps);
+
+    expect(result.topicCount).toBe(2);
+    expect(repo.events.slice(-2)).toEqual(['completed:2', 'summaries']);
+    expect(inputs[0]?.filePath).toBe('u/doc.pdf');
+    expect(inputs[0]?.topics.map((t) => t.id)).toEqual(['t0', 't1']);
+    expect(inputs[0]?.chunks.length).toBe(repo.chunks.length);
+  });
+
+  it('un fallo de los resúmenes no hace fallar la ingesta', async () => {
+    const repo = new InMemoryRepository(pendingDoc);
+    const summaries: SummaryPregenerator = {
+      generate: () => Promise.reject(new Error('IA caída')),
+    };
+    const deps = { ...makeDeps({ totalPages: 2, pages }, repo), summaries };
+    const result = await processDocument(DOC_ID, deps);
+    expect(result.skipped).toBe(false);
+    expect(repo.events.at(-1)).toBe('completed:2');
+    expect(repo.events.some((e) => e.startsWith('failed'))).toBe(false);
+  });
+
+  it('sin temas no los intenta', async () => {
+    const repo = new InMemoryRepository(pendingDoc);
+    let called = false;
+    const summaries: SummaryPregenerator = {
+      generate() {
+        called = true;
+        return Promise.resolve({ generated: 0, failed: 0, skipped: 0 });
+      },
+    };
+    const deps = {
+      ...makeDeps({ totalPages: 1, pages: [{ pageNumber: 1, text: 'texto sin títulos' }] }, repo),
+      summaries,
+    };
+    const result = await processDocument(DOC_ID, deps);
+    expect(result.topicCount).toBe(0);
+    expect(called).toBe(false);
   });
 });
 

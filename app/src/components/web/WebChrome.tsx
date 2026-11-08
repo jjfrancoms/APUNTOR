@@ -12,7 +12,9 @@ const STYLE_ID = 'apuntor-web-chrome';
  * - barras de desplazamiento finas con los colores del tema;
  * - sin el contorno de foco del navegador en los campos de texto (el foco se marca con el
  *   borde del propio campo). Los botones llevan un anillo de foco de teclado con el color de marca;
- * - selección de texto y cursor con los colores del tema.
+ * - selección de texto y cursor con los colores del tema;
+ * - fondo del documento con el color del tema: si un borde queda sin pintar un instante (al
+ *   cambiar de tema, redimensionar o redibujar), el navegador no muestra su negro por defecto.
  */
 export function WebChrome() {
   const { mode, c } = useTheme();
@@ -26,6 +28,8 @@ export function WebChrome() {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     document.documentElement.style.colorScheme = mode;
+    document.documentElement.style.backgroundColor = c.bg;
+    document.body.style.backgroundColor = c.bg;
     let el = document.getElementById(STYLE_ID);
     if (!el) {
       el = document.createElement('style');
@@ -33,6 +37,7 @@ export function WebChrome() {
       document.head.appendChild(el);
     }
     el.textContent = `
+      html, body, #root { background-color: ${c.bg}; }
       * { scrollbar-width: thin; scrollbar-color: ${c.border} transparent; }
       ::-webkit-scrollbar { width: 10px; height: 10px; }
       ::-webkit-scrollbar-track { background: transparent; }

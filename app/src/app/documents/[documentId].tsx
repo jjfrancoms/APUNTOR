@@ -25,13 +25,17 @@ import {
   useStore,
 } from '@/store/store';
 import { useStrings } from '@/i18n/es';
+import { useLanguage } from '@/i18n/language';
+import { formatDate, isToday } from '@/lib/format';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { layout, radius, space, useTheme } from '@/theme';
+import { TopicOutline } from '@/components/domain/TopicOutline';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 19 · Detalle de documento, con la confirmación de eliminación (27). */
 export default function DocumentDetail() {
   const s = useStrings();
+  const language = useLanguage();
   const { c } = useTheme();
   const reducedMotion = useReducedMotion();
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
@@ -50,7 +54,7 @@ export default function DocumentDetail() {
     ...record,
     type: extLabel(record.name),
     size: `${record.sizeMb} MB`,
-    uploaded: record.uploadedLabel,
+    uploaded: isToday(record.createdAt) ? s.document.today : formatDate(record.createdAt, language),
     classification: record.path.length > 0 ? record.path : [s.live.noCourse],
   };
   /** Ejecuta un cambio en el servidor y avisa si no se pudo guardar. */
@@ -75,7 +79,12 @@ export default function DocumentDetail() {
           }
         />
       }
-      footer={<Button label={s.document.ask} onPress={() => router.push('/conversation')} />}
+      footer={
+        <Button
+          label={s.document.ask}
+          onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
+        />
+      }
     >
       <View>
         <Text variant="title" accessibilityRole="header">
@@ -111,16 +120,14 @@ export default function DocumentDetail() {
           <TextLink label={s.common.change} onPress={() => setSheet('move')} />
         </View>
       </Card>
-      {doc.topics.length > 0 ? (
+      {doc.outline && doc.outline.length > 0 ? (
         <>
           <Text variant="subheading" accessibilityRole="header">
             {s.document.detectedTopics}
           </Text>
-          <View style={styles.chips}>
-            {doc.topics.map((t) => (
-              <Chip key={t} label={t} tone="primary" />
-            ))}
-          </View>
+          <Card>
+            <TopicOutline documentId={doc.id} outline={doc.outline} />
+          </Card>
         </>
       ) : null}
       <View style={styles.actions}>
@@ -148,7 +155,10 @@ export default function DocumentDetail() {
             setSheet(null);
             router.push({
               pathname: '/conversation',
-              params: { q: `Resumen de ${record.name.replace(/\.[^.]+$/u, '')}` },
+              params: {
+                q: s.document.summaryPrompt(record.name.replace(/\.[^.]+$/u, '')),
+                docs: record.id,
+              },
             });
           }}
         />
@@ -285,7 +295,6 @@ function ActionButton({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   actions: { flexDirection: 'row', gap: space.sm },
   action: {
     flex: 1,

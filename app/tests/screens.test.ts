@@ -29,7 +29,7 @@ function routeExists(href: string): boolean {
 describe('mapa de pantallas', () => {
   it('tiene las 52 pantallas diseñadas y las agregadas, sin números repetidos', () => {
     const numbers = allScreens.map((s) => s.n).sort((a, b) => a - b);
-    expect(numbers).toEqual(Array.from({ length: 62 }, (_, i) => i + 1));
+    expect(numbers).toEqual(Array.from({ length: 63 }, (_, i) => i + 1));
   });
 
   it.each(allScreens.map((s) => [s.n, s.href] as const))(

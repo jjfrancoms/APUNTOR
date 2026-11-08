@@ -11,6 +11,8 @@ export const ANSWER_JSON_SCHEMA = {
       items: {
         type: 'object',
         properties: {
+          label: { type: 'string' },
+          formula: { type: 'string' },
           text: { type: 'string' },
           citations: {
             type: 'array',
@@ -35,6 +37,8 @@ const modelAnswerSchema = z.object({
   answer_found: z.boolean(),
   claims: z.array(
     z.object({
+      label: z.string().optional(),
+      formula: z.string().optional(),
       text: z.string(),
       citations: z.array(z.object({ fragment_id: z.string(), quote: z.string() })),
     }),
@@ -50,6 +54,10 @@ export interface VerifiedCitation {
 }
 
 export interface VerifiedClaim {
+  /** Término que explica la afirmación ("Negación"), solo si aparece en el fragmento citado. */
+  label?: string;
+  /** Notación ("¬p"), solo si aparece tal cual (sin contar espacios) en el fragmento citado. */
+  formula?: string;
   text: string;
   citations: VerifiedCitation[];
 }
@@ -105,11 +113,21 @@ function stem(word: string): string {
   return word.slice(0, 5);
 }
 
+/**
+ * Parte de las palabras con contenido de `text` que aparecen (por raíz) en `sources`; null si
+ * `text` no tiene ninguna palabra con contenido.
+ */
+export function contentOverlap(text: string, sources: readonly string[]): number | null {
+  const sourceStems = new Set(sources.flatMap(wordsOf).map(stem));
+  const content = wordsOf(text).filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  if (content.length === 0) return null;
+  return content.filter((w) => sourceStems.has(stem(w))).length / content.length;
+}
+
 function isCoherent(claim: string, quotes: readonly string[]): boolean {
   const claimWords = wordsOf(claim);
   const quoteWords = quotes.flatMap(wordsOf);
   const quoteSet = new Set(quoteWords);
-  const quoteStems = new Set(quoteWords.map(stem));
 
   // Una cifra de la afirmación tiene que estar en la cita, tal cual.
   if (claimWords.some((w) => /\d/u.test(w) && !quoteSet.has(w))) return false;
@@ -117,10 +135,37 @@ function isCoherent(claim: string, quotes: readonly string[]): boolean {
   const negated = (words: readonly string[]): boolean => words.some((w) => NEGATIONS.has(w));
   if (negated(claimWords) !== negated(quoteWords)) return false;
 
-  const content = claimWords.filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  if (content.length === 0) return false;
-  const supported = content.filter((w) => quoteStems.has(stem(w))).length;
-  return supported / content.length >= MIN_CLAIM_OVERLAP;
+  const overlap = contentOverlap(claim, quotes);
+  return overlap !== null && overlap >= MIN_CLAIM_OVERLAP;
+}
+
+const MAX_LABEL_CHARS = 80;
+const MAX_FORMULA_CHARS = 120;
+/** Texto sin espacios: una fórmula se compara así con la página. */
+export const compact = (text: string): string => normalizeLiteral(text).replace(/\s+/gu, '');
+
+/**
+ * Término y notación son adornos de presentación: si no están en los fragmentos citados se
+ * descartan (no invalidan la respuesta, que ya se sostiene con su cita).
+ */
+function supportedExtras(
+  claim: { label?: string | undefined; formula?: string | undefined },
+  sources: readonly string[],
+): { label?: string; formula?: string } {
+  const extras: { label?: string; formula?: string } = {};
+  const label = claim.label === undefined ? '' : normalizeLiteral(claim.label);
+  if (label.length > 0 && label.length <= MAX_LABEL_CHARS) {
+    const wanted = wordsOf(label).join(' ');
+    if (wanted.length > 0 && sources.some((s) => wordsOf(s).join(' ').includes(wanted))) {
+      extras.label = label;
+    }
+  }
+  const formula = claim.formula === undefined ? '' : normalizeLiteral(claim.formula);
+  if (formula.length > 0 && formula.length <= MAX_FORMULA_CHARS) {
+    const wanted = compact(formula);
+    if (sources.some((s) => compact(s).includes(wanted))) extras.formula = formula;
+  }
+  return extras;
 }
 
 /**
@@ -173,7 +218,11 @@ export function validateAnswer(
     ) {
       return { valid: false, reason: 'incoherent_claim' };
     }
-    claims.push({ text: claim.text.trim(), citations });
+    const sources = [...new Set(citations.map((c) => c.chunkId))].flatMap((id) => {
+      const chunk = byId.get(id);
+      return chunk ? [chunk.content] : [];
+    });
+    claims.push({ ...supportedExtras(claim, sources), text: claim.text.trim(), citations });
   }
   return { valid: true, claims };
 }

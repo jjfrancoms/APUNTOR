@@ -13,16 +13,15 @@ const LEVEL_ICONS: Record<Level, IconName> = {
   university: 'award',
   other: 'star',
 };
-const TOTAL_STEPS = 3;
 
-/** Pantalla 14 · Onboarding (paso 1: nivel). Los pasos 2 y 3 aún no están diseñados. */
+/** Pantalla 14 · Onboarding: nivel de estudios y a Inicio (las notificaciones aún no existen). */
 export default function Onboarding() {
   const s = useStrings();
   const { c } = useTheme();
   const [level, setLevel] = useState<Level>('university');
   const next = () => {
     saveLevel(level);
-    router.push('/notifications-permission');
+    router.replace('/home');
   };
   return (
     <Screen
@@ -36,17 +35,6 @@ export default function Onboarding() {
         </>
       }
     >
-      <View style={styles.steps} accessibilityLabel={s.onboarding.step(1, TOTAL_STEPS)}>
-        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-          <View
-            key={i}
-            style={[styles.step, { backgroundColor: i === 0 ? c.primary : c.border }]}
-          />
-        ))}
-      </View>
-      <Text variant="caption" color="textMuted">
-        {s.onboarding.step(1, TOTAL_STEPS)}
-      </Text>
       <View style={styles.bubbleRow}>
         <Mascot size={64} />
         <View style={[styles.bubble, { backgroundColor: c.surface, borderColor: c.border }]}>
@@ -100,8 +88,6 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  steps: { flexDirection: 'row', gap: space.sm, paddingTop: space.md },
-  step: { flex: 1, height: 4, borderRadius: 2 },
   bubbleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   bubble: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: space.md },
   options: { gap: space.md },

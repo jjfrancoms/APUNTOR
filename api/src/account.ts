@@ -1,5 +1,5 @@
 import type { DocumentsRepository } from './documents';
-import type { FileStorage } from './storage/file-storage';
+import { derivedPrefix, type FileStorage } from './storage/file-storage';
 
 /** Borra el usuario de Supabase Auth. Necesita la service role key: solo en el servidor. */
 export type AuthUserDeleter = (userId: string) => Promise<void>;
@@ -23,7 +23,7 @@ export function createSupabaseUserDeleter(
 
 export interface AccountDeletionDeps {
   documents: Pick<DocumentsRepository, 'list' | 'deleteAllForUser'>;
-  storage: Pick<FileStorage, 'delete'>;
+  storage: Pick<FileStorage, 'delete' | 'deletePrefix'>;
   deleteAuthUser: AuthUserDeleter;
 }
 
@@ -35,6 +35,7 @@ export interface AccountDeletionDeps {
 export async function deleteUserAccount(deps: AccountDeletionDeps, userId: string): Promise<void> {
   for (const document of await deps.documents.list(userId)) {
     await deps.storage.delete(document.filePath);
+    await deps.storage.deletePrefix(derivedPrefix(document.filePath));
   }
   await deps.documents.deleteAllForUser(userId);
   await deps.deleteAuthUser(userId);

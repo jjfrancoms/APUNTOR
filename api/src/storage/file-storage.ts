@@ -1,6 +1,8 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -8,6 +10,16 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const UPLOAD_URL_TTL_SECONDS = 15 * 60;
+/** Las imágenes de página se ven con un enlace temporal, nunca público. */
+export const DOWNLOAD_URL_TTL_SECONDS = 30 * 60;
+
+/**
+ * Carpeta de lo que el worker deriva de un archivo (imágenes de página, texto por página):
+ * `usuario/doc.pdf` → `usuario/doc/`. Queda dentro de la carpeta del usuario.
+ */
+export function derivedPrefix(filePath: string): string {
+  return `${filePath.replace(/\.[^./]+$/u, '')}/`;
+}
 
 export interface FileStorage {
   download(key: string): Promise<Uint8Array>;
@@ -15,6 +27,12 @@ export interface FileStorage {
   sizeOf(key: string): Promise<number | null>;
   delete(key: string): Promise<void>;
   createUploadUrl(key: string, contentType: string, sizeBytes: number): Promise<string>;
+  /** Sube un archivo generado por el servidor (imágenes de página, texto por página). */
+  upload(key: string, data: Uint8Array, contentType: string): Promise<void>;
+  /** Enlace temporal de lectura. */
+  createDownloadUrl(key: string): Promise<string>;
+  /** Borra todo lo que esté bajo la carpeta (termina en '/'). */
+  deletePrefix(prefix: string): Promise<void>;
 }
 
 /** Rechaza claves que intenten salir de la carpeta del usuario. */
@@ -78,6 +96,38 @@ export class R2FileStorage implements FileStorage {
   async delete(key: string): Promise<void> {
     assertSafeKey(key);
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  async upload(key: string, data: Uint8Array, contentType: string): Promise<void> {
+    assertSafeKey(key);
+    await this.client.send(
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: data, ContentType: contentType }),
+    );
+  }
+
+  async createDownloadUrl(key: string): Promise<string> {
+    assertSafeKey(key);
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: DOWNLOAD_URL_TTL_SECONDS,
+    });
+  }
+
+  async deletePrefix(prefix: string): Promise<void> {
+    if (!prefix.endsWith('/')) throw new Error('El prefijo debe terminar en /');
+    assertSafeKey(`${prefix}x`);
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: token }),
+      );
+      const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []));
+      if (keys.length > 0) {
+        await this.client.send(
+          new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys, Quiet: true } }),
+        );
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
   }
 
   async createUploadUrl(key: string, contentType: string, sizeBytes: number): Promise<string> {

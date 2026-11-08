@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
+import { createAccountExportRepository } from './account-export';
 import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
+import { createSearchRepository } from './search';
+import { createTopicSummarizer } from './topic-summary';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
@@ -9,11 +12,13 @@ import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
 import { createQuotaService } from './quota';
+import { createWaitlistRepository } from './waitlist';
 import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
   const env = getServerEnv();
-  const { db, embedder, generator, search, storage } = createInfrastructure(env);
+  const { db, models, modelChoice, embedder, generator, fallbackGenerator, search, storage } =
+    createInfrastructure(env);
 
   const boss = createQueueClient(env.QUEUE_DATABASE_URL);
   boss.on('error', (error) => {
@@ -26,10 +31,20 @@ async function main(): Promise<void> {
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    waitlist: createWaitlistRepository(db),
+    accountExport: createAccountExportRepository(db),
+    contentSearch: createSearchRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),
-    answer: { embedder, search, generator },
+    answer: { embedder, search, generator, ...(fallbackGenerator ? { fallbackGenerator } : {}) },
+    summaries: createTopicSummarizer({
+      models,
+      model: modelChoice.summary,
+      // Resumen a demanda: si el alto está saturado, un reintento con el medio (el worker no).
+      fallbackModel: modelChoice.medium,
+      storage,
+    }),
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
     admin: createAdminRepository(db),
     authUsers: createSupabaseUsersDirectory(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),

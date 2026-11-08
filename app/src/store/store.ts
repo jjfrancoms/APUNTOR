@@ -5,10 +5,12 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
-import type { ErrorCode } from '@/i18n/es';
+import { stringsFor, type ErrorCode } from '@/i18n/es';
+import { formatDate } from '@/lib/format';
 import { LEGAL_VERSION } from '@/i18n/legal';
+import { withDepth } from '@/lib/outline';
 import {
   api,
   ApiRequestError,
@@ -17,6 +19,7 @@ import {
   type ApiAdminDocument,
   type ApiAdminStats,
   type ApiAdminUser,
+  type ApiAdminWaitlistEntry,
   type ApiConsent,
   type ApiDocument,
   type ApiDocumentStatus,
@@ -44,11 +47,13 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_USAGE,
   todayKey,
+  type AnswerClaim,
   type AppState,
   type Conversation,
   type DocRecord,
   type Level,
   type Message,
+  type PendingAnswer,
   type Plan,
   type SessionUser,
   type Settings,
@@ -108,15 +113,38 @@ async function persist(): Promise<void> {
   }
 }
 
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Igualdad superficial: mismos elementos (arreglos) o mismas claves y valores (objetos). */
+export function shallowEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  const ra = a as Record<string, unknown>;
+  const rb = b as Record<string, unknown>;
+  return ka.every((k) => Object.prototype.hasOwnProperty.call(rb, k) && Object.is(ra[k], rb[k]));
+}
+
+/**
+ * Lee una parte del estado. Si el selector arma un arreglo u objeto nuevo (p. ej. con `filter`),
+ * se devuelve el anterior mientras su contenido sea igual: `useSyncExternalStore` exige una
+ * lectura estable o entra en un bucle de renders ("Maximum update depth exceeded").
+ */
 export function useStore<T>(selector: (s: AppState) => T): T {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => selector(state),
-    () => selector(state),
-  );
+  const last = useRef<{ value: T } | null>(null);
+  const read = (): T => {
+    const next = selector(state);
+    if (last.current && shallowEqual(last.current.value, next)) return last.current.value;
+    last.current = { value: next };
+    return next;
+  };
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 // --- Selectores ------------------------------------------------------------------
@@ -151,11 +179,6 @@ function stripExtension(name: string): string {
   return name.replace(/\.[^.]+$/u, '');
 }
 
-function uploadedLabel(iso: string): string {
-  const date = new Date(iso);
-  return todayKey(date) === todayKey() ? 'hoy' : date.toLocaleDateString('es-PE');
-}
-
 /** Documentos del servidor con la forma que usan las pantallas. */
 export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): DocRecord {
   return {
@@ -166,7 +189,6 @@ export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): 
     courseId: doc.courseId ?? '',
     path: courseTitle ? [courseTitle, stripExtension(doc.title)] : [],
     topics: [],
-    uploadedLabel: uploadedLabel(doc.createdAt),
     status: doc.status,
     topicCount: doc.topicCount,
     createdAt: doc.createdAt,
@@ -248,20 +270,32 @@ export async function refreshAll(): Promise<void> {
   if (data.status === 'fulfilled') {
     const [{ courses }, { documents }, usage] = data.value;
     const titles = new Map(courses.map((c) => [c.id, c.title]));
-    const docs = documents.map((d) =>
+    const fresh = documents.map((d) =>
       toDocRecord(d, d.courseId ? titles.get(d.courseId) : undefined),
     );
-    setState((s) => ({
-      ...s,
-      documents: docs,
-      courses: buildCourses(courses, docs),
-      consent: consent ?? s.consent,
-      sync: {
-        loading: false,
-        error:
-          consents.status === 'rejected' ? toErrorCode(consents.reason, 'NET_UNAVAILABLE') : null,
-      },
-    }));
+    setState((s) => {
+      // Los temas ya cargados se conservan mientras el documento no cambie.
+      const docs = fresh.map((d) => {
+        const old = s.documents.find((o) => o.id === d.id);
+        return old?.outline &&
+          old.outline.length > 0 &&
+          old.status === d.status &&
+          old.topicCount === d.topicCount
+          ? { ...d, outline: old.outline, topics: old.topics }
+          : d;
+      });
+      return {
+        ...s,
+        documents: docs,
+        courses: buildCourses(courses, docs),
+        consent: consent ?? s.consent,
+        sync: {
+          loading: false,
+          error:
+            consents.status === 'rejected' ? toErrorCode(consents.reason, 'NET_UNAVAILABLE') : null,
+        },
+      };
+    });
     applyUsage(usage);
   } else {
     setState((s) => ({
@@ -282,6 +316,19 @@ function isLevel(value: unknown): value is Level {
   return value === 'school' || value === 'university' || value === 'other';
 }
 
+/**
+ * `app_metadata.providers` lista las formas de entrar (`provider`, la primera). Sin ese dato se
+ * pide la contraseña: ante la duda, el camino más seguro.
+ */
+function hasPasswordLogin(appMetadata: unknown): boolean {
+  if (typeof appMetadata !== 'object' || appMetadata === null) return true;
+  const { provider, providers } = appMetadata as { provider?: unknown; providers?: unknown };
+  const names = [...(Array.isArray(providers) ? (providers as unknown[]) : []), provider].filter(
+    (name) => typeof name === 'string',
+  );
+  return names.length === 0 || names.includes('email');
+}
+
 function toSessionUser(user: User): SessionUser {
   const meta: Record<string, unknown> = user.user_metadata;
   const email = user.email ?? '';
@@ -296,6 +343,7 @@ function toSessionUser(user: User): SessionUser {
     email,
     level: isLevel(meta.level) ? meta.level : 'university',
     adultConfirmed: meta.adult_confirmed === true,
+    hasPassword: hasPasswordLogin(user.app_metadata),
   };
 }
 
@@ -327,6 +375,7 @@ function startSession(user: User): Promise<void> {
 }
 
 function endSession(): void {
+  abortAllAnswers();
   setState((s) => ({
     ...createInitialState(),
     settings: s.settings,
@@ -659,8 +708,53 @@ export async function deleteAccount(): Promise<boolean> {
   return true;
 }
 
-export function joinWaitlist(email: string): void {
-  setState((s) => ({ ...s, waitlist: [...new Set([...s.waitlist, email.trim()])] }));
+export type DeleteAccountResult = 'deleted' | 'wrong_password' | 'failed';
+
+/**
+ * Borrado pedido desde Perfil (40). Si la cuenta tiene contraseña, Supabase la comprueba antes
+ * de llamar a `DELETE /v1/account`: con una contraseña incorrecta no se borra nada.
+ */
+export async function deleteAccountConfirmed(password: string): Promise<DeleteAccountResult> {
+  const session = state.session;
+  if (!session) return 'failed';
+  if (session.hasPassword) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: session.email,
+        password,
+      });
+      if (error) {
+        return error.status === 400 || error.code === 'invalid_credentials'
+          ? 'wrong_password'
+          : 'failed';
+      }
+    } catch {
+      return 'failed';
+    }
+  }
+  return (await deleteAccount()) ? 'deleted' : 'failed';
+}
+
+export type WaitlistResult = 'ok' | 'invalid' | 'limited' | 'failed';
+
+/**
+ * Inscribe un correo en la lista de espera (44). Se guarda solo en el servidor: nada de esto
+ * queda en el dispositivo. Sin consentimiento expreso no se envía.
+ */
+export async function joinWaitlist(
+  email: string,
+  consent: boolean,
+  source: 'app' | 'web',
+): Promise<WaitlistResult> {
+  if (!consent || !isValidEmail(email)) return 'invalid';
+  try {
+    await api.joinWaitlist({ email: email.trim(), consent: true, source });
+    return 'ok';
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.code === 'REQ_INVALID') return 'invalid';
+    if (error instanceof ApiRequestError && error.code === 'RATE_LIMITED') return 'limited';
+    return 'failed';
+  }
 }
 
 // --- Panel de administración -------------------------------------------------------
@@ -690,7 +784,13 @@ export async function refreshAdmin(): Promise<boolean> {
 
 /** Errores del panel. Los tres primeros son de conexión o permiso; el resto, códigos de la API. */
 export type AdminError =
-  'offline' | 'forbidden' | 'failed' | 'DOC_STATE' | 'DOC_NOT_FOUND' | 'ADMIN_TARGET_IS_SELF';
+  | 'offline'
+  | 'forbidden'
+  | 'failed'
+  | 'DOC_STATE'
+  | 'DOC_NOT_FOUND'
+  | 'ADMIN_TARGET_IS_SELF'
+  | 'WAITLIST_NOT_FOUND';
 
 export type AdminResult<T> = { ok: true; data: T } | { ok: false; error: AdminError };
 
@@ -701,7 +801,12 @@ export interface AdminPage<T> {
   hasMore: boolean;
 }
 
-const ADMIN_CODES: readonly AdminError[] = ['DOC_STATE', 'DOC_NOT_FOUND', 'ADMIN_TARGET_IS_SELF'];
+const ADMIN_CODES: readonly AdminError[] = [
+  'DOC_STATE',
+  'DOC_NOT_FOUND',
+  'ADMIN_TARGET_IS_SELF',
+  'WAITLIST_NOT_FOUND',
+];
 
 /** Traduce el error de la API a uno del panel. Un 403 quita el acceso al panel al instante. */
 export function toAdminError(error: unknown): AdminError {
@@ -767,6 +872,23 @@ export function loadAdminAudit(page = 1): Promise<AdminResult<AdminPage<ApiAdmin
   return adminCall(async () => {
     const r = await api.adminAudit(page);
     return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+export function loadAdminWaitlist(
+  page = 1,
+): Promise<AdminResult<AdminPage<ApiAdminWaitlistEntry>>> {
+  return adminCall(async () => {
+    const r = await api.adminWaitlist(page);
+    return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+/** Borra una inscripción de la lista de espera, cuando la persona lo pide. */
+export function adminDeleteWaitlistEntry(id: string): Promise<AdminResult<null>> {
+  return adminCall(async () => {
+    await api.adminDeleteWaitlistEntry(id);
+    return null;
   });
 }
 
@@ -878,13 +1000,20 @@ export async function moveDocument(id: string, courseId: string): Promise<boolea
 export async function loadDocumentTopics(id: string): Promise<void> {
   try {
     const { topics } = await api.topics(id);
-    const titles = topics.map((t) => t.title);
+    const outline = withDepth(topics);
     setState((s) => ({
       ...s,
-      documents: s.documents.map((d) => (d.id === id ? { ...d, topics: titles } : d)),
+      documents: s.documents.map((d) =>
+        d.id === id ? { ...d, outline, topics: outline.map((t) => t.title) } : d,
+      ),
     }));
   } catch {
-    // Sin temas: la pantalla muestra el documento igual.
+    // Sin temas: la pantalla muestra el documento igual. Se marca como cargado para no
+    // reintentar en cada render.
+    setState((s) => ({
+      ...s,
+      documents: s.documents.map((d) => (d.id === id && !d.outline ? { ...d, outline: [] } : d)),
+    }));
   }
 }
 
@@ -1061,6 +1190,20 @@ export function retryUpload(id: string): void {
   void runUpload(id);
 }
 
+/** Subidas cortadas por la red que aún se pueden reintentar. */
+export function networkFailedUploads(s: AppState): UploadJob[] {
+  return s.uploads.filter(
+    (u) => u.status === 'failed' && u.error === 'UP_NETWORK' && pickedFiles.has(u.id),
+  );
+}
+
+/** Al volver la conexión, reanuda las subidas que se cortaron. Devuelve cuántas reanudó. */
+export function retryNetworkUploads(): number {
+  const jobs = networkFailedUploads(state);
+  for (const job of jobs) retryUpload(job.id);
+  return jobs.length;
+}
+
 /** Quita el archivo de la lista; si ya estaba en el servidor sin confirmar, lo borra. */
 export function removeUpload(id: string): void {
   const job = state.uploads.find((u) => u.id === id);
@@ -1123,12 +1266,19 @@ export function uploadSummary(s: AppState): {
 
 // --- Chat --------------------------------------------------------------------------
 
-export function startConversation(): string {
+export function startConversation(scopeDocIds: readonly string[] = []): string {
   const id = newId('conv');
   setState((s) => ({
     ...s,
     conversations: [
-      { id, title: '', course: '', updatedAt: Date.now(), messages: [] },
+      {
+        id,
+        title: '',
+        course: '',
+        updatedAt: Date.now(),
+        messages: [],
+        ...(scopeDocIds.length > 0 ? { scopeDocIds: [...scopeDocIds] } : {}),
+      },
       ...s.conversations,
     ],
   }));
@@ -1176,36 +1326,150 @@ function courseTitleOf(documentId: string): string {
   return state.courses.find((c) => c.id === doc?.courseId)?.title ?? '';
 }
 
+/** Tiempo máximo de espera de una respuesta del chat (la IA puede tardar). */
+export const CHAT_TIMEOUT_MS = 90_000;
+
+/** Controlador de la petición en curso de cada conversación (no va al estado: no se guarda). */
+const answerControllers = new Map<string, AbortController>();
+
+/** true si la conversación espera una respuesta (se muestra "pensando" y el botón detener). */
+export function isAnswerPending(s: AppState, conversationId: string): boolean {
+  return conversationId in s.pendingAnswers;
+}
+
+function clearPending(conversationId: string): void {
+  if (!(conversationId in state.pendingAnswers)) return;
+  setState((s) => {
+    const { [conversationId]: _done, ...rest } = s.pendingAnswers;
+    return { ...s, pendingAnswers: rest };
+  });
+}
+
+type ChatErrorCode = NonNullable<Message['errorCode']>;
+const CHAT_ERROR_CODES: readonly ChatErrorCode[] = ['TIMEOUT', 'NETWORK', 'RATE_LIMITED'];
+
+/** Aviso de la mascota para un fallo de la petición del chat. */
+function chatFailureMessage(error: unknown): Message {
+  const code = error instanceof ApiRequestError ? error.code : null;
+  if (code === 'CANCELLED') return { id: newId('m'), role: 'mascot', kind: 'cancelled', text: '' };
+  if (code === 'CHAT_DAILY_LIMIT')
+    return { id: newId('m'), role: 'mascot', kind: 'limit', text: '' };
+  const errorCode = CHAT_ERROR_CODES.find((c) => c === code) ?? 'CHAT_FAILED';
+  return { id: newId('m'), role: 'mascot', kind: 'error', errorCode, text: '' };
+}
+
+/**
+ * Corre una petición del chat con su respuesta "en camino": una a la vez por conversación,
+ * cancelable con `cancelAnswer` y con tiempo máximo. Siempre limpia el pendiente al terminar.
+ */
+async function runPending(
+  conversationId: string,
+  question: string,
+  kind: PendingAnswer['kind'],
+  call: (signal: AbortSignal) => Promise<void>,
+): Promise<void> {
+  if (isAnswerPending(state, conversationId) || answerControllers.has(conversationId)) return;
+  const controller = new AbortController();
+  answerControllers.set(conversationId, controller);
+  setState((s) => ({
+    ...s,
+    pendingAnswers: {
+      ...s.pendingAnswers,
+      [conversationId]: { question, startedAt: Date.now(), kind },
+    },
+  }));
+  // Si la sesión terminó mientras tanto, el controlador ya no está y no se agrega nada.
+  const current = (): boolean => answerControllers.get(conversationId) === controller;
+  try {
+    await call(controller.signal);
+  } catch (error) {
+    if (current()) appendMessages(conversationId, [chatFailureMessage(error)]);
+  } finally {
+    if (current()) {
+      answerControllers.delete(conversationId);
+      clearPending(conversationId);
+    }
+  }
+  void refreshUsage();
+}
+
+/** Detiene la respuesta en camino de esa conversación (si no hay ninguna, no hace nada). */
+export function cancelAnswer(conversationId: string): void {
+  answerControllers.get(conversationId)?.abort();
+}
+
+/** Corta todas las peticiones del chat sin dejar avisos (al cerrar sesión o en pruebas). */
+function abortAllAnswers(): void {
+  const controllers = [...answerControllers.values()];
+  answerControllers.clear();
+  controllers.forEach((c) => c.abort());
+}
+
+/** Pregunta corta que parece incompleta o con errores ("loa"): a lo sumo 2 palabras y 12 letras. */
+function looksUnclear(question: string): boolean {
+  const text = question.trim();
+  return text.split(/\s+/).filter(Boolean).length <= 2 && text.length <= 12;
+}
+
 /**
  * Pregunta al servidor: responde solo con fragmentos propios y cada afirmación lleva su
  * página, verificada por el validador. Si no hay respaldo, la mascota lo dice.
  */
-export async function answerQuestion(conversationId: string, question: string): Promise<void> {
+export async function answerQuestion(
+  conversationId: string,
+  question: string,
+  scope?: readonly string[],
+): Promise<void> {
+  // Sin alcance explícito se usa el guardado en la conversación (así reintentar lo conserva).
+  const documentIds =
+    scope ?? state.conversations.find((c) => c.id === conversationId)?.scopeDocIds ?? [];
+  if (isAnswerPending(state, conversationId)) return;
   if (!state.settings.useDocs) {
     appendMessages(conversationId, [
       { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
     ]);
     return;
   }
-  try {
-    const answer = await api.ask(question);
-    if (answer.status === 'abstained') {
+  await runPending(conversationId, question, 'notes', async (signal) => {
+    const answer = await api.ask(question, {
+      signal,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      ...(documentIds.length > 0 ? { documentIds } : {}),
+    });
+    if (answerControllers.get(conversationId)?.signal !== signal) return;
+    if (answer.status === 'small_talk') {
       appendMessages(conversationId, [
-        { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
+        { id: newId('m'), role: 'mascot', kind: 'smallTalk', smallTalk: answer.kind, text: '' },
+      ]);
+    } else if (answer.status === 'abstained') {
+      const unclear = answer.reason === 'no_matches' && looksUnclear(question);
+      appendMessages(conversationId, [
+        {
+          id: newId('m'),
+          role: 'mascot',
+          kind: 'notFound',
+          text: '',
+          ...(answer.reason ? { reason: answer.reason } : {}),
+          ...(unclear ? { unclear } : {}),
+        },
       ]);
     } else {
       const sources = new Map<string, { page: number; klass: number; documentId: string }>();
-      const lines = answer.claims.map((claim) => {
-        const pages = [...new Set(claim.citations.map((c) => c.pageNumber))];
+      const claims: AnswerClaim[] = answer.claims.map((claim) => {
+        const pages = new Map<string, { documentId: string; page: number }>();
         for (const c of claim.citations) {
-          sources.set(`${c.documentId}-${c.pageNumber}`, {
-            page: c.pageNumber,
-            klass: 0,
-            documentId: c.documentId,
-          });
+          const key = `${c.documentId}-${c.pageNumber}`;
+          pages.set(key, { documentId: c.documentId, page: c.pageNumber });
+          sources.set(key, { page: c.pageNumber, klass: 0, documentId: c.documentId });
         }
-        return `${claim.text} ${pages.map((p) => `[pág. ${p}]`).join(' ')}`;
+        return {
+          ...(claim.label ? { label: claim.label } : {}),
+          ...(claim.formula ? { formula: claim.formula } : {}),
+          text: claim.text,
+          pages: [...pages.values()].sort((a, b) => a.page - b.page),
+        };
       });
+      const lines = claims.map((c) => [c.label, c.formula, c.text].filter(Boolean).join(' · '));
       const first = [...sources.values()][0];
       appendMessages(
         conversationId,
@@ -1216,18 +1480,13 @@ export async function answerQuestion(conversationId: string, question: string): 
             kind: 'answer',
             text: lines.join('\n'),
             sources: [...sources.values()],
+            claims,
           },
         ],
         first ? { course: courseTitleOf(first.documentId) } : {},
       );
     }
-  } catch (error) {
-    const limit = error instanceof ApiRequestError && error.code === 'CHAT_DAILY_LIMIT';
-    appendMessages(conversationId, [
-      { id: newId('m'), role: 'mascot', kind: limit ? 'limit' : 'error', text: '' },
-    ]);
-  }
-  void refreshUsage();
+  });
 }
 
 function hostOf(url: string): string {
@@ -1240,8 +1499,9 @@ function hostOf(url: string): string {
 
 /** "Buscar fuera" (pantalla 30): resultados de internet aparte, cada uno con su fuente. */
 export async function searchOutside(conversationId: string, question: string): Promise<void> {
-  try {
-    const { results } = await api.external(question);
+  await runPending(conversationId, question, 'external', async (signal) => {
+    const { results } = await api.external(question, { signal, timeoutMs: CHAT_TIMEOUT_MS });
+    if (answerControllers.get(conversationId)?.signal !== signal) return;
     const messages: Message[] =
       results.length === 0
         ? [{ id: newId('m'), role: 'mascot', kind: 'external', text: '' }]
@@ -1253,13 +1513,70 @@ export async function searchOutside(conversationId: string, question: string): P
             external: { title: r.title, host: hostOf(r.url), url: r.url },
           }));
     appendMessages(conversationId, messages);
-  } catch (error) {
-    const limit = error instanceof ApiRequestError && error.code === 'CHAT_DAILY_LIMIT';
-    appendMessages(conversationId, [
-      { id: newId('m'), role: 'mascot', kind: limit ? 'limit' : 'error', text: '' },
-    ]);
+  });
+}
+
+/** Quita el alcance de la conversación: las siguientes preguntas usan todos los apuntes. */
+export function widenConversationScope(conversationId: string): void {
+  setState((s) => ({
+    ...s,
+    conversations: s.conversations.map((c) => {
+      if (c.id !== conversationId || !c.scopeDocIds) return c;
+      const { scopeDocIds: _quitado, ...rest } = c;
+      return rest;
+    }),
+  }));
+}
+
+function lastUserIndex(conv: Conversation): number {
+  for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
+    if (conv.messages[i]?.role === 'user') return i;
   }
-  void refreshUsage();
+  return -1;
+}
+
+function replaceMessages(conversationId: string, messages: Message[]): void {
+  setState((s) => ({
+    ...s,
+    conversations: s.conversations.map((c) =>
+      c.id === conversationId ? { ...c, messages, updatedAt: Date.now() } : c,
+    ),
+  }));
+}
+
+/**
+ * Vuelve a preguntar lo último tras un fallo o una cancelación, sin repetir la burbuja de la
+ * persona: quita los avisos de error/cancelación que siguen a su última pregunta. El límite
+ * diario lo revisa el servidor.
+ */
+export function retryLastQuestion(conversationId: string): void {
+  if (isAnswerPending(state, conversationId)) return;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (!conv) return;
+  const index = lastUserIndex(conv);
+  const last = conv.messages[index];
+  if (!last) return;
+  const kept = conv.messages.filter(
+    (m, i) =>
+      i <= index || !(m.role === 'mascot' && (m.kind === 'error' || m.kind === 'cancelled')),
+  );
+  if (kept.length !== conv.messages.length) replaceMessages(conversationId, kept);
+  void answerQuestion(conversationId, last.text);
+}
+
+/**
+ * Quita la última pregunta y todo lo que vino después, y devuelve su texto para volver a
+ * escribirla. null si hay una respuesta en camino o no hay preguntas.
+ */
+export function editLastQuestion(conversationId: string): string | null {
+  if (isAnswerPending(state, conversationId)) return null;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (!conv) return null;
+  const index = lastUserIndex(conv);
+  const last = conv.messages[index];
+  if (!last) return null;
+  replaceMessages(conversationId, conv.messages.slice(0, index));
+  return last.text;
 }
 
 // --- Estudio (fase 3: quizzes y tarjetas generados desde tus documentos) ------------
@@ -1337,6 +1654,7 @@ function matches(query: string, text: string): boolean {
 
 export function searchAll(query: string, s: AppState = state): SearchHit[] {
   if (query.trim().length === 0) return [];
+  const labels = stringsFor(s.settings.language).search;
   const hits: SearchHit[] = [];
   for (const doc of s.documents) {
     const course = s.courses.find((c) => c.id === doc.courseId)?.title ?? '';
@@ -1346,7 +1664,7 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         kind: 'document',
         targetId: doc.id,
         title: doc.name,
-        location: doc.pages > 0 ? `${doc.pages} páginas` : '',
+        location: doc.pages > 0 ? labels.pagesCount(doc.pages) : '',
         snippet: doc.topics.join(' · '),
         tag: course,
       });
@@ -1359,10 +1677,10 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         id: conv.id,
         kind: 'chat',
         targetId: conv.id,
-        title: `Chat · ${conv.title}`,
-        location: new Date(conv.updatedAt).toLocaleDateString('es-PE'),
+        title: labels.chatTitle(conv.title),
+        location: formatDate(new Date(conv.updatedAt).toISOString(), s.settings.language),
         snippet: snippetAround(msg?.text ?? conv.title, query),
-        tag: conv.course || 'Chat',
+        tag: conv.course || labels.chatTag,
       });
     }
   }
@@ -1444,10 +1762,27 @@ export function exportUserData(s: AppState = state): string {
         titulo: c.title,
         mensajes: c.messages.map((m) => ({ de: m.role, texto: m.text })),
       })),
+      progresoDeEstudio: s.study,
     },
     null,
     2,
   );
+}
+
+/**
+ * Exportación completa (derecho de acceso): lo que guarda el servidor (`GET /v1/account/export`)
+ * y lo que solo está en este dispositivo. Si el servidor falla no se entrega un archivo a medias.
+ */
+export async function exportAccountData(): Promise<
+  { ok: true; json: string } | { ok: false; error: ErrorCode }
+> {
+  try {
+    const servidor = await api.exportAccount();
+    const dispositivo: unknown = JSON.parse(exportUserData());
+    return { ok: true, json: JSON.stringify({ servidor, dispositivo }, null, 2) };
+  } catch (error) {
+    return { ok: false, error: toErrorCode(error, 'NET_UNAVAILABLE') };
+  }
 }
 
 // --- Contenido por clase y temas (fase 2) --------------------------------------------
@@ -1469,6 +1804,7 @@ export function topicDetail(s: AppState, topicId: string): TopicDetail | null {
 
 /** Para pruebas: vuelve al estado inicial. */
 export function resetForTests(): void {
+  abortAllAnswers();
   state = createInitialState();
   codeExchanges.clear();
   pickedFiles.clear();

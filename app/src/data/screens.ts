@@ -36,7 +36,12 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
       { n: 9, name: 'Error al procesar archivos', href: '/upload/errors', designed: true },
       { n: 41, name: 'Idioma no compatible', href: '/upload/language', designed: true },
       { n: 28, name: 'Escanear apunte', href: '/upload/scan', designed: true },
-      { n: 29, name: 'Lectura poco clara', href: '/upload/scan-review', designed: true },
+      {
+        n: 29,
+        name: 'Lectura poco clara',
+        href: '/upload/scan-review?demo=unclear',
+        designed: true,
+      },
     ],
   },
   {
@@ -164,6 +169,10 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
       { n: 61, name: 'Panel · Documentos', href: '/admin/documents', designed: false },
       { n: 62, name: 'Panel · Auditoría', href: '/admin/audit', designed: false },
     ],
+  },
+  {
+    title: 'Contenido',
+    screens: [{ n: 63, name: 'Resumen del tema', href: '/topic', designed: false }],
   },
 ];
 

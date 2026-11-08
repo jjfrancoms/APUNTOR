@@ -73,6 +73,8 @@ const api = {
   updateDocument: vi.fn(async () => ({})),
   deleteDocument: vi.fn(async () => undefined),
   deleteAccount: vi.fn(async () => undefined),
+  exportAccount: vi.fn(async (): Promise<unknown> => ({ profile: { id: 'u1' } })),
+  joinWaitlist: vi.fn(async () => ({ status: 'joined' as const })),
   ask: vi.fn(),
   external: vi.fn(),
   acceptConsent: vi.fn(async (document: string, version: string) => ({
@@ -338,7 +340,9 @@ describe('chat', () => {
       status: 'answered',
       claims: [
         {
-          text: 'El límite describe el valor al que se acerca f(x).',
+          label: 'Límite',
+          formula: 'lím f(x)',
+          text: 'Describe el valor al que se acerca f(x).',
           citations: [{ chunkId: 'k', documentId: 'd1', pageNumber: 12, quote: 'el valor' }],
         },
       ],
@@ -349,10 +353,48 @@ describe('chat', () => {
     const last = store.getState().conversations[0]?.messages.at(-1);
     expect(last).toMatchObject({
       kind: 'answer',
-      text: 'El límite describe el valor al que se acerca f(x). [pág. 12]',
+      text: 'Límite · lím f(x) · Describe el valor al que se acerca f(x).',
       sources: [{ page: 12, documentId: 'd1' }],
+      claims: [
+        {
+          label: 'Límite',
+          formula: 'lím f(x)',
+          text: 'Describe el valor al que se acerca f(x).',
+          pages: [{ documentId: 'd1', page: 12 }],
+        },
+      ],
     });
     expect(store.getState().conversations[0]?.course).toBe('Cálculo I');
+  });
+
+  it('el alcance viaja al servidor, se conserva al reintentar y se puede ampliar', async () => {
+    await signedIn();
+    api.ask.mockResolvedValue({ status: 'small_talk', kind: 'greeting' });
+    const id = store.startConversation(['d1']);
+    expect(store.getState().conversations[0]?.scopeDocIds).toEqual(['d1']);
+    store.askQuestion(id, 'Hola');
+    await store.answerQuestion(id, 'Hola');
+    expect(api.ask.mock.calls.at(-1)?.[1]).toMatchObject({ documentIds: ['d1'] });
+    store.retryLastQuestion(id);
+    await vi.waitFor(() => expect(api.ask.mock.calls.length).toBeGreaterThan(1));
+    expect(api.ask.mock.calls.at(-1)?.[1]).toMatchObject({ documentIds: ['d1'] });
+    await vi.waitFor(() => expect(store.getState().pendingAnswers[id]).toBeUndefined());
+    store.widenConversationScope(id);
+    expect(store.getState().conversations[0]?.scopeDocIds).toBeUndefined();
+    await store.answerQuestion(id, 'Hola otra vez');
+    expect(api.ask.mock.calls.at(-1)?.[1]).not.toHaveProperty('documentIds');
+  });
+
+  it('un saludo se responde con un texto de la app', async () => {
+    await signedIn();
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'greeting' });
+    const id = store.startConversation();
+    await store.answerQuestion(id, 'Hola');
+    expect(store.getState().conversations[0]?.messages.at(-1)).toMatchObject({
+      role: 'mascot',
+      kind: 'smallTalk',
+      smallTalk: 'greeting',
+    });
   });
 
   it('si no está en los apuntes, la mascota lo dice', async () => {
@@ -397,6 +439,309 @@ describe('chat', () => {
       text: 'Dato',
       external: { host: 'es.wikipedia.org', url: 'https://es.wikipedia.org/wiki/X' },
     });
+  });
+});
+
+describe('chat: respuesta en camino', () => {
+  /** api.ask que espera hasta que se aborte su señal (como el fetch real). */
+  function askUntilAborted() {
+    api.ask.mockImplementationOnce(
+      (_q: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () =>
+            reject(new FakeApiError('CANCELLED', 0)),
+          );
+        }),
+    );
+  }
+
+  it('marca la conversación como pendiente durante la llamada y la limpia al terminar', async () => {
+    await signedIn();
+    let resolve: (value: unknown) => void = () => undefined;
+    api.ask.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    const id = store.startConversation();
+    store.askQuestion(id, 'Hola');
+    const pending = store.answerQuestion(id, 'Hola');
+    expect(store.isAnswerPending(store.getState(), id)).toBe(true);
+    expect(store.getState().pendingAnswers[id]).toMatchObject({ question: 'Hola', kind: 'notes' });
+    expect(api.ask).toHaveBeenCalledWith('Hola', {
+      signal: expect.any(AbortSignal),
+      timeoutMs: store.CHAT_TIMEOUT_MS,
+    });
+    // Una pregunta a la vez: la segunda no llama al servidor.
+    await store.answerQuestion(id, 'otra');
+    expect(api.ask).toHaveBeenCalledTimes(1);
+    resolve({ status: 'small_talk', kind: 'greeting' });
+    await pending;
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+    expect(store.getState().conversations[0]?.messages.at(-1)?.kind).toBe('smallTalk');
+  });
+
+  it('detener deja un aviso de cancelación y limpia el pendiente', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, '¿Qué es un límite?');
+    const pending = store.answerQuestion(id, '¿Qué es un límite?');
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+    expect(store.getState().conversations[0]?.messages.map((m) => m.kind)).toEqual([
+      'text',
+      'cancelled',
+    ]);
+    // Sin nada en camino, detener no hace nada.
+    expect(() => store.cancelAnswer(id)).not.toThrow();
+  });
+
+  it('cerrar sesión corta la petición sin dejar avisos', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, 'x');
+    const pending = store.answerQuestion(id, 'x');
+    await store.signOut();
+    await pending;
+    expect(store.getState().pendingAnswers).toEqual({});
+    expect(store.getState().conversations[0]?.messages.map((m) => m.kind)).toEqual(['text']);
+  });
+
+  it('tiempo agotado, red y saturación llegan como error con su código', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockRejectedValueOnce(new FakeApiError('TIMEOUT', 0));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('RATE_LIMITED', 429));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('INTERNAL', 500));
+    await store.answerQuestion(id, 'x');
+    expect(store.getState().conversations[0]?.messages.map((m) => [m.kind, m.errorCode])).toEqual([
+      ['error', 'TIMEOUT'],
+      ['error', 'NETWORK'],
+      ['error', 'RATE_LIMITED'],
+      ['error', 'CHAT_FAILED'],
+    ]);
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+  });
+
+  it('reintentar no repite la burbuja de la persona', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    store.askQuestion(id, '¿Qué es un límite?');
+    api.ask.mockRejectedValueOnce(new FakeApiError('TIMEOUT', 0));
+    await store.answerQuestion(id, '¿Qué es un límite?');
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'thanks' });
+    store.retryLastQuestion(id);
+    await vi.waitFor(() => expect(store.isAnswerPending(store.getState(), id)).toBe(false));
+    expect(api.ask).toHaveBeenLastCalledWith('¿Qué es un límite?', expect.anything());
+    expect(store.getState().conversations[0]?.messages.map((m) => [m.role, m.kind])).toEqual([
+      ['user', 'text'],
+      ['mascot', 'smallTalk'],
+    ]);
+  });
+
+  it('editar quita la última pregunta con su respuesta y devuelve el texto', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    store.askQuestion(id, 'primera');
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'greeting' });
+    await store.answerQuestion(id, 'primera');
+    store.askQuestion(id, 'segunda');
+    api.ask.mockRejectedValueOnce(new FakeApiError('CHAT_FAILED', 502));
+    await store.answerQuestion(id, 'segunda');
+    expect(store.editLastQuestion(id)).toBe('segunda');
+    expect(store.getState().conversations[0]?.messages.map((m) => m.text || m.kind)).toEqual([
+      'primera',
+      'smallTalk',
+    ]);
+  });
+
+  it('no se puede editar ni reintentar mientras hay una respuesta en camino', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, 'x');
+    const pending = store.answerQuestion(id, 'x');
+    expect(store.editLastQuestion(id)).toBeNull();
+    store.retryLastQuestion(id);
+    expect(api.ask).toHaveBeenCalledTimes(1);
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.editLastQuestion(store.startConversation())).toBeNull();
+  });
+
+  it('"no encontrado" lleva el motivo y marca las preguntas que parecen incompletas', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: '', reason: 'no_matches' });
+    await store.answerQuestion(id, 'loa');
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: '', reason: 'no_matches' });
+    await store.answerQuestion(id, '¿Qué dice el teorema de Bolzano?');
+    api.ask.mockResolvedValueOnce({
+      status: 'abstained',
+      message: '',
+      reason: 'validation_failed',
+    });
+    await store.answerQuestion(id, 'loa');
+    const [first, second, third] = store.getState().conversations[0]?.messages ?? [];
+    expect(first).toMatchObject({ kind: 'notFound', reason: 'no_matches', unclear: true });
+    expect(second).toMatchObject({ kind: 'notFound', reason: 'no_matches' });
+    expect(second?.unclear).toBeUndefined();
+    expect(third).toMatchObject({ kind: 'notFound', reason: 'validation_failed' });
+    expect(third?.unclear).toBeUndefined();
+  });
+
+  it('buscar fuera usa el mismo pendiente y se puede detener', async () => {
+    await signedIn();
+    api.external.mockImplementationOnce(
+      (_q: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () =>
+            reject(new FakeApiError('CANCELLED', 0)),
+          );
+        }),
+    );
+    const id = store.startConversation();
+    const pending = store.searchOutside(id, 'x');
+    expect(store.getState().pendingAnswers[id]?.kind).toBe('external');
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.getState().conversations[0]?.messages.at(-1)?.kind).toBe('cancelled');
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+  });
+
+  it('el pendiente nunca se guarda en el dispositivo', async () => {
+    const storage = (await import('@react-native-async-storage/async-storage')).default;
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    const pending = store.answerQuestion(id, 'x');
+    const calls = vi.mocked(storage.setItem).mock.calls;
+    const saved = calls.at(-1)?.[1] ?? '';
+    expect(saved).not.toContain('pendingAnswers');
+    store.cancelAnswer(id);
+    await pending;
+  });
+});
+
+describe('exportación de datos', () => {
+  it('une lo del servidor con lo del dispositivo', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: 'nada' });
+    await store.answerQuestion(id, 'una pregunta');
+    const result = await store.exportAccountData();
+    if (!result.ok) throw new Error('debía funcionar');
+    const data = JSON.parse(result.json) as {
+      servidor: unknown;
+      dispositivo: { conversaciones: unknown[]; ajustes: unknown; progresoDeEstudio: unknown };
+    };
+    expect(data.servidor).toEqual({ profile: { id: 'u1' } });
+    expect(data.dispositivo.conversaciones).toHaveLength(1);
+    expect(data.dispositivo.ajustes).toBeDefined();
+    expect(data.dispositivo.progresoDeEstudio).toBeDefined();
+  });
+
+  it('si el servidor falla, no entrega un archivo a medias', async () => {
+    await signedIn();
+    api.exportAccount.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.exportAccountData()).toEqual({ ok: false, error: 'NET_UNAVAILABLE' });
+  });
+});
+
+describe('borrar la cuenta desde Perfil', () => {
+  const google = {
+    ...user('g2'),
+    app_metadata: { provider: 'google', providers: ['google'] },
+  };
+
+  it('con contraseña incorrecta no borra nada', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {},
+      error: { status: 400, code: 'invalid_credentials' },
+    });
+    expect(await store.deleteAccountConfirmed('mala')).toBe('wrong_password');
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+    expect(store.getState().session).not.toBeNull();
+  });
+
+  it('si no se pudo comprobar la contraseña, tampoco borra', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {},
+      error: { status: 0, code: undefined },
+    });
+    expect(await store.deleteAccountConfirmed('buena')).toBe('failed');
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('con la contraseña correcta comprueba con Supabase y luego borra', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockClear();
+    auth.signInWithPassword.mockResolvedValueOnce({ data: { user: user('u1') }, error: null });
+    expect(await store.deleteAccountConfirmed('buena')).toBe('deleted');
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'u1@correo.com',
+      password: 'buena',
+    });
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(store.getState().session).toBeNull();
+  });
+
+  it('una cuenta de Google no pide contraseña', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({ data: { user: google }, error: null });
+    await store.signIn('g2@correo.com', 'x');
+    await vi.waitFor(() => expect(store.getState().sync.loading).toBe(false));
+    expect(store.getState().session?.hasPassword).toBe(false);
+    auth.signInWithPassword.mockClear();
+    expect(await store.deleteAccountConfirmed('')).toBe('deleted');
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('una cuenta con correo y Google sí pide contraseña', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {
+        user: {
+          ...user('m1'),
+          app_metadata: { provider: 'google', providers: ['google', 'email'] },
+        },
+      },
+      error: null,
+    });
+    await store.signIn('m1@correo.com', 'x');
+    await vi.waitFor(() => expect(store.getState().sync.loading).toBe(false));
+    expect(store.getState().session?.hasPassword).toBe(true);
+  });
+});
+
+describe('lista de espera', () => {
+  it('envía el correo al servidor y no lo guarda en el dispositivo', async () => {
+    expect(await store.joinWaitlist(' tutor@correo.com ', true, 'web')).toBe('ok');
+    expect(api.joinWaitlist).toHaveBeenCalledWith({
+      email: 'tutor@correo.com',
+      consent: true,
+      source: 'web',
+    });
+    expect(JSON.stringify(store.getState())).not.toContain('tutor@correo.com');
+  });
+
+  it('sin consentimiento o con correo inválido no llama a la API', async () => {
+    expect(await store.joinWaitlist('tutor@correo.com', false, 'app')).toBe('invalid');
+    expect(await store.joinWaitlist('no-es-correo', true, 'app')).toBe('invalid');
+    expect(api.joinWaitlist).not.toHaveBeenCalled();
+  });
+
+  it('traduce los errores del servidor', async () => {
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('RATE_LIMITED', 429));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('limited');
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('REQ_INVALID', 400));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('invalid');
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('failed');
   });
 });
 
@@ -815,5 +1160,22 @@ describe('panel de administración', () => {
     expect(store.deleteConfirmationText(noEmail)).toBe('u9');
     expect(store.deleteConfirmationMatches(noEmail, ' U9 ')).toBe(true);
     expect(store.deleteConfirmationMatches(noEmail, '')).toBe(false);
+  });
+});
+
+describe('lectura estable del estado (useStore)', () => {
+  it('arreglos y objetos con el mismo contenido cuentan como iguales', () => {
+    const doc = { id: 'd1' };
+    expect(store.shallowEqual([doc], [doc])).toBe(true);
+    expect(store.shallowEqual([], [])).toBe(true);
+    expect(store.shallowEqual({ a: 1, b: doc }, { a: 1, b: doc })).toBe(true);
+  });
+
+  it('distingue contenido distinto', () => {
+    expect(store.shallowEqual([{ id: 'd1' }], [{ id: 'd1' }])).toBe(false);
+    expect(store.shallowEqual([1], [1, 2])).toBe(false);
+    expect(store.shallowEqual([], {})).toBe(false);
+    expect(store.shallowEqual({ a: 1 }, { b: 1 })).toBe(false);
+    expect(store.shallowEqual(null, {})).toBe(false);
   });
 });

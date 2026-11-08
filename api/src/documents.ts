@@ -1,15 +1,25 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { consents, courses, documents, topics, type DocumentStatus } from '../../db/schema';
+import {
+  consents,
+  courses,
+  documentChunks,
+  documents,
+  topics,
+  type DocumentStatus,
+} from '../../db/schema';
+import { buildTopicContent, type TopicContent } from './topic-content';
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const MAX_COURSE_TITLE = 80;
 
-/** Formatos del README: PDF, PPTX, DOCX y fotos. */
+/** Formatos del README: PDF, PPTX, DOCX, texto (TXT y Markdown) y fotos. */
 export const UPLOAD_CONTENT_TYPES: Readonly<Record<string, string>> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+  md: 'text/markdown',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   png: 'image/png',
@@ -66,6 +76,8 @@ export interface DocumentsRepository {
   delete(userId: string, documentId: string): Promise<void>;
   markFailed(documentId: string, message: string): Promise<void>;
   topics(userId: string, documentId: string): Promise<TopicRecord[]>;
+  /** Texto del documento bajo un tema, por página (null si el tema no es de ese documento). */
+  topicContent(userId: string, documentId: string, topicId: string): Promise<TopicContent | null>;
   listCourses(userId: string): Promise<CourseRecord[]>;
   getCourse(userId: string, courseId: string): Promise<CourseRecord | null>;
   createCourse(userId: string, title: string): Promise<CourseRecord>;
@@ -96,7 +108,7 @@ const courseColumns = { id: courses.id, title: courses.title, createdAt: courses
 
 /** Toda consulta filtra por usuario, además de RLS. */
 export function createDocumentsRepository(db: Database): DocumentsRepository {
-  return {
+  const repository: DocumentsRepository = {
     async create(input) {
       await db.insert(documents).values(input);
     },
@@ -145,6 +157,33 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
         .where(and(eq(topics.documentId, documentId), eq(documents.userId, userId)))
         .orderBy(asc(topics.createdAt));
     },
+    async topicContent(userId, documentId, topicId) {
+      const rows = await repository.topics(userId, documentId);
+      if (!rows.some((t) => t.id === topicId)) return null;
+      const chunks = await db
+        .select({
+          pageNumber: documentChunks.pageNumber,
+          chunkIndex: documentChunks.chunkIndex,
+          content: documentChunks.content,
+          metadata: documentChunks.metadata,
+        })
+        .from(documentChunks)
+        .innerJoin(documents, eq(documents.id, documentChunks.documentId))
+        .where(and(eq(documentChunks.documentId, documentId), eq(documents.userId, userId)))
+        .orderBy(asc(documentChunks.chunkIndex));
+      return buildTopicContent(
+        rows,
+        chunks.map((c) => ({
+          pageNumber: c.pageNumber,
+          chunkIndex: c.chunkIndex,
+          content: c.content,
+          sectionPath: c.metadata.sectionPath,
+          charStart: c.metadata.charStart,
+          charEnd: c.metadata.charEnd,
+        })),
+        topicId,
+      );
+    },
     listCourses(userId) {
       return db
         .select(courseColumns)
@@ -184,4 +223,5 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
       });
     },
   };
+  return repository;
 }

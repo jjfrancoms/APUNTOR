@@ -105,7 +105,7 @@ export default function EditProfile() {
           {e.levelLocked}
         </Text>
       </View>
-      <Text variant="overline" color="textMuted">
+      <Text variant="smallStrong" accessibilityRole="header">
         {e.passwordHeader}
       </Text>
       <Card>

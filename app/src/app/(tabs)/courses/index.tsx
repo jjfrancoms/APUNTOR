@@ -1,10 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
+import { checkConnection, useOnline } from '@/lib/online';
 import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
-import { pendingReview, useStore } from '@/store/store';
+import { TopicOutline } from '@/components/domain/TopicOutline';
+import { loadDocumentTopics, pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
@@ -16,9 +19,11 @@ export default function Courses() {
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const allCourses = useStore((st) => st.courses);
   const pendingReviewCount = useStore((st) => pendingReview(st).length);
-  const unassigned = useStore((st) => st.documents.filter((d) => d.courseId === ''));
+  const documents = useStore((st) => st.documents);
+  const unassigned = useMemo(() => documents.filter((d) => d.courseId === ''), [documents]);
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
+  const online = useOnline();
 
   if (demo === 'offline') {
     return (
@@ -32,6 +37,23 @@ export default function Courses() {
           body={s.empty.offlineBody}
           primary={{ label: s.empty.downloaded, onPress: () => router.replace('/courses') }}
           secondary={{ label: s.empty.retry, onPress: () => router.replace('/courses') }}
+        />
+      </Screen>
+    );
+  }
+
+  // Los cursos no se guardan en el dispositivo: sin red y sin datos no hay nada que mostrar.
+  if (!online && courses.length === 0 && unassigned.length === 0) {
+    return (
+      <Screen>
+        <Text variant="display" accessibilityRole="header">
+          {s.courses.title}
+        </Text>
+        <EmptyState
+          mood="sleepy"
+          title={s.empty.offlineTitle}
+          body={s.connection.coursesBody}
+          primary={{ label: s.empty.retry, onPress: checkConnection }}
         />
       </Screen>
     );
@@ -69,6 +91,7 @@ export default function Courses() {
       <Text variant="display" accessibilityRole="header">
         {s.courses.title}
       </Text>
+      <OfflineBanner title={s.connection.courses} />
       <Tap
         accessibilityRole="search"
         accessibilityLabel={s.courses.search}
@@ -144,10 +167,17 @@ function CourseCard({
   const s = useStrings();
   const { c } = useTheme();
   const items = useStore((st) => st.items);
+  const documents = useStore((st) => st.documents);
   // Por defecto se abre la primera clase sin terminar.
   const [openClass, setOpenClass] = useState<string | null>(
     course.classes.find((k) => k.progress < 1)?.id ?? null,
   );
+  // Hasta la fase 2 cada documento es una clase: sus temas se piden al abrirla.
+  const openDoc = open ? documents.find((d) => d.id === openClass) : undefined;
+  const needsTopics = openDoc?.status === 'completed' && openDoc.outline === undefined;
+  useEffect(() => {
+    if (needsTopics && openClass) void loadDocumentTopics(openClass);
+  }, [needsTopics, openClass]);
   return (
     <Card style={styles.course}>
       <Tap
@@ -177,6 +207,14 @@ function CourseCard({
               },
             ].filter((sec) => sec.list.length > 0);
             const expanded = openClass === klass.id;
+            const doc = documents.find((d) => d.id === klass.id);
+            const roots = doc?.outline?.filter((t) => t.depth === 1).length;
+            const countLabel =
+              sections.length > 0
+                ? s.courses.sections(sections.length)
+                : roots !== undefined && roots > 0
+                  ? s.courses.sections(roots)
+                  : s.courses.topicsCount(klass.topicCount);
             return (
               <View key={klass.id} style={styles.klass}>
                 <Tap
@@ -195,11 +233,30 @@ function CourseCard({
                     {klass.title}
                   </Text>
                   <Text variant="caption" color="textMuted">
-                    {s.courses.sections(sections.length)}
+                    {countLabel}
                   </Text>
                 </Tap>
                 {expanded ? (
                   <>
+                    {sections.length === 0 && doc ? (
+                      <View style={styles.section}>
+                        {doc.status !== 'completed' ? (
+                          <Text variant="small" color="textMuted">
+                            {s.live.status[doc.status]}
+                          </Text>
+                        ) : doc.outline === undefined ? (
+                          <Text variant="small" color="textMuted">
+                            {s.courses.loadingTopics}
+                          </Text>
+                        ) : doc.outline.length === 0 ? (
+                          <Text variant="small" color="textMuted">
+                            {s.courses.noTopics}
+                          </Text>
+                        ) : (
+                          <TopicOutline documentId={doc.id} outline={doc.outline} />
+                        )}
+                      </View>
+                    ) : null}
                     {sections.map((section) => (
                       <View key={section.title} style={styles.section}>
                         <Text variant="overline" color="textMuted">

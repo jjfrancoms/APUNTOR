@@ -22,6 +22,8 @@ export interface SessionUser {
    * Google no pasó por el registro con fecha de nacimiento y debe confirmarlo antes de seguir.
    */
   adultConfirmed: boolean;
+  /** true si puede entrar con correo y contraseña: al borrar la cuenta se le vuelve a pedir. */
+  hasPassword: boolean;
 }
 
 /** Apariencia: 'system' sigue el modo claro/oscuro del dispositivo. */
@@ -32,10 +34,6 @@ export interface Settings {
   language: Language;
   useDocs: boolean;
   external: boolean;
-  analytics: boolean;
-  saveProgress: boolean;
-  lightMode: boolean;
-  voice: boolean;
   notifProcessed: boolean;
   notifReview: boolean;
   notifLimit: boolean;
@@ -49,6 +47,17 @@ export interface StoreCourse extends Course {
 
 export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+/** Tema detectado en el documento (lo genera el worker a partir de sus títulos). */
+export interface DocTopic {
+  id: string;
+  parentId: string | null;
+  title: string;
+  /** Páginas donde aparece el tema o sus subtemas. */
+  pages: number[];
+  /** 1 = tema raíz. */
+  depth: number;
+}
+
 export interface DocRecord {
   id: string;
   name: string;
@@ -58,7 +67,8 @@ export interface DocRecord {
   courseId: string;
   path: string[];
   topics: string[];
-  uploadedLabel: string;
+  /** Índice de temas con páginas; `undefined` mientras no se haya cargado. */
+  outline?: DocTopic[];
   status: DocumentStatus;
   topicCount: number;
   createdAt: string;
@@ -92,12 +102,38 @@ export interface UploadJob {
   documentId?: string;
 }
 
+export interface AnswerClaim {
+  label?: string;
+  formula?: string;
+  text: string;
+  pages: { documentId: string; page: number }[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'mascot';
   text: string;
-  kind: 'text' | 'answer' | 'notFound' | 'external' | 'error' | 'limit';
+  kind:
+    | 'text'
+    | 'answer'
+    | 'notFound'
+    | 'external'
+    | 'error'
+    | 'limit'
+    | 'smallTalk'
+    /** La persona detuvo la respuesta (no se cobra la pregunta). */
+    | 'cancelled';
+  /** Para `notFound`: por qué no hubo respuesta con los apuntes (si el servidor lo dijo). */
+  reason?: 'empty_question' | 'no_matches' | 'validation_failed';
+  /** Para `notFound`: la pregunta parece incompleta o con errores (p. ej. "loa"). */
+  unclear?: boolean;
+  /** Para `error`: qué falló, para mostrar el aviso adecuado. */
+  errorCode?: 'TIMEOUT' | 'NETWORK' | 'RATE_LIMITED' | 'CHAT_FAILED';
+  /** Para `smallTalk`: qué cortesía responder (el texto sale de los textos de la app). */
+  smallTalk?: 'greeting' | 'thanks' | 'identity' | 'farewell';
   sources?: { page: number; klass: number; documentId: string }[];
+  /** Respuesta con estructura: cada idea con su término, notación y páginas. */
+  claims?: AnswerClaim[];
   external?: { title: string; host: string; url?: string };
 }
 
@@ -107,6 +143,8 @@ export interface Conversation {
   course: string;
   updatedAt: number;
   messages: Message[];
+  /** Si existe, las preguntas se responden solo con estos documentos. */
+  scopeDocIds?: string[];
 }
 
 export interface ShareLink {
@@ -124,6 +162,13 @@ export interface Usage {
   storageLimit: number;
 }
 
+/** Respuesta en camino para una conversación (una pregunta a la vez). */
+export interface PendingAnswer {
+  question: string;
+  startedAt: number;
+  kind: 'notes' | 'external';
+}
+
 export interface AppState {
   version: 3;
   session: SessionUser | null;
@@ -139,6 +184,11 @@ export interface AppState {
   chunks: Chunk[];
   uploads: UploadJob[];
   conversations: Conversation[];
+  /**
+   * Respuestas en camino por id de conversación. Solo en memoria: nunca se guarda en el
+   * dispositivo (al reabrir la app no queda ninguna petición viva).
+   */
+  pendingAnswers: Record<string, PendingAnswer>;
   usage: Usage;
   /** Estado de la última carga desde el servidor. */
   sync: { loading: boolean; error: ErrorCode | null };
@@ -155,7 +205,6 @@ export interface AppState {
   /** true mientras se consulta `isAdmin` (el panel espera en vez de redirigir). */
   adminChecking: boolean;
   shares: ShareLink[];
-  waitlist: string[];
   study: {
     known: string[];
     unknown: string[];
@@ -174,12 +223,8 @@ export function todayKey(date = new Date()): string {
 export const DEFAULT_SETTINGS: Settings = {
   useDocs: true,
   external: true,
-  analytics: false,
-  saveProgress: true,
   theme: 'system',
   language: 'es',
-  lightMode: false,
-  voice: false,
   notifProcessed: true,
   notifReview: true,
   notifLimit: false,
@@ -209,13 +254,13 @@ export function createInitialState(): AppState {
     chunks: [],
     uploads: [],
     conversations: [],
+    pendingAnswers: {},
     usage: DEFAULT_USAGE,
     sync: { loading: false, error: null },
     consent: 'unknown',
     isAdmin: false,
     adminChecking: false,
     shares: [],
-    waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null, boxes: {} },
     payments: [],
     notices: { languages: false, reported: [] },

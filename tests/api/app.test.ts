@@ -4,7 +4,16 @@ import type { AdminAuditRecord, AuthUserIdentity, AuthUserRecord } from '../../a
 import { buildApp, type AppDeps } from '../../api/src/app';
 import type { ConsentRecord } from '../../api/src/consents';
 import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
-import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from './helpers';
+import { IngestionAlreadyQueuedError } from '../../api/src/queue';
+import { SummaryLimitError } from '../../api/src/topic-summary';
+import {
+  CHUNK,
+  fakeEmbedder,
+  fakeGenerator,
+  fakeQuota,
+  fakeWaitlist,
+  VALID_ANSWER,
+} from './helpers';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -30,6 +39,8 @@ interface World {
   consents: StoredConsent[];
   topics: Map<string, TopicRecord[]>;
   objects: Map<string, number>;
+  /** Contenido de los objetos que sube el servidor (manifiestos, imágenes de página). */
+  files: Map<string, Uint8Array>;
   enqueued: string[];
   deletedUsers: string[];
   quota: ReturnType<typeof fakeQuota>;
@@ -47,6 +58,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const consents: World['consents'] = [];
   const topics: World['topics'] = new Map();
   const objects: World['objects'] = new Map();
+  const files: World['files'] = new Map();
   const enqueued: string[] = [];
   const deletedUsers: string[] = [];
   const quota = fakeQuota(1000);
@@ -70,6 +82,14 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   };
   const app = await buildApp({
     authenticate: (token) => Promise.resolve(SESSIONS[token] ?? null),
+    contentSearch: {
+      search: (userId, query) =>
+        Promise.resolve({
+          documents: [{ id: userId, title: query }],
+          topics: [],
+          snippets: [],
+        }),
+    },
     documents: {
       create(input) {
         docs.set(input.id, {
@@ -98,6 +118,27 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         return Promise.resolve();
       },
       topics: (userId, id) => Promise.resolve(own(userId, id) ? (topics.get(id) ?? []) : []),
+      topicContent(userId, id, topicId) {
+        const topic = own(userId, id) ? topics.get(id)?.find((t) => t.id === topicId) : undefined;
+        return Promise.resolve(
+          topic
+            ? {
+                topic,
+                path: [topic.title],
+                blocks: [
+                  {
+                    pageNumber: 2,
+                    sectionPath: [topic.title],
+                    text: 'Texto del tema',
+                    charStart: 0,
+                    charEnd: 14,
+                  },
+                ],
+                truncated: false,
+              }
+            : null,
+        );
+      },
       listCourses: (userId) =>
         Promise.resolve([...courses.values()].filter((c) => c.userId === userId)),
       getCourse(userId, id) {
@@ -126,6 +167,12 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         return Promise.resolve();
       },
     },
+    waitlist: fakeWaitlist(),
+    accountExport: {
+      chunks: () => Promise.resolve([]),
+      topics: () => Promise.resolve([]),
+      quotas: () => Promise.resolve([]),
+    },
     consents: {
       accept(userId, document, version) {
         const found = consents.find(
@@ -139,13 +186,31 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       list: (userId) => Promise.resolve(consents.filter((c) => c.userId === userId)),
     },
     storage: {
-      download: () => Promise.resolve(new Uint8Array()),
+      download(key) {
+        const file = files.get(key);
+        return file ? Promise.resolve(file) : Promise.reject(new Error('NoSuchKey'));
+      },
       sizeOf: (key) => Promise.resolve(objects.get(key) ?? null),
       delete(key) {
         objects.delete(key);
         return Promise.resolve();
       },
       createUploadUrl: (key) => Promise.resolve(`https://r2.example/${key}`),
+      upload(key, data) {
+        files.set(key, data);
+        objects.set(key, data.length);
+        return Promise.resolve();
+      },
+      createDownloadUrl: (key) => Promise.resolve(`https://r2.example/get/${key}`),
+      deletePrefix(prefix) {
+        for (const key of [...objects.keys(), ...files.keys()]) {
+          if (key.startsWith(prefix)) {
+            objects.delete(key);
+            files.delete(key);
+          }
+        }
+        return Promise.resolve();
+      },
     },
     enqueue(id) {
       enqueued.push(id);
@@ -202,6 +267,18 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         doc.status = 'pending';
         return Promise.resolve('retried');
       },
+      reprocessCompletedDocument(id) {
+        const doc = docs.get(id);
+        if (!doc) return Promise.resolve('not_found');
+        if (doc.status !== 'completed') return Promise.resolve('not_completed');
+        doc.status = 'pending';
+        return Promise.resolve('reprocessing');
+      },
+      restoreCompletedDocument(id) {
+        const doc = docs.get(id);
+        if (doc?.status === 'pending') doc.status = 'completed';
+        return Promise.resolve();
+      },
       recordAudit(entry) {
         audit.unshift({ ...entry, id: crypto.randomUUID(), createdAt: new Date() });
         return Promise.resolve();
@@ -228,6 +305,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
     consents,
     topics,
     objects,
+    files,
     enqueued,
     deletedUsers,
     quota,
@@ -455,6 +533,218 @@ describe('documentos', () => {
     expect(theirs.statusCode).toBe(404);
   });
 
+  it('devuelve el contenido de un tema solo a su dueño', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const url = `/v1/documents/${id}/topics/${topicId}`;
+    const mine = await world.app.inject({ method: 'GET', url, headers: AUTH });
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json()).toMatchObject({
+      path: ['1. Límites'],
+      blocks: [{ pageNumber: 2, text: 'Texto del tema' }],
+      document: { id },
+    });
+    expect(mine.json()).toMatchObject({ pageImages: [] });
+    const theirs = await world.app.inject({ method: 'GET', url, headers: AUTH_OTHER });
+    expect(theirs.statusCode).toBe(404);
+    const missing = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/00000000-0000-4000-8000-000000000000`,
+      headers: AUTH,
+    });
+    expect(errorCode(missing)).toBe('DOC_NOT_FOUND');
+    const invalid = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/no-es-uuid`,
+      headers: AUTH,
+    });
+    expect(errorCode(invalid)).toBe('REQ_INVALID');
+  });
+
+  it('el contenido de un tema trae la estructura y la imagen de la página', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const doc = world.docs.get(id);
+    if (!doc) throw new Error('sin documento');
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const base = doc.filePath.replace(/\.[^./]+$/u, '');
+    const manifest = {
+      version: 1,
+      pages: [
+        {
+          pageNumber: 2,
+          text: 'Texto\ndel tema',
+          image: { key: `${base}/page-2.png`, width: 1240, height: 1754 },
+        },
+      ],
+    };
+    world.files.set(`${base}/pages.json`, new TextEncoder().encode(JSON.stringify(manifest)));
+    const res = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/${topicId}`,
+      headers: AUTH,
+    });
+    expect(res.json()).toMatchObject({
+      blocks: [{ pageNumber: 2, text: 'Texto\ndel tema' }],
+      pageImages: [
+        {
+          pageNumber: 2,
+          url: `https://r2.example/get/${base}/page-2.png`,
+          width: 1240,
+          height: 1754,
+        },
+      ],
+    });
+
+    const page = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/2`,
+      headers: AUTH,
+    });
+    expect(page.json()).toEqual({
+      pageNumber: 2,
+      url: `https://r2.example/get/${base}/page-2.png`,
+      width: 1240,
+      height: 1754,
+    });
+    const noImage = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/5`,
+      headers: AUTH,
+    });
+    expect(noImage.statusCode).toBe(404);
+    const theirs = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/2`,
+      headers: AUTH_OTHER,
+    });
+    expect(theirs.statusCode).toBe(404);
+
+    // Al borrar el documento se borran también sus páginas.
+    await world.app.inject({ method: 'DELETE', url: `/v1/documents/${id}`, headers: AUTH });
+    expect([...world.files.keys()].filter((k) => k.startsWith(`${base}/`))).toEqual([]);
+  });
+
+  it('el resumen de un tema trae su estructura y enlaces a las figuras y páginas', async () => {
+    const calls: string[] = [];
+    const world = await createWorld({
+      summaries: {
+        get(input) {
+          calls.push(input.topic.id);
+          return Promise.resolve({
+            version: 1,
+            topicId: input.topic.id,
+            model: 'lite',
+            blocks: [
+              { type: 'heading', text: 'Límites' },
+              { type: 'table', header: ['x', 'f(x)'], rows: [['1', '2']], pages: [2] },
+              {
+                type: 'figure',
+                page: 2,
+                caption: 'Gráfica',
+                key: 'u/doc/summaries/t-fig-0.png',
+                width: 400,
+                height: 300,
+              },
+            ],
+          });
+        },
+      },
+    });
+    const id = await createDocument(world);
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const url = `/v1/documents/${id}/topics/${topicId}/summary`;
+    const res = await world.app.inject({ method: 'GET', url, headers: AUTH });
+    expect(res.statusCode).toBe(200);
+    const body: unknown = res.json();
+    expect(body).toMatchObject({
+      blocks: [
+        { type: 'heading' },
+        { type: 'table', header: ['x', 'f(x)'] },
+        { type: 'figure', url: 'https://r2.example/get/u/doc/summaries/t-fig-0.png' },
+      ],
+      pageImages: [],
+    });
+    // La clave interna del archivo no sale en la respuesta.
+    expect(JSON.stringify(body)).not.toContain('"key"');
+    const theirs = await world.app.inject({ method: 'GET', url, headers: AUTH_OTHER });
+    expect(theirs.statusCode).toBe(404);
+    expect(calls).toEqual([topicId]);
+  });
+
+  it('el resumen cobra la cuota al generar, avisa del límite y expone unverified', async () => {
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    // Solo los resúmenes tienen tope 1; el resto de tipos (almacenamiento) no se limita.
+    const base = fakeQuota(1);
+    const summaryQuota = {
+      ...base,
+      consume: (userId: string, kind: string, amount: number) =>
+        kind === 'summaries' ? base.consume(userId, kind, amount) : Promise.resolve(true),
+    };
+    const world = await createWorld({
+      summaries: {
+        async get(_input, billing) {
+          if (billing && !(await billing.reserve())) throw new SummaryLimitError();
+          return {
+            version: 1,
+            topicId,
+            model: 'm',
+            blocks: [{ type: 'paragraph', text: 'Sin respaldo', pages: [], unverified: true }],
+          };
+        },
+      },
+      quota: summaryQuota,
+    });
+    const id = await createDocument(world);
+    world.topics.set(id, [{ id: topicId, parentId: null, title: 'T', sourcePages: [1] }]);
+    const open = () =>
+      world.app.inject({
+        method: 'GET',
+        url: `/v1/documents/${id}/topics/${topicId}/summary`,
+        headers: AUTH,
+      });
+    const first = await open();
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({
+      blocks: [{ type: 'paragraph', pages: [], unverified: true }],
+    });
+    const second = await open();
+    expect(second.statusCode).toBe(429);
+    expect(errorCode(second)).toBe('SUMMARY_DAILY_LIMIT');
+  });
+
+  it('el resumen avisa si la IA no está o está saturada', async () => {
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    const without = await createWorld();
+    const id = await createDocument(without);
+    without.topics.set(id, [{ id: topicId, parentId: null, title: 'T', sourcePages: [1] }]);
+    const off = await without.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/${topicId}/summary`,
+      headers: AUTH,
+    });
+    expect(off.statusCode).toBe(503);
+
+    const busy = await createWorld({
+      summaries: {
+        get: () =>
+          Promise.reject(new Error('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}')),
+      },
+    });
+    const busyId = await createDocument(busy);
+    busy.topics.set(busyId, [{ id: topicId, parentId: null, title: 'T', sourcePages: [1] }]);
+    const res = await busy.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${busyId}/topics/${topicId}/summary`,
+      headers: AUTH,
+    });
+    expect(errorCode(res)).toBe('RATE_LIMITED');
+  });
+
   it('otro usuario no ve, completa, cambia ni borra el documento', async () => {
     const world = await createWorld();
     const id = await createDocument(world);
@@ -599,6 +889,39 @@ describe('cuenta', () => {
   });
 });
 
+describe('búsqueda en los apuntes', () => {
+  it('pide sesión y busca solo con el usuario de la sesión', async () => {
+    const { app } = await createWorld();
+    const anonymous = await app.inject({ method: 'GET', url: '/v1/search?q=limites' });
+    expect(anonymous.statusCode).toBe(401);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/search?q=${encodeURIComponent('  límites ')}`,
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      documents: [{ id: USER, title: 'límites' }],
+      topics: [],
+      snippets: [],
+    });
+  });
+
+  it('valida el largo de la consulta', async () => {
+    const { app } = await createWorld();
+    for (const query of ['', '?q=', '?q=a', `?q=${'a'.repeat(201)}`, '?q=%20a%20']) {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/search${query}`,
+        headers: AUTH,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: 'REQ_INVALID' } });
+    }
+  });
+});
+
 describe('preguntas', () => {
   const payload = { question: '¿Qué produce la mitocondria?' };
 
@@ -633,6 +956,43 @@ describe('preguntas', () => {
     expect(response.statusCode).toBe(502);
     expect(errorCode(response)).toBe('CHAT_FAILED');
     expect(response.body).not.toContain('secreto');
+  });
+
+  it('sin respuesta dice el motivo', async () => {
+    const { app } = await createWorld({
+      answer: {
+        embedder: fakeEmbedder,
+        search: () => Promise.resolve([]),
+        generator: fakeGenerator(VALID_ANSWER),
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload,
+    });
+    expect(response.json()).toMatchObject({ status: 'abstained', reason: 'no_matches' });
+  });
+
+  it('la IA saturada responde RATE_LIMITED para reintentar luego', async () => {
+    const { app } = await createWorld({
+      answer: {
+        embedder: fakeEmbedder,
+        search: () => Promise.resolve([CHUNK]),
+        generator: {
+          generateJson: () =>
+            Promise.reject(new Error('{"error":{"code":503,"status":"UNAVAILABLE"}}')),
+        },
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload,
+    });
+    expect(errorCode(response)).toBe('RATE_LIMITED');
   });
 
   it('rechaza una pregunta vacía', async () => {
@@ -1152,6 +1512,67 @@ describe('panel de administrador', () => {
     expect(response.statusCode).toBe(500);
     expect(world.docs.get(id)?.status).toBe('failed');
     expect(world.audit).toEqual([]);
+  });
+
+  it('reprocesa solo documentos completados, los encola y lo audita', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const reprocess = (target: string) =>
+      world.app.inject({
+        method: 'POST',
+        url: `/v1/admin/documents/${target}/reprocess`,
+        headers: AUTH_ADMIN,
+      });
+
+    const notCompleted = await reprocess(id);
+    expect(notCompleted.statusCode).toBe(409);
+    expect(errorCode(notCompleted)).toBe('DOC_STATE');
+    expect(world.enqueued).toEqual([]);
+
+    const doc = world.docs.get(id);
+    if (doc) doc.status = 'completed';
+    const accepted = await reprocess(id);
+    expect(accepted.statusCode).toBe(202);
+    expect(accepted.json()).toEqual({ id, status: 'pending' });
+    expect(world.docs.get(id)?.status).toBe('pending');
+    expect(world.enqueued).toEqual([id]);
+    expect(world.audit.map((e) => [e.action, e.target])).toEqual([
+      ['document.reprocess', `document:${id}`],
+    ]);
+
+    expect((await reprocess(OTHER)).statusCode).toBe(404);
+  });
+
+  it('reprocesar exige ser administrador', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const response = await world.app.inject({
+      method: 'POST',
+      url: `/v1/admin/documents/${id}/reprocess`,
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(403);
+    expect(world.enqueued).toEqual([]);
+  });
+
+  it('si no se puede encolar el reproceso, vuelve a completado y no se audita', async () => {
+    for (const [failure, status] of [
+      [new Error('cola caída'), 500],
+      [new IngestionAlreadyQueuedError('x'), 409],
+    ] as const) {
+      const world = await createWorld({ enqueue: () => Promise.reject(failure) });
+      const id = await createDocument(world);
+      const doc = world.docs.get(id);
+      if (doc) doc.status = 'completed';
+      const response = await world.app.inject({
+        method: 'POST',
+        url: `/v1/admin/documents/${id}/reprocess`,
+        headers: AUTH_ADMIN,
+      });
+      expect(response.statusCode).toBe(status);
+      expect(world.docs.get(id)?.status).toBe('completed');
+      expect(world.audit).toEqual([]);
+    }
   });
 
   it('borra un usuario (archivos, datos y Auth) sin tocar a otros y lo audita', async () => {

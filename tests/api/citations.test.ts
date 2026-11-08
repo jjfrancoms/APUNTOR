@@ -156,3 +156,41 @@ describe('formatContextBlock', () => {
     expect(block.match(/<\/fragmento>/gu)).toHaveLength(1);
   });
 });
+
+describe('término y notación de una afirmación', () => {
+  const logic = chunk({
+    content:
+      'Negación: dada una proposición p, su contraria no p es verdadera cuando aquella es falsa; se simboliza ¬ p.',
+  });
+  const withExtras = (label: string, formula: string): string =>
+    JSON.stringify({
+      answer_found: true,
+      claims: [
+        {
+          label,
+          formula,
+          text: 'Dada una proposición p, su contraria no p es verdadera cuando aquella es falsa.',
+          citations: [
+            {
+              fragment_id: CHUNK_ID,
+              quote: 'su contraria no p es verdadera cuando aquella es falsa',
+            },
+          ],
+        },
+      ],
+    });
+
+  it('los conserva si están en el fragmento citado (la notación, sin contar espacios)', () => {
+    const result = validateAnswer(withExtras('Negación', '¬p'), [logic]);
+    expect(result.valid && result.claims[0]).toMatchObject({ label: 'Negación', formula: '¬p' });
+  });
+
+  it('descarta los inventados sin rechazar la respuesta', () => {
+    const result = validateAnswer(withExtras('Conjunción', 'p ∧ q'), [logic]);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.claims[0]?.label).toBeUndefined();
+      expect(result.claims[0]?.formula).toBeUndefined();
+    }
+  });
+});

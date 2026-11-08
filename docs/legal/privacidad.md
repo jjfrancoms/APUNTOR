@@ -1,6 +1,6 @@
 # Política de privacidad
 
-> **Borrador pendiente de revisión legal.** Versión `2026-11-07` · actualizado el 7 de noviembre de 2026.
+> **Borrador pendiente de revisión legal.** Versión `2026-11-08` · actualizado el 8 de noviembre de 2026.
 > Fuente única del texto que ve el usuario: `app/src/i18n/legal.ts` (este archivo lo reproduce;
 > si cambias uno, cambia el otro y sube `LEGAL_VERSION`). Los datos entre corchetes deben
 > completarse antes de publicar. Pendientes y fuentes en [cumplimiento.md](./cumplimiento.md).
@@ -31,11 +31,9 @@ Datos de uso: cuánto espacio y cuántas preguntas usas, para aplicar los límit
 
 Datos técnicos: la información que todo servicio en internet recibe al conectarte (como la dirección IP y el tipo de dispositivo), usada para que la app funcione y sea segura.
 
-Analítica: solo si la activas. Es anónima, no incluye el contenido de tus documentos ni de tus preguntas y no usa un identificador persistente.
-
 ### 3. Para qué los usamos
 
-Para crear y mantener tu cuenta; guardar y procesar tus documentos; responder tus preguntas con citas de página; aplicar los límites de uso; hacer "Buscar fuera" cuando lo pidas; proteger el servicio contra abusos; atender tus solicitudes; y, si activas la analítica, entender cómo se usa la app para mejorarla.
+Para crear y mantener tu cuenta; guardar y procesar tus documentos; responder tus preguntas con citas de página; aplicar los límites de uso; hacer "Buscar fuera" cuando lo pidas; proteger el servicio contra abusos; atender tus solicitudes.
 
 No vendemos tus datos, no los usamos para publicidad y no usamos tus documentos ni tus preguntas para entrenar modelos de inteligencia artificial. No tomamos decisiones con efectos jurídicos sobre ti basadas solo en un tratamiento automatizado.
 
@@ -43,7 +41,7 @@ No vendemos tus datos, no los usamos para publicidad y no usamos tus documentos 
 
 Tratamos tus datos con tu consentimiento previo, informado, expreso e inequívoco, que nos das al crear tu cuenta y aceptar esta política (artículos 5 y 13.5 de la Ley N.° 29733). Parte del tratamiento es además necesaria para prestarte el servicio que pediste (artículo 14, numeral 5).
 
-"Buscar fuera" y la analítica son opcionales: puedes apagarlos en Perfil cuando quieras.
+"Buscar fuera" es opcional: puedes apagarlo en Perfil cuando quieras.
 
 Puedes revocar tu consentimiento en cualquier momento (artículo 13.7). Como sin estos datos no podemos prestarte el servicio, la forma de revocarlo por completo es borrar tu cuenta.
 
@@ -101,7 +99,7 @@ APUNTOR es solo para mayores de 18 años y no recopila a sabiendas datos de meno
 
 ### 12. Cambios en esta política
 
-Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.
+Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.
 
 ## Privacy Policy (English)
 
@@ -125,11 +123,9 @@ Usage data: how much storage and how many questions you use, to apply your plan 
 
 Technical data: the information any internet service receives when you connect (such as your IP address and device type), used to make the app work and keep it secure.
 
-Analytics: only if you turn it on. It is anonymous, does not include the content of your documents or questions, and does not use a persistent identifier.
-
 ### 3. What we use it for
 
-To create and maintain your account; store and process your documents; answer your questions with page citations; apply usage limits; run "Search outside" when you ask for it; protect the service from abuse; handle your requests; and, if you turn on analytics, understand how the app is used in order to improve it.
+To create and maintain your account; store and process your documents; answer your questions with page citations; apply usage limits; run "Search outside" when you ask for it; protect the service from abuse; handle your requests.
 
 We do not sell your data, we do not use it for advertising, and we do not use your documents or questions to train artificial intelligence models. We do not make decisions with legal effects on you based solely on automated processing.
 
@@ -137,7 +133,7 @@ We do not sell your data, we do not use it for advertising, and we do not use yo
 
 We process your data with your prior, informed, express and unequivocal consent, which you give when you create your account and accept this policy (articles 5 and 13.5 of Law No. 29733). Part of the processing is also necessary to provide the service you requested (article 14, item 5).
 
-"Search outside" and analytics are optional: you can turn them off in Profile at any time.
+"Search outside" is optional: you can turn it off in Profile at any time.
 
 You can withdraw your consent at any time (article 13.7). Since we cannot provide the service without this data, the way to withdraw it completely is to delete your account.
 
@@ -195,4 +191,4 @@ APUNTOR is only for people aged 18 or older and does not knowingly collect data 
 
 ### 12. Changes to this policy
 
-This is version 2026-11-07, last updated on November 7, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.
+This is version 2026-11-08, last updated on November 8, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.

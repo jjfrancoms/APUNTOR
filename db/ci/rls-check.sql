@@ -29,6 +29,8 @@ INSERT INTO consents (user_id, document, version) VALUES
 INSERT INTO admin_audit (admin_user_id, admin_email, action, target) VALUES
   ('11111111-1111-4111-8111-111111111111', 'admin@example.com', 'user.delete', 'user:22222222-2222-4222-8222-222222222222');
 
+INSERT INTO waitlist (email, consent, source) VALUES ('tutor@example.com', true, 'app');
+
 -- Usuario 1 autenticado
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
@@ -45,6 +47,13 @@ BEGIN
   BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
       RAISE EXCEPTION 'RLS admin_audit: authenticated ve la auditoría';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  -- La lista de espera es solo del backend: ningún usuario lee los correos.
+  BEGIN
+    IF (SELECT count(*) FROM waitlist) <> 0 THEN
+      RAISE EXCEPTION 'RLS waitlist: authenticated ve la lista de espera';
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
@@ -84,6 +93,11 @@ BEGIN
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en admin_audit';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    INSERT INTO waitlist (email, consent) VALUES ('x@example.com', true);
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en waitlist';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 -- anon no ve nada
@@ -109,6 +123,17 @@ BEGIN
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    IF (SELECT count(*) FROM waitlist) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer waitlist';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO waitlist (email, consent) VALUES ('anon@example.com', true);
+    RAISE EXCEPTION 'RLS: anon pudo insertar en waitlist';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 RESET ROLE;
@@ -116,6 +141,7 @@ DO $$
 BEGIN
   IF (SELECT count(*) FROM documents) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró un documento ajeno'; END IF;
   IF (SELECT count(*) FROM admin_audit) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la auditoría'; END IF;
+  IF (SELECT count(*) FROM waitlist) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la lista de espera'; END IF;
 END $$;
 
 ROLLBACK;

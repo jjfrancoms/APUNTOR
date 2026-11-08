@@ -10,12 +10,12 @@ import type { Language } from './language';
  * Cambiar el contenido obliga a subir `LEGAL_VERSION` (fecha ISO) y `LEGAL_UPDATED`: la
  * aceptación registrada guarda documento, versión y fecha.
  */
-export const LEGAL_VERSION = '2026-11-07';
+export const LEGAL_VERSION = '2026-11-08';
 
 /** Fecha de la última actualización, legible en cada idioma. */
 export const LEGAL_UPDATED: Readonly<Record<Language, string>> = {
-  es: '7 de noviembre de 2026',
-  en: 'November 7, 2026',
+  es: '8 de noviembre de 2026',
+  en: 'November 8, 2026',
 };
 
 export type LegalDoc = 'terms' | 'privacy' | 'subscription';
@@ -51,7 +51,7 @@ const es: LegalTexts = {
       title: '2. Aceptación y versión',
       paragraphs: [
         'Al crear tu cuenta aceptas estos Términos y condiciones y declaras haber leído la Política de privacidad. Guardamos un registro de tu aceptación con el nombre del documento, su versión y la fecha.',
-        'Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.',
+        'Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.',
       ],
     },
     {
@@ -159,13 +159,12 @@ const es: LegalTexts = {
         'Tus preguntas: el texto de cada pregunta se procesa en nuestros servidores para generar la respuesta. Hoy el historial de conversaciones se guarda solo en tu dispositivo.',
         'Datos de uso: cuánto espacio y cuántas preguntas usas, para aplicar los límites de tu plan; y el registro de tu aceptación de los términos y de esta política (documento, versión y fecha).',
         'Datos técnicos: la información que todo servicio en internet recibe al conectarte (como la dirección IP y el tipo de dispositivo), usada para que la app funcione y sea segura.',
-        'Analítica: solo si la activas. Es anónima, no incluye el contenido de tus documentos ni de tus preguntas y no usa un identificador persistente.',
       ],
     },
     {
       title: '3. Para qué los usamos',
       paragraphs: [
-        'Para crear y mantener tu cuenta; guardar y procesar tus documentos; responder tus preguntas con citas de página; aplicar los límites de uso; hacer "Buscar fuera" cuando lo pidas; proteger el servicio contra abusos; atender tus solicitudes; y, si activas la analítica, entender cómo se usa la app para mejorarla.',
+        'Para crear y mantener tu cuenta; guardar y procesar tus documentos; responder tus preguntas con citas de página; aplicar los límites de uso; hacer "Buscar fuera" cuando lo pidas; proteger el servicio contra abusos; atender tus solicitudes.',
         'No vendemos tus datos, no los usamos para publicidad y no usamos tus documentos ni tus preguntas para entrenar modelos de inteligencia artificial. No tomamos decisiones con efectos jurídicos sobre ti basadas solo en un tratamiento automatizado.',
       ],
     },
@@ -173,7 +172,7 @@ const es: LegalTexts = {
       title: '4. Base del tratamiento y consentimiento',
       paragraphs: [
         'Tratamos tus datos con tu consentimiento previo, informado, expreso e inequívoco, que nos das al crear tu cuenta y aceptar esta política (artículos 5 y 13.5 de la Ley N.° 29733). Parte del tratamiento es además necesaria para prestarte el servicio que pediste (artículo 14, numeral 5).',
-        '"Buscar fuera" y la analítica son opcionales: puedes apagarlos en Perfil cuando quieras.',
+        '"Buscar fuera" es opcional: puedes apagarlo en Perfil cuando quieras.',
         'Puedes revocar tu consentimiento en cualquier momento (artículo 13.7). Como sin estos datos no podemos prestarte el servicio, la forma de revocarlo por completo es borrar tu cuenta.',
       ],
     },
@@ -234,7 +233,7 @@ const es: LegalTexts = {
     {
       title: '12. Cambios en esta política',
       paragraphs: [
-        'Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.',
+        'Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.',
       ],
     },
   ],
@@ -256,7 +255,7 @@ const es: LegalTexts = {
     {
       title: '3. Contacto',
       paragraphs: [
-        'Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.',
+        'Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026.',
       ],
     },
   ],
@@ -275,7 +274,7 @@ const en: LegalTexts = {
       title: '2. Acceptance and version',
       paragraphs: [
         'By creating your account you accept these Terms and Conditions and confirm you have read the Privacy Policy. We keep a record of your acceptance with the document name, its version and the date.',
-        'This is version 2026-11-07, last updated on November 7, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.',
+        'This is version 2026-11-08, last updated on November 8, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.',
       ],
     },
     {
@@ -383,13 +382,12 @@ const en: LegalTexts = {
         'Your questions: the text of each question is processed on our servers to generate the answer. Today your conversation history is stored only on your device.',
         'Usage data: how much storage and how many questions you use, to apply your plan limits; and the record of your acceptance of the terms and this policy (document, version and date).',
         'Technical data: the information any internet service receives when you connect (such as your IP address and device type), used to make the app work and keep it secure.',
-        'Analytics: only if you turn it on. It is anonymous, does not include the content of your documents or questions, and does not use a persistent identifier.',
       ],
     },
     {
       title: '3. What we use it for',
       paragraphs: [
-        'To create and maintain your account; store and process your documents; answer your questions with page citations; apply usage limits; run "Search outside" when you ask for it; protect the service from abuse; handle your requests; and, if you turn on analytics, understand how the app is used in order to improve it.',
+        'To create and maintain your account; store and process your documents; answer your questions with page citations; apply usage limits; run "Search outside" when you ask for it; protect the service from abuse; handle your requests.',
         'We do not sell your data, we do not use it for advertising, and we do not use your documents or questions to train artificial intelligence models. We do not make decisions with legal effects on you based solely on automated processing.',
       ],
     },
@@ -397,7 +395,7 @@ const en: LegalTexts = {
       title: '4. Legal basis and consent',
       paragraphs: [
         'We process your data with your prior, informed, express and unequivocal consent, which you give when you create your account and accept this policy (articles 5 and 13.5 of Law No. 29733). Part of the processing is also necessary to provide the service you requested (article 14, item 5).',
-        '"Search outside" and analytics are optional: you can turn them off in Profile at any time.',
+        '"Search outside" is optional: you can turn it off in Profile at any time.',
         'You can withdraw your consent at any time (article 13.7). Since we cannot provide the service without this data, the way to withdraw it completely is to delete your account.',
       ],
     },
@@ -458,7 +456,7 @@ const en: LegalTexts = {
     {
       title: '12. Changes to this policy',
       paragraphs: [
-        'This is version 2026-11-07, last updated on November 7, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.',
+        'This is version 2026-11-08, last updated on November 8, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.',
       ],
     },
   ],
@@ -480,7 +478,7 @@ const en: LegalTexts = {
     {
       title: '3. Contact',
       paragraphs: [
-        'If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-07, last updated on November 7, 2026.',
+        'If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-08, last updated on November 8, 2026.',
       ],
     },
   ],
