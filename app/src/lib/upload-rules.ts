@@ -2,19 +2,26 @@ import type { ErrorCode } from '@/i18n/es';
 import { normalize } from './text-search';
 
 export const MAX_UPLOAD_MB = 50;
-export const ACCEPTED_EXTENSIONS = [
-  'pdf',
-  'doc',
-  'docx',
-  'ppt',
-  'pptx',
-  'txt',
-  'md',
-  'jpg',
-  'jpeg',
-  'png',
-  'heic',
-] as const;
+
+/**
+ * Formatos que el servidor acepta, con su tipo MIME (igual que `UPLOAD_CONTENT_TYPES` de la API).
+ * Los formatos antiguos de Office (.doc, .ppt) no se leen: se rechazan con UP_FORMAT y el mensaje
+ * sugiere guardarlos como .docx o .pptx.
+ */
+export const ACCEPTED_CONTENT_TYPES = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+  md: 'text/markdown',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  heic: 'image/heic',
+} as const;
+
+export type AcceptedExtension = keyof typeof ACCEPTED_CONTENT_TYPES;
+export const ACCEPTED_EXTENSIONS = Object.keys(ACCEPTED_CONTENT_TYPES) as AcceptedExtension[];
 
 export function extensionOf(name: string): string {
   const i = name.lastIndexOf('.');
@@ -25,8 +32,8 @@ export function extensionOf(name: string): string {
 export function extLabel(name: string): string {
   const ext = extensionOf(name);
   if (['jpg', 'jpeg', 'png', 'heic'].includes(ext)) return 'IMG';
-  if (ext === 'pptx' || ext === 'ppt') return 'PPT';
-  if (ext === 'docx' || ext === 'doc') return 'DOC';
+  if (ext === 'pptx') return 'PPT';
+  if (ext === 'docx') return 'DOC';
   return ext.toUpperCase().slice(0, 4) || 'ARCH';
 }
 
@@ -36,8 +43,8 @@ export function isImage(name: string): boolean {
 
 /**
  * Valida un archivo antes de subirlo. Devuelve el código de error de la
- * especificación (UP_FORMAT, UP_SIZE, UP_QUOTA, UP_LANGUAGE) o null si es válido.
- * El idioma se simula por el nombre (p. ej. "…chino…") hasta tener el detector real.
+ * especificación (UP_FORMAT, UP_SIZE, UP_QUOTA) o null si es válido. El idioma no se comprueba
+ * aquí: no hay detector real todavía (la pantalla 41 solo se ve en la vista previa).
  */
 export function validateUpload(
   file: { name: string; sizeMb: number },
@@ -49,7 +56,6 @@ export function validateUpload(
   if (file.sizeMb > MAX_UPLOAD_MB) return 'UP_SIZE';
   if (!(ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) return 'UP_FORMAT';
   if (usedMb + file.sizeMb > quotaMb) return 'UP_QUOTA';
-  if (/chino|chinese|中文|zh[_-]/u.test(normalize(file.name))) return 'UP_LANGUAGE';
   return null;
 }
 

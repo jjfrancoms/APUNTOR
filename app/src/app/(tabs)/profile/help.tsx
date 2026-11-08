@@ -1,13 +1,12 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Linking, StyleSheet, TextInput, View } from 'react-native';
 import { Card, Icon, Screen, Text, TextLink, TopBar, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { normalize } from '@/lib/text-search';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
-const CATEGORY_ICONS: IconName[] = ['upload', 'shield', 'layers', 'credit-card'];
+const CATEGORY_ICONS: IconName[] = ['upload', 'shield', 'globe', 'credit-card'];
 
 /** Pantalla 42 · Centro de ayuda: búsqueda, categorías y respuestas desplegables. */
 export default function Help() {
@@ -66,7 +65,7 @@ export default function Help() {
         })}
       </View>
       <View style={styles.row}>
-        <Text variant="overline" color="textMuted" style={styles.flex}>
+        <Text variant="smallStrong" accessibilityRole="header" style={styles.flex}>
           {s.help.faqHeader}
         </Text>
         {category !== null ? (
@@ -116,7 +115,11 @@ export default function Help() {
           })
         )}
       </Card>
-      <Tap accessibilityRole="button" onPress={() => router.push('/profile/contact')}>
+      {/* El formulario de contacto (pantalla 43) aún no envía nada: se escribe por correo. */}
+      <Tap
+        accessibilityRole="link"
+        onPress={() => void Linking.openURL(`mailto:${s.help.supportEmail}`).catch(() => undefined)}
+      >
         <Card tone="primary" style={styles.row}>
           <View style={styles.flex}>
             <Text variant="bodyStrong" color="primary">

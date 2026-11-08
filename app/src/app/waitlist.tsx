@@ -22,7 +22,7 @@ export default function Waitlist() {
   const s = useStrings();
   const w = s.waitlist;
   const [email, setEmail] = useState('');
-  const [consent, setConsent] = useState(true);
+  const [consent, setConsent] = useState(false);
   const [joined, setJoined] = useState(false);
   return (
     <Screen

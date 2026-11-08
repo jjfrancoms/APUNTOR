@@ -32,10 +32,6 @@ export interface Settings {
   language: Language;
   useDocs: boolean;
   external: boolean;
-  analytics: boolean;
-  saveProgress: boolean;
-  lightMode: boolean;
-  voice: boolean;
   notifProcessed: boolean;
   notifReview: boolean;
   notifLimit: boolean;
@@ -71,7 +67,6 @@ export interface DocRecord {
   topics: string[];
   /** Índice de temas con páginas; `undefined` mientras no se haya cargado. */
   outline?: DocTopic[];
-  uploadedLabel: string;
   status: DocumentStatus;
   topicCount: number;
   createdAt: string;
@@ -225,12 +220,8 @@ export function todayKey(date = new Date()): string {
 export const DEFAULT_SETTINGS: Settings = {
   useDocs: true,
   external: true,
-  analytics: false,
-  saveProgress: true,
   theme: 'system',
   language: 'es',
-  lightMode: false,
-  voice: false,
   notifProcessed: true,
   notifReview: true,
   notifLimit: false,

@@ -55,7 +55,6 @@ export default function Conversation() {
   const externalOn = useStore((st) => st.settings.external);
   const asked = useStore(questionsToday);
   const limit = useStore(dailyQuestionLimit);
-  const plan = useStore((st) => st.plan);
   // La respuesta en camino vive en el store: sigue visible al salir y volver al chat.
   const pending = useStore((st) => (id ? st.pendingAnswers[id] : undefined));
   const thinking = pending !== undefined;
@@ -264,11 +263,9 @@ export default function Conversation() {
       case 'limit':
         return (
           <Banner key={m.id} tone="warning" icon="clock" title={s.errors.CHAT_DAILY_LIMIT}>
-            <Text variant="caption">{s.chat.limitBody(asked, limit, 'la medianoche')}</Text>
+            <Text variant="caption">{s.chat.limitUsed(asked, limit)}</Text>
             <ProgressBar value={1} tone="accent" label={s.errors.CHAT_DAILY_LIMIT} />
-            {plan === 'free' ? (
-              <Button label={s.chat.seePlans} onPress={() => router.push('/plans')} />
-            ) : null}
+            <Text variant="caption">{s.chat.plansSoon}</Text>
           </Banner>
         );
       case 'error':
