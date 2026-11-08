@@ -32,10 +32,6 @@ export interface Settings {
   language: Language;
   useDocs: boolean;
   external: boolean;
-  analytics: boolean;
-  saveProgress: boolean;
-  lightMode: boolean;
-  voice: boolean;
   notifProcessed: boolean;
   notifReview: boolean;
   notifLimit: boolean;
@@ -174,12 +170,8 @@ export function todayKey(date = new Date()): string {
 export const DEFAULT_SETTINGS: Settings = {
   useDocs: true,
   external: true,
-  analytics: false,
-  saveProgress: true,
   theme: 'system',
   language: 'es',
-  lightMode: false,
-  voice: false,
   notifProcessed: true,
   notifReview: true,
   notifLimit: false,

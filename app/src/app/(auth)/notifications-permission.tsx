@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Icon, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings } from '@/store/store';
 import { space, useTheme } from '@/theme';
 
-/** Pantalla 33 · Permiso de notificaciones */
-export default function NotificationsPermission() {
+/** Pantalla 33 · Permiso de notificaciones. Fase 4: fuera del onboarding, solo en la vista previa. */
+function NotificationsPermission() {
   const s = useStrings();
   const { c } = useTheme();
   const done = () => router.replace('/home');
@@ -64,6 +65,9 @@ export default function NotificationsPermission() {
     </Screen>
   );
 }
+
+// Las notificaciones aún no existen: en la app real se muestra "Muy pronto".
+export default previewOnly(NotificationsPermission);
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.sm },

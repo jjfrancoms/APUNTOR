@@ -133,7 +133,6 @@ export const es = {
     wrongEmail: '¿Correo equivocado?',
   },
   onboarding: {
-    step: (n: number, total: number) => `Paso ${n} de ${total}`,
     greeting: '¡Hola! Para ayudarte mejor, cuéntame qué estudias.',
     levels: {
       school: { title: 'Colegio', detail: 'Primaria o secundaria' },
@@ -153,10 +152,6 @@ export const es = {
     external: {
       title: 'Buscar contexto externo',
       detail: 'Se muestra aparte, siempre con su fuente.',
-    },
-    analytics: {
-      title: 'Mejorar la app con datos anónimos',
-      detail: 'Opcional. Nunca incluye tus documentos.',
     },
     minorTitle: '¿Tienes menos de 18 años?',
     minorBody:
@@ -258,24 +253,20 @@ export const es = {
   profile: {
     title: 'Perfil',
     edit: 'Editar',
-    privacyHeader: 'PRIVACIDAD Y DATOS',
+    privacyHeader: 'Privacidad y datos',
     useDocs: { title: 'Usar mis documentos para ayudarme', detail: 'Solo tú los ves' },
     external: { title: 'Buscar contexto externo', detail: 'Con fuentes visibles' },
-    progress: { title: 'Guardar mi progreso de estudio', detail: '' },
-    mascotHeader: 'MASCOTA',
     appearance: {
-      header: 'APARIENCIA',
+      header: 'Apariencia',
       system: 'Automático',
       light: 'Claro',
       dark: 'Oscuro',
       detail: 'Automático usa el mismo modo que tu dispositivo.',
     },
     language: {
-      header: 'IDIOMA',
+      header: 'Idioma',
       detail: 'Cambia los textos de la app. Tus documentos y apuntes no se traducen.',
     },
-    lightMode: { title: 'Modo ligero (sin 3D)', detail: 'Menos batería y datos' },
-    voice: { title: 'Voz de la mascota', detail: '' },
     notifications: 'Notificaciones',
     subscription: 'Suscripción',
     help: 'Ayuda y contacto',
@@ -561,14 +552,8 @@ export const es = {
   },
   notificationSettings: {
     header: 'Notificaciones',
-    deniedTitle: 'Están desactivadas en tu teléfono',
-    deniedBody: 'Actívalas en los ajustes del sistema para recibir avisos.',
-    openSettings: 'Abrir ajustes del teléfono',
-    processed: { title: 'Documentos procesados', detail: 'Cuando termine de leer y clasificar' },
-    review: { title: 'Repaso del día', detail: 'Máximo una al día' },
-    limit: { title: 'Tu límite diario se renovó', detail: 'Opcional' },
-    reviewTime: 'Hora del repaso',
-    note: 'No enviamos avisos de madrugada. Sin respuesta por 7 días, pausamos el recordatorio.',
+    soonTitle: 'Las notificaciones llegarán pronto',
+    soonBody: 'Por ahora no enviamos avisos. Verás el estado de tus documentos dentro de la app.',
   },
   share: {
     header: 'Compartir resumen',
@@ -716,7 +701,7 @@ export const es = {
     level: 'Qué estudias',
     save: 'Guardar cambios',
     saved: 'Cambios guardados',
-    passwordHeader: 'CAMBIAR CONTRASEÑA',
+    passwordHeader: 'Cambiar contraseña',
     current: 'Contraseña actual',
     next: 'Nueva contraseña',
     changePassword: 'Cambiar contraseña',

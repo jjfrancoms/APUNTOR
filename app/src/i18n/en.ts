@@ -129,7 +129,6 @@ export const en: Strings = {
     wrongEmail: 'Wrong email?',
   },
   onboarding: {
-    step: (n: number, total: number) => `Step ${n} of ${total}`,
     greeting: 'Hi! To help you better, tell me what you study.',
     levels: {
       school: { title: 'School', detail: 'Primary or secondary' },
@@ -149,10 +148,6 @@ export const en: Strings = {
     external: {
       title: 'Search external context',
       detail: 'Shown separately, always with its source.',
-    },
-    analytics: {
-      title: 'Improve the app with anonymous data',
-      detail: 'Optional. It never includes your documents.',
     },
     minorTitle: 'Are you under 18?',
     minorBody:
@@ -255,24 +250,20 @@ export const en: Strings = {
   profile: {
     title: 'Profile',
     edit: 'Edit',
-    privacyHeader: 'PRIVACY AND DATA',
+    privacyHeader: 'Privacy and data',
     useDocs: { title: 'Use my documents to help me', detail: 'Only you see them' },
     external: { title: 'Search external context', detail: 'With visible sources' },
-    progress: { title: 'Save my study progress', detail: '' },
-    mascotHeader: 'MASCOT',
     appearance: {
-      header: 'APPEARANCE',
+      header: 'Appearance',
       system: 'Automatic',
       light: 'Light',
       dark: 'Dark',
       detail: 'Automatic uses the same mode as your device.',
     },
     language: {
-      header: 'LANGUAGE',
+      header: 'Language',
       detail: "Changes the app's text. Your documents and notes are not translated.",
     },
-    lightMode: { title: 'Lite mode (no 3D)', detail: 'Less battery and data' },
-    voice: { title: 'Mascot voice', detail: '' },
     notifications: 'Notifications',
     subscription: 'Subscription',
     help: 'Help and contact',
@@ -565,14 +556,8 @@ export const en: Strings = {
   },
   notificationSettings: {
     header: 'Notifications',
-    deniedTitle: "They're turned off on your phone",
-    deniedBody: 'Turn them on in your system settings to get alerts.',
-    openSettings: 'Open phone settings',
-    processed: { title: 'Documents processed', detail: "When I'm done reading and filing" },
-    review: { title: 'Daily review', detail: 'At most one a day' },
-    limit: { title: 'Your daily limit was renewed', detail: 'Optional' },
-    reviewTime: 'Review time',
-    note: "We don't send alerts late at night. With no response for 7 days, we pause the reminder.",
+    soonTitle: 'Notifications are coming soon',
+    soonBody: "We don't send alerts yet. You'll see the status of your documents inside the app.",
   },
   share: {
     header: 'Share summary',
@@ -720,7 +705,7 @@ export const en: Strings = {
     level: 'What you study',
     save: 'Save changes',
     saved: 'Changes saved',
-    passwordHeader: 'CHANGE PASSWORD',
+    passwordHeader: 'Change password',
     current: 'Current password',
     next: 'New password',
     changePassword: 'Change password',
