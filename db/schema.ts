@@ -199,6 +199,84 @@ export const adminAudit = pgTable(
   (t) => [index('admin_audit_created_at_idx').on(t.createdAt)],
 );
 
+/** Quién escribe cada mensaje del chat y de qué tipo es (los mismos valores que usa la app). */
+export const CONVERSATION_MESSAGE_ROLES = ['user', 'mascot'] as const;
+export type ConversationMessageRole = (typeof CONVERSATION_MESSAGE_ROLES)[number];
+export const CONVERSATION_MESSAGE_KINDS = [
+  'text',
+  'answer',
+  'notFound',
+  'external',
+  'error',
+  'limit',
+  'smallTalk',
+  'cancelled',
+] as const;
+export type ConversationMessageKind = (typeof CONVERSATION_MESSAGE_KINDS)[number];
+
+/** Datos estructurados de un mensaje; su forma la valida la API al guardarlos. */
+export interface ConversationMessagePayload {
+  claims?: {
+    label?: string | undefined;
+    formula?: string | undefined;
+    text: string;
+    pages: { documentId: string; page: number }[];
+  }[];
+  sources?: { page: number; klass: number; documentId: string }[];
+  reason?: 'empty_question' | 'no_matches' | 'validation_failed';
+  unclear?: boolean;
+  errorCode?: 'TIMEOUT' | 'NETWORK' | 'RATE_LIMITED' | 'CHAT_FAILED';
+  smallTalk?: 'greeting' | 'thanks' | 'identity' | 'farewell';
+  external?: { title: string; host: string; url?: string | undefined };
+}
+
+/**
+ * Conversaciones del chat. El id lo genera la app (idempotencia y uso sin conexión). El usuario
+ * lee y borra las suyas (RLS); las escrituras las hace solo el backend.
+ */
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    title: text('title').notNull().default(''),
+    /** Nombre del curso tal como se mostró al responder (etiqueta, no referencia). */
+    course: text('course').notNull().default(''),
+    /** Documentos a los que se limitó la conversación; `null` si son todos. */
+    scopeDocumentIds: uuid('scope_document_ids').array(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('conversations_user_updated_idx').on(t.userId, t.updatedAt.desc())],
+);
+
+/** Mensajes de una conversación. El id lo genera la app: reenviar un lote no los duplica. */
+export const conversationMessages = pgTable(
+  'conversation_messages',
+  {
+    id: uuid('id').notNull(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    role: text('role').$type<ConversationMessageRole>().notNull(),
+    kind: text('kind').$type<ConversationMessageKind>().notNull(),
+    text: text('text').notNull().default(''),
+    payload: jsonb('payload').$type<ConversationMessagePayload>().notNull().default({}),
+    /** Orden de llegada: los mensajes de un mismo lote comparten `created_at`. */
+    seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.conversationId, t.id] }),
+    index('conversation_messages_order_idx').on(t.conversationId, t.seq),
+    check('conversation_messages_role_valid', sql`${t.role} IN ('user', 'mascot')`),
+    check(
+      'conversation_messages_kind_valid',
+      sql`${t.kind} IN ('text', 'answer', 'notFound', 'external', 'error', 'limit', 'smallTalk', 'cancelled')`,
+    ),
+  ],
+);
+
 export type Course = typeof courses.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;

@@ -29,6 +29,14 @@ INSERT INTO consents (user_id, document, version) VALUES
 INSERT INTO admin_audit (admin_user_id, admin_email, action, target) VALUES
   ('11111111-1111-4111-8111-111111111111', 'admin@example.com', 'user.delete', 'user:22222222-2222-4222-8222-222222222222');
 
+INSERT INTO conversations (id, user_id, title) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000c1', '11111111-1111-4111-8111-111111111111', 'Chat A'),
+  ('bbbbbbbb-0000-4000-8000-0000000000c2', '22222222-2222-4222-8222-222222222222', 'Chat B');
+
+INSERT INTO conversation_messages (id, conversation_id, role, kind, text) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000d1', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'user', 'text', 'Hola A'),
+  ('bbbbbbbb-0000-4000-8000-0000000000d2', 'bbbbbbbb-0000-4000-8000-0000000000c2', 'user', 'text', 'Hola B');
+
 -- Usuario 1 autenticado
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
@@ -41,6 +49,8 @@ BEGIN
   IF (SELECT count(*) FROM courses) <> 1 THEN RAISE EXCEPTION 'RLS cursos: ve cursos ajenos'; END IF;
   IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
   IF (SELECT count(*) FROM consents) <> 1 THEN RAISE EXCEPTION 'RLS consentimientos: ve consentimientos ajenos'; END IF;
+  IF (SELECT count(*) FROM conversations) <> 1 THEN RAISE EXCEPTION 'RLS conversations: ve conversaciones ajenas'; END IF;
+  IF (SELECT count(*) FROM conversation_messages) <> 1 THEN RAISE EXCEPTION 'RLS conversation_messages: ve mensajes ajenos'; END IF;
   -- La auditoría del administrador es solo del backend: ni siquiera el propio admin la lee así.
   BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
@@ -63,6 +73,8 @@ END $$;
 
 -- No puede borrar documentos de otro usuario (0 filas afectadas)…
 DELETE FROM documents WHERE id = 'bbbbbbbb-0000-4000-8000-000000000002';
+DELETE FROM conversations WHERE id = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+DELETE FROM conversation_messages WHERE conversation_id = 'bbbbbbbb-0000-4000-8000-0000000000c2';
 -- …ni insertar directamente (las escrituras van por el backend).
 DO $$
 BEGIN
@@ -76,6 +88,18 @@ BEGIN
     INSERT INTO consents (user_id, document, version)
     VALUES ('11111111-1111-4111-8111-111111111111', 'privacy', '2026-11-01');
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en consents';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO conversations (id, user_id)
+    VALUES ('aaaaaaaa-0000-4000-8000-0000000000c9', '11111111-1111-4111-8111-111111111111');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en conversations';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO conversation_messages (id, conversation_id, role, kind)
+    VALUES ('aaaaaaaa-0000-4000-8000-0000000000d9', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'user', 'text');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en conversation_messages';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
@@ -104,6 +128,18 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
+    IF (SELECT count(*) FROM conversations) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer conversations';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    IF (SELECT count(*) FROM conversation_messages) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer conversation_messages';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
       RAISE EXCEPTION 'RLS: anon pudo leer admin_audit';
     END IF;
@@ -116,6 +152,8 @@ DO $$
 BEGIN
   IF (SELECT count(*) FROM documents) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró un documento ajeno'; END IF;
   IF (SELECT count(*) FROM admin_audit) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la auditoría'; END IF;
+  IF (SELECT count(*) FROM conversations) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró una conversación ajena'; END IF;
+  IF (SELECT count(*) FROM conversation_messages) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró mensajes ajenos'; END IF;
 END $$;
 
 ROLLBACK;
