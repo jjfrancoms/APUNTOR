@@ -3,7 +3,7 @@ import {
   assertEmbeddingDimensions,
   type EmbeddingProvider,
 } from '../../../api/src/llm/embedding-provider';
-import type { FileStorage } from '../../../api/src/storage/file-storage';
+import { derivedPrefix, type FileStorage } from '../../../api/src/storage/file-storage';
 import { EMBEDDING_DIMENSIONS } from '../../../db/schema';
 import { buildTopicTree, flattenTopicTree } from '../topics/topic-tree';
 import type { EmbeddedChunk, IngestionRepository } from './document-repository';
@@ -150,6 +150,8 @@ export async function processDocument(
     }
 
     await repository.deleteChunks(documentId);
+    // Al reprocesar, los temas cambian de id: sus resúmenes ya no le sirven a nadie.
+    await storage.deletePrefix(`${derivedPrefix(document.filePath)}summaries/`);
 
     const batchSize = Math.min(
       deps.embeddingBatchSize ?? DEFAULT_EMBEDDING_BATCH_SIZE,

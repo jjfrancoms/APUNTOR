@@ -4,6 +4,7 @@ import type { AdminAuditRecord, AuthUserIdentity, AuthUserRecord } from '../../a
 import { buildApp, type AppDeps } from '../../api/src/app';
 import type { ConsentRecord } from '../../api/src/consents';
 import type { CourseRecord, DocumentRecord, TopicRecord } from '../../api/src/documents';
+import { IngestionAlreadyQueuedError } from '../../api/src/queue';
 import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from './helpers';
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -243,6 +244,18 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         if (doc.status !== 'failed') return Promise.resolve('not_failed');
         doc.status = 'pending';
         return Promise.resolve('retried');
+      },
+      reprocessCompletedDocument(id) {
+        const doc = docs.get(id);
+        if (!doc) return Promise.resolve('not_found');
+        if (doc.status !== 'completed') return Promise.resolve('not_completed');
+        doc.status = 'pending';
+        return Promise.resolve('reprocessing');
+      },
+      restoreCompletedDocument(id) {
+        const doc = docs.get(id);
+        if (doc?.status === 'pending') doc.status = 'completed';
+        return Promise.resolve();
       },
       recordAudit(entry) {
         audit.unshift({ ...entry, id: crypto.randomUUID(), createdAt: new Date() });
@@ -1403,6 +1416,67 @@ describe('panel de administrador', () => {
     expect(response.statusCode).toBe(500);
     expect(world.docs.get(id)?.status).toBe('failed');
     expect(world.audit).toEqual([]);
+  });
+
+  it('reprocesa solo documentos completados, los encola y lo audita', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const reprocess = (target: string) =>
+      world.app.inject({
+        method: 'POST',
+        url: `/v1/admin/documents/${target}/reprocess`,
+        headers: AUTH_ADMIN,
+      });
+
+    const notCompleted = await reprocess(id);
+    expect(notCompleted.statusCode).toBe(409);
+    expect(errorCode(notCompleted)).toBe('DOC_STATE');
+    expect(world.enqueued).toEqual([]);
+
+    const doc = world.docs.get(id);
+    if (doc) doc.status = 'completed';
+    const accepted = await reprocess(id);
+    expect(accepted.statusCode).toBe(202);
+    expect(accepted.json()).toEqual({ id, status: 'pending' });
+    expect(world.docs.get(id)?.status).toBe('pending');
+    expect(world.enqueued).toEqual([id]);
+    expect(world.audit.map((e) => [e.action, e.target])).toEqual([
+      ['document.reprocess', `document:${id}`],
+    ]);
+
+    expect((await reprocess(OTHER)).statusCode).toBe(404);
+  });
+
+  it('reprocesar exige ser administrador', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const response = await world.app.inject({
+      method: 'POST',
+      url: `/v1/admin/documents/${id}/reprocess`,
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(403);
+    expect(world.enqueued).toEqual([]);
+  });
+
+  it('si no se puede encolar el reproceso, vuelve a completado y no se audita', async () => {
+    for (const [failure, status] of [
+      [new Error('cola caída'), 500],
+      [new IngestionAlreadyQueuedError('x'), 409],
+    ] as const) {
+      const world = await createWorld({ enqueue: () => Promise.reject(failure) });
+      const id = await createDocument(world);
+      const doc = world.docs.get(id);
+      if (doc) doc.status = 'completed';
+      const response = await world.app.inject({
+        method: 'POST',
+        url: `/v1/admin/documents/${id}/reprocess`,
+        headers: AUTH_ADMIN,
+      });
+      expect(response.statusCode).toBe(status);
+      expect(world.docs.get(id)?.status).toBe('completed');
+      expect(world.audit).toEqual([]);
+    }
   });
 
   it('borra un usuario (archivos, datos y Auth) sin tocar a otros y lo audita', async () => {

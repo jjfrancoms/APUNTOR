@@ -79,6 +79,9 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   documento:** `MAX_OCR_PAGES` = 120 páginas escaneadas de PDF (si se pasa, error permanente sin
   gastar ninguna llamada) y `MAX_OCR_SLIDE_IMAGES` = 30 imágenes de diapositivas (las que sobran
   se omiten, sin fallar).
+- **Reprocesar** un documento completado (panel o `npm run reprocess`, que gasta embeddings y
+  OCR de nuevo): vuelve a `pending` y se encola; el worker regenera fragmentos, temas y páginas y
+  borra `summaries/` antes de regenerarlos. Solo el panel deja rastro en `admin_audit`.
 - **Archivos derivados** en R2, dentro de la carpeta del usuario (`derivedPrefix()`:
   `usuario/doc.pdf` → `usuario/doc/`): `pages.json` (texto normalizado por página, el mismo de
   los offsets `charStart/charEnd`) y `page-N.png` (página de PDF dibujada con
@@ -126,6 +129,8 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   `tests/db/admin.test.ts` con textos marcador). Rutas: `me`, `stats`, `users` (Admin API de
   Supabase vía `AppDeps.authUsers`, nunca SQL sobre `auth.users`), `documents` (filtro
   `status`), `POST documents/:id/retry` (solo fallidos → `pending` y se encola, 202),
+  `POST documents/:id/reprocess` (solo completados → `pending` y se encola, 202; 409 `DOC_STATE`
+  si no está completado o si su trabajo sigue activo generando resúmenes),
   `DELETE users/:id` (misma lógica que `DELETE /v1/account`, `deleteUserAccount()`; borrarse a
   sí mismo es 409 `ADMIN_TARGET_IS_SELF`) y `audit`. Listas con `page`/`perPage` (máx. 100) y
   `hasMore`. Toda acción que cambia algo se registra en `admin_audit` (RLS sin políticas: solo el
@@ -199,20 +204,21 @@ app/                      # app Expo/React Native (Expo Router, SDK 58), paquete
 
 ## Comandos clave
 
-| Comando               | Qué hace                                         |
-| --------------------- | ------------------------------------------------ |
-| `npm run dev`         | API con recarga automática                       |
-| `npm run api`         | Arranca la API (requiere `.env`)                 |
-| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)   |
-| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)       |
-| `npm run lint`        | ESLint (type-checked, `any` prohibido)           |
-| `npm run typecheck`   | `tsc --noEmit`                                   |
-| `npm test`            | Vitest (unitarios)                               |
-| `npm run format`      | Prettier                                         |
-| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`        |
-| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`   |
-| `npm run db:push`     | Sincroniza el esquema sin migración (solo local) |
-| `npm run db:studio`   | Drizzle Studio                                   |
+| Comando               | Qué hace                                            |
+| --------------------- | --------------------------------------------------- |
+| `npm run dev`         | API con recarga automática                          |
+| `npm run api`         | Arranca la API (requiere `.env`)                    |
+| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)      |
+| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)          |
+| `npm run reprocess`   | Reprocesa: `-- <documentId>` o `-- --all-completed` |
+| `npm run lint`        | ESLint (type-checked, `any` prohibido)              |
+| `npm run typecheck`   | `tsc --noEmit`                                      |
+| `npm test`            | Vitest (unitarios)                                  |
+| `npm run format`      | Prettier                                            |
+| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`           |
+| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`      |
+| `npm run db:push`     | Sincroniza el esquema sin migración (solo local)    |
+| `npm run db:studio`   | Drizzle Studio                                      |
 
 App móvil (dentro de `app/`, con su propio `package.json`):
 
