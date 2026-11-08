@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
@@ -23,16 +23,9 @@ const OTHER_DOC = 'ffffffff-0000-4000-8000-000000000002';
 const CHUNK = 'eeeeeeee-0000-4000-8000-0000000000c1';
 const TODAY = '2026-11-08';
 
-/**
- * Las tablas llegan con la migración que se genera al integrar la fase 3 (`db/pending/study.sql`
- * va detrás). Hasta entonces estas pruebas se omiten: la migración no se versiona en esta rama.
- */
 const migrations = readdirSync(join(ROOT, 'migrations'))
   .filter((f) => f.endsWith('.sql'))
   .sort();
-const hasTables = migrations.some((file) =>
-  readFileSync(join(ROOT, 'migrations', file), 'utf8').includes('CREATE TABLE "study_sets"'),
-);
 
 const cards = (n: number): ValidStudyItem[] =>
   Array.from({ length: n }, (_, i) => ({
@@ -54,7 +47,7 @@ const quizItems: ValidStudyItem[] = [
   },
 ];
 
-describe.skipIf(!hasTables)('estudio (SQL real)', () => {
+describe('estudio (SQL real)', () => {
   let pg: PGlite;
   let repo: StudyRepository;
   let documents: DocumentsRepository;
@@ -72,8 +65,6 @@ describe.skipIf(!hasTables)('estudio (SQL real)', () => {
     for (const file of migrations) {
       await pg.exec(readFileSync(join(ROOT, 'migrations', file), 'utf8'));
     }
-    const pending = join(ROOT, 'pending', 'study.sql');
-    if (existsSync(pending)) await pg.exec(readFileSync(pending, 'utf8'));
 
     const db = drizzle(pg, { schema }) as unknown as Database;
     accountExport = createAccountExportRepository(db);

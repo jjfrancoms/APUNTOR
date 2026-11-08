@@ -1,10 +1,5 @@
--- Fase 3 (quizzes, tarjetas y repaso). SQL a mano que drizzle-kit no genera: se aplica tras la
--- migración generada desde db/schema.ts (crea study_sets, study_items y study_reviews).
-
--- Cuota diaria de generaciones. Idempotente: drizzle-kit también genera el cambio del CHECK.
-ALTER TABLE "usage_quotas" DROP CONSTRAINT IF EXISTS "usage_quotas_kind_valid";--> statement-breakpoint
-ALTER TABLE "usage_quotas" ADD CONSTRAINT "usage_quotas_kind_valid"
-  CHECK ("kind" IN ('questions', 'storage_bytes', 'summaries', 'study_generations'));--> statement-breakpoint
+-- Fase 3 (quizzes, tarjetas y repaso): RLS y permisos. El CHECK de usage_quotas con
+-- study_generations ya lo cambia la migración generada 0016.
 
 -- El usuario autenticado solo lee lo suyo; las escrituras las hace el backend.
 ALTER TABLE "study_sets" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
