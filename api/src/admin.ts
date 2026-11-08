@@ -5,11 +5,14 @@ import {
   adminAudit,
   CONSENT_DOCUMENTS,
   consents,
+  conversationMessages,
+  conversations,
   documents,
   documentStatusEnum,
   usageQuotas,
   type DocumentStatus,
 } from '../../db/schema';
+import { conversationCounts } from './conversations';
 
 /*
  * Panel de administrador. Principio de privacidad (lo promete la política): el administrador
@@ -218,6 +221,8 @@ export interface AdminStats {
   storageBytes: number;
   questionsToday: number;
   consents: { currentVersionUsers: number };
+  /** Solo cuántas hay: el panel nunca lee títulos ni mensajes. */
+  conversations: { total: number; messages: number };
 }
 
 export interface AdminUserSummary {
@@ -226,6 +231,8 @@ export interface AdminUserSummary {
   questionsToday: number;
   /** Versión más reciente en la que aceptó términos y privacidad; `null` si ninguna. */
   consentVersion: string | null;
+  conversations: number;
+  conversationMessages: number;
 }
 
 /** Metadatos de un documento: sin ruta del archivo ni contenido. */
@@ -351,6 +358,10 @@ export function createAdminRepository(db: Database): AdminRepository {
         storageBytes,
         questionsToday: questions[0]?.total ?? 0,
         consents: { currentVersionUsers },
+        conversations: {
+          total: (await db.select({ total: count() }).from(conversations))[0]?.total ?? 0,
+          messages: (await db.select({ total: count() }).from(conversationMessages))[0]?.total ?? 0,
+        },
       };
     },
 
@@ -359,7 +370,14 @@ export function createAdminRepository(db: Database): AdminRepository {
       if (userIds.length === 0) return result;
       const ids = [...userIds];
       for (const id of ids) {
-        result.set(id, { documents: 0, storageBytes: 0, questionsToday: 0, consentVersion: null });
+        result.set(id, {
+          documents: 0,
+          storageBytes: 0,
+          questionsToday: 0,
+          consentVersion: null,
+          conversations: 0,
+          conversationMessages: 0,
+        });
       }
 
       const docs = await db
@@ -404,6 +422,14 @@ export function createAdminRepository(db: Database): AdminRepository {
         const summary = result.get(row.userId);
         if (summary && (summary.consentVersion === null || row.version > summary.consentVersion)) {
           summary.consentVersion = row.version;
+        }
+      }
+
+      for (const [userId, counts] of await conversationCounts(db, ids)) {
+        const summary = result.get(userId);
+        if (summary) {
+          summary.conversations = counts.conversations;
+          summary.conversationMessages = counts.messages;
         }
       }
       return result;

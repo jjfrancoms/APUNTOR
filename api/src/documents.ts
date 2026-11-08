@@ -3,6 +3,7 @@ import type { Database } from '../../db/client';
 import {
   classificationCorrections,
   consents,
+  conversations,
   courses,
   documentChunks,
   documents,
@@ -109,7 +110,7 @@ export interface DocumentsRepository {
   createCourse(userId: string, title: string): Promise<CourseRecord>;
   renameCourse(userId: string, courseId: string, title: string): Promise<void>;
   deleteCourse(userId: string, courseId: string): Promise<void>;
-  /** Borra cursos, documentos (con fragmentos y temas), estudio, cuotas y consentimientos. */
+  /** Borra cursos, documentos (con fragmentos y temas), estudio, cuotas, consentimientos y conversaciones. */
   deleteAllForUser(userId: string): Promise<void>;
 }
 
@@ -286,6 +287,8 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
         await tx.delete(courses).where(eq(courses.userId, userId));
         await tx.execute(sql`DELETE FROM usage_quotas WHERE user_id = ${userId}::uuid`);
         await tx.delete(consents).where(eq(consents.userId, userId));
+        // Los mensajes se van con su conversación (ON DELETE CASCADE).
+        await tx.delete(conversations).where(eq(conversations.userId, userId));
       });
     },
   };

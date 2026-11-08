@@ -129,6 +129,15 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **Logs sin contenido** (`api/src/logging.ts`): de cada petición solo método, ruta sin query
   e id; nunca el cuerpo (preguntas, títulos) ni `Authorization`. Los errores 4xx de Fastify (JSON
   mal formado) responden `REQ_INVALID` y no se registran.
+- **Conversaciones** (`api/src/conversations.ts`, rutas `/v1/conversations`; la app en
+  `app/src/store/conversation-sync.ts`): la app genera los ids (UUID) y sube todo por una sola vía;
+  `POST /v1/questions` no guarda nada. Crear y agregar son idempotentes por id, y solo el dueño
+  las ve o las cambia (a otro usuario le responde 404). AsyncStorage es la copia local: el store compara con lo
+  que el servidor ya confirmó y sube lo que falta, así que sin conexión se reintenta sin duplicar.
+  Borrar gana: una conversación o mensaje borrado no vuelve al unir, y lo que ya se confirmó y
+  falta en el servidor se quitó en otro dispositivo. Las respuestas en camino
+  (`pendingAnswers`) nunca se suben. Se borran con la cuenta (`deleteAllForUser`), van en
+  `GET /v1/account/export`, y el panel solo muestra conteos.
 - Cabeceras de seguridad con `@fastify/helmet`.
 - **Panel de administrador** (`api/src/admin.ts`, rutas `/v1/admin/*`): es admin quien tenga en
   el JWT un `email` incluido en `ADMIN_EMAILS` (separado por comas, sin distinguir mayúsculas)
@@ -248,8 +257,8 @@ App móvil (dentro de `app/`, con su propio `package.json`):
 | `npx expo install <pkg>` | Instala dependencias compatibles con el SDK (`EXPO_OFFLINE=1` si la red bloquea la API de Expo) |
 
 Datos reales: `app/src/store/store.ts` habla con Supabase Auth (`lib/supabase.ts`) y con la API
-(`lib/api.ts`). No hay cuenta ni datos de prueba. El dispositivo solo guarda ajustes, conversaciones y
-progreso de estudio del usuario que inició sesión. La app necesita `app/.env` (ver `app/.env.example`):
+(`lib/api.ts`). No hay cuenta ni datos de prueba. El dispositivo guarda ajustes, progreso de estudio y una
+copia de las conversaciones del usuario que inició sesión. La app necesita `app/.env` (ver `app/.env.example`):
 URL y clave publicable de Supabase, y la URL de la API (con Expo Go, la IP de la laptop en la red).
 
 Fases: 1 (hecha) cuentas, cursos creados por el usuario, subida, preguntas con citas, cuotas y contexto
@@ -289,8 +298,11 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 
 ## Pendiente
 
-- Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario, y
-  conversaciones guardadas en el servidor (hoy viven en el dispositivo).
+- Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario.
+- Conversaciones en el servidor: código listo, **falta la migración**. Generar con
+  `npm run db:generate` (tablas `conversations` y `conversation_messages`) y crear otra con
+  `npx drizzle-kit generate --custom --name conversations_rls` pegando
+  `db/pending/conversations.sql` (RLS y permisos). Aplicar ambas **antes de desplegar la API**.
 - Fase 3: quizzes, flashcards y resúmenes compartidos generados desde los documentos, con cita.
 - Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Apple.
 - Migraciones `0009_consents` y `0010_consents_rls` (tabla `consents` con RLS) escritas pero

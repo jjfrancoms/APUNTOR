@@ -11,8 +11,9 @@ import {
   fakeEmbedder,
   fakeGenerator,
   fakeQuota,
-  fakeWaitlist,
   VALID_ANSWER,
+  fakeConversations,
+  fakeWaitlist,
 } from './helpers';
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -185,6 +186,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         return Promise.resolve();
       },
     },
+    conversations: fakeConversations(),
     waitlist: fakeWaitlist(),
     accountExport: {
       chunks: () => Promise.resolve([]),
@@ -256,6 +258,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
           storageBytes: 0,
           questionsToday: quota.used,
           consents: { currentVersionUsers: 0 },
+          conversations: { total: 0, messages: 0 },
         }),
       userSummaries: (ids) =>
         Promise.resolve(
@@ -269,6 +272,8 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
                   storageBytes: own.reduce((total, d) => total + d.sizeBytes, 0),
                   questionsToday: 0,
                   consentVersion: null,
+                  conversations: 0,
+                  conversationMessages: 0,
                 },
               ];
             }),

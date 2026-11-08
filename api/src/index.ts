@@ -8,6 +8,7 @@ import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
 import { createConsentsRepository } from './consents';
+import { createConversationsRepository } from './conversations';
 import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    conversations: createConversationsRepository(db),
     waitlist: createWaitlistRepository(db),
     accountExport: createAccountExportRepository(db),
     contentSearch: createSearchRepository(db),

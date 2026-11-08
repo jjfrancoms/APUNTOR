@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createAccountExportRepository } from '../../api/src/account-export';
 import { createAdminRepository, type AuthUserRecord } from '../../api/src/admin';
 import { buildApp } from '../../api/src/app';
+import { createConversationsRepository } from '../../api/src/conversations';
 import { createConsentsRepository } from '../../api/src/consents';
 import { createDocumentsRepository } from '../../api/src/documents';
 import { periodFor } from '../../api/src/quota';
@@ -34,6 +35,9 @@ const DOC_OTHER = 'bbbbbbbb-0000-4000-8000-000000000004';
 /** Texto que solo existe dentro de un fragmento: no puede aparecer en ninguna respuesta. */
 const CHUNK_MARKER = 'MARCADOR-SECRETO-DEL-FRAGMENTO-42';
 const QUESTION_MARKER = 'MARCADOR-PREGUNTA-99';
+const CONVERSATION_MARKER = 'MARCADOR-CONVERSACION-7';
+const CONV_USER = 'eeeeeeee-0000-4000-8000-000000000001';
+const CONV_OTHER = 'eeeeeeee-0000-4000-8000-000000000002';
 const AUTH_ADMIN = { authorization: 'Bearer token-admin' };
 const AUTH_USER = { authorization: 'Bearer token-user' };
 
@@ -85,6 +89,13 @@ beforeAll(async () => {
       ('${USER}', 'terms', '2026-11-01'), ('${USER}', 'privacy', '2026-11-01'),
       ('${OTHER}', 'terms', '2026-11-01'),
       ('${ADMIN}', 'terms', '2026-10-01'), ('${ADMIN}', 'privacy', '2026-10-01');
+    INSERT INTO conversations (id, user_id, title, course) VALUES
+      ('${CONV_USER}', '${USER}', '${CONVERSATION_MARKER}', 'Curso'),
+      ('${CONV_OTHER}', '${OTHER}', 'Ajena', '');
+    INSERT INTO conversation_messages (id, conversation_id, role, kind, text) VALUES
+      ('${CONV_USER}', '${CONV_USER}', 'user', 'text', '${CONVERSATION_MARKER}'),
+      ('${CONV_OTHER}', '${CONV_USER}', 'mascot', 'answer', '${CONVERSATION_MARKER}'),
+      ('${CONV_OTHER}', '${CONV_OTHER}', 'user', 'text', 'Hola');
   `);
   for (const path of [`${USER}/ok.pdf`, `${USER}/roto.pdf`, `${OTHER}/ajeno.pdf`])
     objects.add(path);
@@ -102,6 +113,7 @@ beforeAll(async () => {
       ),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    conversations: createConversationsRepository(db),
     waitlist: fakeWaitlist(),
     accountExport: createAccountExportRepository(db),
     admin: createAdminRepository(db),
@@ -168,6 +180,7 @@ describe('panel de administrador (SQL real)', () => {
       questionsToday: 6,
       // Solo USER aceptó términos y privacidad en 2026-11-01 (OTHER solo términos).
       consents: { currentVersionUsers: 1 },
+      conversations: { total: 2, messages: 3 },
     });
   });
 
@@ -187,6 +200,8 @@ describe('panel de administrador (SQL real)', () => {
           storageBytes: 0,
           questionsToday: 0,
           consentVersion: '2026-10-01',
+          conversations: 0,
+          conversationMessages: 0,
         },
         {
           id: USER,
@@ -198,6 +213,8 @@ describe('panel de administrador (SQL real)', () => {
           storageBytes: 175,
           questionsToday: 4,
           consentVersion: '2026-11-01',
+          conversations: 1,
+          conversationMessages: 2,
         },
         {
           id: OTHER,
@@ -209,6 +226,8 @@ describe('panel de administrador (SQL real)', () => {
           storageBytes: 1000,
           questionsToday: 2,
           consentVersion: null,
+          conversations: 1,
+          conversationMessages: 1,
         },
       ],
     });
@@ -268,6 +287,7 @@ describe('panel de administrador (SQL real)', () => {
     for (const body of bodies) {
       expect(body).not.toContain(CHUNK_MARKER);
       expect(body).not.toContain(QUESTION_MARKER);
+      expect(body).not.toContain(CONVERSATION_MARKER);
       expect(body).not.toContain('Mitocondria');
       expect(body).not.toContain('file_path');
       expect(body).not.toContain(`${USER}/`);
@@ -314,13 +334,18 @@ describe('panel de administrador (SQL real)', () => {
 
     const count = async (table: string, user: string) =>
       (await pg.query(`SELECT 1 FROM ${table} WHERE user_id = $1`, [user])).rows.length;
-    for (const table of ['documents', 'usage_quotas', 'consents', 'courses']) {
+    for (const table of ['documents', 'usage_quotas', 'consents', 'courses', 'conversations']) {
       expect(await count(table, USER)).toBe(0);
     }
     expect(await count('documents', OTHER)).toBe(1);
     expect(await count('usage_quotas', OTHER)).toBe(1);
     expect(await count('consents', OTHER)).toBe(1);
     expect(await count('consents', ADMIN)).toBe(2);
+    expect(await count('conversations', OTHER)).toBe(1);
+    const left = await pg.query<{ conversation_id: string }>(
+      'SELECT conversation_id FROM conversation_messages',
+    );
+    expect(left.rows.map((r) => r.conversation_id)).toEqual([CONV_OTHER]);
     const chunks = await pg.query<{ document_id: string }>(
       'SELECT document_id FROM document_chunks',
     );

@@ -15,6 +15,7 @@ import {
 import type { AuthUsersDirectory } from './admin';
 import type { AuthSession } from './auth';
 import type { ConsentsRepository } from './consents';
+import type { ConversationsRepository } from './conversations';
 import type { DocumentsRepository } from './documents';
 import { FREE_LIMITS, type QuotaService } from './quota';
 import type { FileStorage } from './storage/file-storage';
@@ -280,6 +281,7 @@ export interface AccountExportDeps {
   /** Solo se lee (`download`) con las rutas de resúmenes de los documentos del usuario. */
   storage: Pick<FileStorage, 'download'>;
   consents: Pick<ConsentsRepository, 'list'>;
+  conversations: Pick<ConversationsRepository, 'exportAll'>;
   accountExport: AccountExportRepository;
   quota: Pick<QuotaService, 'usage'>;
   waitlist: Pick<WaitlistRepository, 'findByEmail'>;
@@ -318,6 +320,7 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
     studySetRows,
     studyItemRows,
     studyReviewRows,
+    conversations,
   ] = await Promise.all([
     deps.documents.listCourses(userId),
     deps.documents.list(userId),
@@ -329,6 +332,7 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
     deps.accountExport.studySets(userId),
     deps.accountExport.studyItems(userId),
     deps.accountExport.studyReviews(userId),
+    deps.conversations.exportAll(userId),
   ]);
   const verifiedEmail = identity?.emailConfirmedAt ? identity.email : null;
   const waitlist = verifiedEmail === null ? null : await deps.waitlist.findByEmail(verifiedEmail);
@@ -358,6 +362,22 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
       document: consent.document,
       version: consent.version,
       acceptedAt: consent.acceptedAt.toISOString(),
+    })),
+    conversations: conversations.map((conversation) => ({
+      id: conversation.id,
+      title: conversation.title,
+      course: conversation.course,
+      scopeDocumentIds: conversation.scopeDocumentIds,
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+      messages: conversation.messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        kind: message.kind,
+        text: message.text,
+        payload: message.payload,
+        createdAt: message.createdAt.toISOString(),
+      })),
     })),
     courses: courses.map((course) => ({
       id: course.id,

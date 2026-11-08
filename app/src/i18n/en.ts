@@ -570,6 +570,10 @@ export const en: Strings = {
     search: 'Search your conversations…',
     today: 'TODAY',
     week: 'THIS WEEK',
+    delete: 'Delete conversation',
+    deleteTitle: 'Delete this conversation?',
+    deleteBody: "It will be removed from this device and from your account. This can't be undone.",
+    deleteConfirm: 'Delete',
   },
   quizSetup: {
     header: 'New quiz',
@@ -1016,6 +1020,8 @@ export const en: Strings = {
       byStatus: 'Documents by status',
       storage: 'Storage used',
       questionsToday: "Today's questions",
+      conversations: 'Conversations',
+      conversationsDetail: (messages: number) => `${messages} messages`,
       consents: 'Current consent',
       consentsDetail: (n: number, total: number) => `${n} of ${total} users`,
       failedAlert: (n: number) =>
