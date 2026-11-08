@@ -113,7 +113,7 @@ function stem(word: string): string {
   return word.slice(0, 5);
 }
 
-function isCoherent(claim: string, quotes: readonly string[]): boolean {
+export function isCoherent(claim: string, quotes: readonly string[]): boolean {
   const claimWords = wordsOf(claim);
   const quoteWords = quotes.flatMap(wordsOf);
   const quoteSet = new Set(quoteWords);
@@ -160,6 +160,34 @@ function supportedExtras(
 }
 
 /**
+ * Comprueba una cita contra los fragmentos: que el fragmento exista, que la cita tenga al menos
+ * `MIN_QUOTE_WORDS` palabras y que esté literal en él. La página sale del fragmento.
+ */
+export function verifyCitation(
+  citation: { fragment_id: string; quote: string },
+  byId: ReadonlyMap<string, RetrievedChunk>,
+):
+  | { ok: true; citation: VerifiedCitation }
+  | { ok: false; reason: 'unknown_fragment' | 'quote_too_short' | 'quote_not_found' } {
+  const chunk = byId.get(citation.fragment_id);
+  if (!chunk) return { ok: false, reason: 'unknown_fragment' };
+  const quote = normalizeLiteral(citation.quote);
+  if (wordsOf(quote).length < MIN_QUOTE_WORDS) return { ok: false, reason: 'quote_too_short' };
+  if (!normalizeLiteral(chunk.content).includes(quote)) {
+    return { ok: false, reason: 'quote_not_found' };
+  }
+  return {
+    ok: true,
+    citation: {
+      chunkId: chunk.id,
+      documentId: chunk.documentId,
+      pageNumber: chunk.pageNumber,
+      quote,
+    },
+  };
+}
+
+/**
  * Valida la respuesta contra los fragmentos recuperados: id del fragmento, cita literal
  * y coherencia con la afirmación. Basta un fallo para rechazar la respuesta entera.
  */
@@ -185,21 +213,9 @@ export function validateAnswer(
     if (claim.citations.length === 0) return { valid: false, reason: 'claim_without_citation' };
     const citations: VerifiedCitation[] = [];
     for (const citation of claim.citations) {
-      const chunk = byId.get(citation.fragment_id);
-      if (!chunk) return { valid: false, reason: 'unknown_fragment' };
-      const quote = normalizeLiteral(citation.quote);
-      if (wordsOf(quote).length < MIN_QUOTE_WORDS) {
-        return { valid: false, reason: 'quote_too_short' };
-      }
-      if (!normalizeLiteral(chunk.content).includes(quote)) {
-        return { valid: false, reason: 'quote_not_found' };
-      }
-      citations.push({
-        chunkId: chunk.id,
-        documentId: chunk.documentId,
-        pageNumber: chunk.pageNumber,
-        quote,
-      });
+      const verified = verifyCitation(citation, byId);
+      if (!verified.ok) return { valid: false, reason: verified.reason };
+      citations.push(verified.citation);
     }
     if (
       !isCoherent(

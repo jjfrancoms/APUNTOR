@@ -5,6 +5,8 @@ import {
   courses,
   documentChunks,
   documents,
+  studyReviews,
+  studySets,
   topics,
   type DocumentStatus,
 } from '../../db/schema';
@@ -81,7 +83,7 @@ export interface DocumentsRepository {
   createCourse(userId: string, title: string): Promise<CourseRecord>;
   renameCourse(userId: string, courseId: string, title: string): Promise<void>;
   deleteCourse(userId: string, courseId: string): Promise<void>;
-  /** Borra cursos, documentos (con fragmentos y temas), cuotas y consentimientos del usuario. */
+  /** Borra cursos, documentos (con fragmentos y temas), estudio, cuotas y consentimientos. */
   deleteAllForUser(userId: string): Promise<void>;
 }
 
@@ -214,6 +216,9 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
     },
     async deleteAllForUser(userId) {
       await db.transaction(async (tx) => {
+        // Antes que los documentos: los conjuntos arrastran sus elementos y repasos.
+        await tx.delete(studyReviews).where(eq(studyReviews.userId, userId));
+        await tx.delete(studySets).where(eq(studySets.userId, userId));
         await tx.delete(documents).where(eq(documents.userId, userId));
         await tx.delete(courses).where(eq(courses.userId, userId));
         await tx.execute(sql`DELETE FROM usage_quotas WHERE user_id = ${userId}::uuid`);

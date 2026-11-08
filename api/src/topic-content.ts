@@ -62,7 +62,7 @@ export function topicPath(topics: readonly TopicRow[], topicId: string): string[
   return path;
 }
 
-function startsWithPath(sectionPath: readonly string[], prefix: readonly string[]): boolean {
+export function startsWithPath(sectionPath: readonly string[], prefix: readonly string[]): boolean {
   if (sectionPath.length < prefix.length) return false;
   return prefix.every((title, i) => normalizeTitle(sectionPath[i] ?? '') === title);
 }
