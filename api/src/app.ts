@@ -28,6 +28,7 @@ import {
   extensionOf,
   MAX_COURSE_TITLE,
   MAX_UPLOAD_BYTES,
+  sameCourseTitle,
   UPLOAD_CONTENT_TYPES,
   type CourseRecord,
   type DocumentRecord,
@@ -113,6 +114,12 @@ const updateDocumentBody = z
   })
   .refine((body) => body.title !== undefined || body.courseId !== undefined);
 const courseBody = z.object({ title: courseTitle });
+const classificationBody = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('accept') }),
+  z.object({ action: z.literal('choose'), courseId: z.uuid() }),
+  z.object({ action: z.literal('create'), title: courseTitle }),
+  z.object({ action: z.literal('dismiss') }),
+]);
 const questionBody = z.object({
   question: z.string().trim().min(1).max(2000),
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
@@ -153,6 +160,11 @@ function toPublicDocument(document: DocumentRecord) {
     status: document.status,
     totalPages: document.totalPages,
     topicCount: document.topicCount,
+    classificationStatus: document.classificationStatus,
+    suggestedCourseId: document.suggestedCourseId,
+    suggestedCourseTitle: document.suggestedCourseTitle,
+    suggestionConfidence: document.suggestionConfidence,
+    suggestionReason: document.suggestionReason,
     createdAt: document.createdAt.toISOString(),
   };
 }
@@ -322,6 +334,51 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const course = await deps.documents.getCourse(userId, courseId);
     if (!course) throw new ApiError('COURSE_NOT_FOUND', 404);
     return course;
+  }
+
+  /** El curso con ese título si ya existe (sin duplicar); si no, lo crea. */
+  async function findOrCreateCourse(userId: string, title: string): Promise<CourseRecord> {
+    const existing = (await deps.documents.listCourses(userId)).find((c) =>
+      sameCourseTitle(c.title, title),
+    );
+    return existing ?? deps.documents.createCourse(userId, title);
+  }
+
+  /** El curso que propuso la IA: el existente, o uno nuevo con el título sugerido. */
+  async function suggestedCourse(
+    userId: string,
+    document: DocumentRecord,
+  ): Promise<CourseRecord> {
+    if (document.classificationStatus !== 'suggested') throw new ApiError('DOC_STATE', 409);
+    if (document.suggestedCourseId !== null) {
+      const course = await deps.documents.getCourse(userId, document.suggestedCourseId);
+      if (course) return course;
+    }
+    if (document.suggestedCourseTitle === null) throw new ApiError('DOC_STATE', 409);
+    return findOrCreateCourse(userId, document.suggestedCourseTitle);
+  }
+
+  /** Solo es corrección si había sugerencia y el usuario eligió otro curso. */
+  function correctsSuggestion(document: DocumentRecord, course: CourseRecord): boolean {
+    if (document.classificationStatus !== 'suggested') return false;
+    if (course.id === document.suggestedCourseId) return false;
+    return !(
+      document.suggestedCourseTitle !== null &&
+      sameCourseTitle(course.title, document.suggestedCourseTitle)
+    );
+  }
+
+  async function confirmCourse(
+    userId: string,
+    document: DocumentRecord,
+    course: CourseRecord,
+  ): Promise<DocumentRecord> {
+    await deps.documents.applyClassification(userId, document.id, {
+      status: 'confirmed',
+      courseId: course.id,
+      recordCorrection: correctsSuggestion(document, course),
+    });
+    return { ...document, courseId: course.id, classificationStatus: 'confirmed' };
   }
 
   app.get('/health', { config: { rateLimit: false } }, () => ({ status: 'ok' }));
@@ -597,14 +654,36 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.patch('/v1/documents/:id', async (request) => {
+  // La sugerencia de curso la decide siempre el usuario (pantalla 16).
+  app.post('/v1/documents/:id/classification', async (request) => {
     const userId = await requireUser(request);
     const document = await requireDocument(userId, request.params);
+    const body = parse(classificationBody, request.body);
+    if (body.action === 'dismiss') {
+      if (document.classificationStatus !== 'suggested') throw new ApiError('DOC_STATE', 409);
+      await deps.documents.applyClassification(userId, document.id, { status: 'dismissed' });
+      return toPublicDocument({ ...document, classificationStatus: 'dismissed' });
+    }
+    const course =
+      body.action === 'accept'
+        ? await suggestedCourse(userId, document)
+        : body.action === 'choose'
+          ? await requireCourse(userId, body.courseId)
+          : await findOrCreateCourse(userId, body.title);
+    return toPublicDocument(await confirmCourse(userId, document, course));
+  });
+
+  app.patch('/v1/documents/:id', async (request) => {
+    const userId = await requireUser(request);
+    let document = await requireDocument(userId, request.params);
     const body = parse(updateDocumentBody, request.body);
-    if (typeof body.courseId === 'string') await requireCourse(userId, body.courseId);
+    // Elegir curso por aquí también resuelve la sugerencia: no queda pendiente de revisar.
+    const course =
+      typeof body.courseId === 'string' ? await requireCourse(userId, body.courseId) : null;
+    if (course) document = await confirmCourse(userId, document, course);
     await deps.documents.update(userId, document.id, {
       ...(body.title === undefined ? {} : { title: body.title }),
-      ...(body.courseId === undefined ? {} : { courseId: body.courseId }),
+      ...(body.courseId === undefined || course ? {} : { courseId: body.courseId }),
     });
     return toPublicDocument({
       ...document,

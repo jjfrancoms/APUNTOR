@@ -33,6 +33,8 @@ interface World {
   /** Contenido de los objetos que sube el servidor (manifiestos, imágenes de página). */
   files: Map<string, Uint8Array>;
   enqueued: string[];
+  /** Correcciones a la IA guardadas (documento → curso). */
+  corrections: { id: string; courseId: string }[];
   deletedUsers: string[];
   quota: ReturnType<typeof fakeQuota>;
   audit: (AdminAuditRecord & { adminUserId: string })[];
@@ -51,6 +53,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const objects: World['objects'] = new Map();
   const files: World['files'] = new Map();
   const enqueued: string[] = [];
+  const corrections: World['corrections'] = [];
   const deletedUsers: string[] = [];
   const quota = fakeQuota(1000);
   const audit: World['audit'] = [];
@@ -80,8 +83,23 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
           status: 'pending',
           totalPages: null,
           topicCount: 0,
+          classificationStatus: 'none',
+          suggestedCourseId: null,
+          suggestedCourseTitle: null,
+          suggestionConfidence: null,
+          suggestionReason: null,
           createdAt: new Date(0),
         });
+        return Promise.resolve();
+      },
+      applyClassification(userId, id, decision) {
+        const doc = own(userId, id);
+        if (!doc) return Promise.resolve();
+        doc.classificationStatus = decision.status;
+        if (decision.status === 'confirmed') {
+          doc.courseId = decision.courseId;
+          if (decision.recordCorrection) corrections.push({ id, courseId: decision.courseId });
+        }
         return Promise.resolve();
       },
       get: (userId, id) => Promise.resolve(own(userId, id)),

@@ -1,11 +1,13 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import {
+  classificationCorrections,
   consents,
   courses,
   documentChunks,
   documents,
   topics,
+  type ClassificationStatus,
   type DocumentStatus,
 } from '../../db/schema';
 import { buildTopicContent, type TopicContent } from './topic-content';
@@ -45,8 +47,19 @@ export interface DocumentRecord {
   totalPages: number | null;
   /** Temas detectados en los encabezados (los cuenta el servidor, no la app). */
   topicCount: number;
+  /** Curso que propone la IA; con `null` y título, la propuesta es crear ese curso. */
+  suggestedCourseId: string | null;
+  suggestedCourseTitle: string | null;
+  suggestionConfidence: number | null;
+  suggestionReason: string | null;
+  classificationStatus: ClassificationStatus;
   createdAt: Date;
 }
+
+/** Lo que decide el usuario sobre la sugerencia de curso. */
+export type ClassificationDecision =
+  | { status: 'confirmed'; courseId: string; recordCorrection: boolean }
+  | { status: 'dismissed' };
 
 export interface CourseRecord {
   id: string;
@@ -79,6 +92,12 @@ export interface DocumentsRepository {
   ): Promise<void>;
   delete(userId: string, documentId: string): Promise<void>;
   markFailed(documentId: string, message: string): Promise<void>;
+  /** Aplica la decisión del usuario y, si corrigió a la IA, guarda la corrección. */
+  applyClassification(
+    userId: string,
+    documentId: string,
+    decision: ClassificationDecision,
+  ): Promise<void>;
   topics(userId: string, documentId: string): Promise<TopicRecord[]>;
   /** Texto del documento bajo un tema, por página (null si el tema no es de ese documento). */
   topicContent(userId: string, documentId: string, topicId: string): Promise<TopicContent | null>;
@@ -105,6 +124,14 @@ const documentColumns = {
     sql<number>`(SELECT count(*) FROM topics t WHERE t.document_id = "documents"."id")`.mapWith(
       Number,
     ),
+  suggestedCourseId: documents.suggestedCourseId,
+  // El nombre actual del curso si se renombró; si se borró, el nombre con el que se propuso.
+  suggestedCourseTitle: sql<
+    string | null
+  >`COALESCE((SELECT c.title FROM courses c WHERE c.id = "documents"."suggested_course_id"), "documents"."suggested_course_title")`,
+  suggestionConfidence: documents.suggestionConfidence,
+  suggestionReason: documents.suggestionReason,
+  classificationStatus: documents.classificationStatus,
   createdAt: documents.createdAt,
 };
 
@@ -147,6 +174,31 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
         .update(documents)
         .set({ status: 'failed', errorMessage: message, updatedAt: sql`now()` })
         .where(eq(documents.id, documentId));
+    },
+    async applyClassification(userId, documentId, decision) {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(documents)
+          .set(
+            decision.status === 'confirmed'
+              ? {
+                  courseId: decision.courseId,
+                  classificationStatus: 'confirmed',
+                  updatedAt: sql`now()`,
+                }
+              : { classificationStatus: 'dismissed', updatedAt: sql`now()` },
+          )
+          .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+        if (decision.status === 'confirmed' && decision.recordCorrection) {
+          await tx
+            .insert(classificationCorrections)
+            .values({ userId, documentId, courseId: decision.courseId })
+            .onConflictDoUpdate({
+              target: classificationCorrections.documentId,
+              set: { courseId: decision.courseId, createdAt: sql`now()` },
+            });
+        }
+      });
     },
     topics(userId, documentId) {
       return db
