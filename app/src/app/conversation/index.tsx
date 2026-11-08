@@ -1,4 +1,5 @@
 import { AnswerClaims } from '@/components/chat/AnswerClaims';
+import { progressPhase } from '@/components/chat/progress';
 import { openSourcePage } from '@/lib/source-page';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -26,8 +27,11 @@ import { PREVIEW } from '@/lib/config';
 import {
   answerQuestion,
   askQuestion,
+  cancelAnswer,
   dailyQuestionLimit,
+  editLastQuestion,
   questionsToday,
+  retryLastQuestion,
   searchOutside,
   startConversation,
   useStore,
@@ -52,44 +56,86 @@ export default function Conversation() {
   const asked = useStore(questionsToday);
   const limit = useStore(dailyQuestionLimit);
   const plan = useStore((st) => st.plan);
+  // La respuesta en camino vive en el store: sigue visible al salir y volver al chat.
+  const pending = useStore((st) => (id ? st.pendingAnswers[id] : undefined));
+  const thinking = pending !== undefined;
   const [draft, setDraft] = useState('');
-  const [thinking, setThinking] = useState(false);
-  const mounted = useRef(true);
+  const [now, setNow] = useState(() => Date.now());
+  const initialSent = useRef(false);
 
   useEffect(() => {
     if (!id) setId(startConversation());
   }, [id]);
-  useEffect(
-    () => () => {
-      mounted.current = false;
-    },
-    [],
-  );
+
+  // Reloj de los avisos de progreso: solo corre mientras hay una respuesta en camino.
+  const startedAt = pending?.startedAt;
+  useEffect(() => {
+    if (startedAt === undefined) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [startedAt]);
 
   const send = (text: string) => {
+    // Con una respuesta en camino no se envía: el borrador se conserva.
     if (!id || thinking || text.trim().length === 0) return;
     setDraft('');
     if (!askQuestion(id, text)) return; // límite diario: el mensaje queda con el aviso
-    setThinking(true);
-    void answerQuestion(id, text).finally(() => {
-      if (mounted.current) setThinking(false);
-    });
+    void answerQuestion(id, text);
   };
   const outside = () => {
     if (!id || thinking) return;
-    setThinking(true);
-    void searchOutside(id, lastQuestion).finally(() => {
-      if (mounted.current) setThinking(false);
-    });
+    void searchOutside(id, lastQuestion);
+  };
+  const stop = () => {
+    if (id) cancelAnswer(id);
+  };
+  const retry = () => {
+    if (id && !thinking) retryLastQuestion(id);
+  };
+  const edit = () => {
+    if (!id || thinking) return;
+    const text = editLastQuestion(id);
+    if (text !== null) setDraft(text);
   };
 
   useEffect(() => {
-    if (params.q && id && conv && conv.messages.length === 0) send(params.q);
-    // Solo al abrir con una pregunta inicial (?q=…).
+    // Solo una vez, al abrir con una pregunta inicial (?q=…).
+    if (initialSent.current || !params.q || !id || !conv || conv.messages.length > 0) return;
+    initialSent.current = true;
+    send(params.q);
   }, [id, conv?.id]);
 
   const messages = conv?.messages ?? [];
   const lastQuestion = [...messages].reverse().find((m) => m.role === 'user')?.text ?? '';
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+  /** Pregunta del estudiante que precede al mensaje `index` (para citarla en el aviso). */
+  const questionBefore = (index: number): string =>
+    messages
+      .slice(0, index)
+      .reverse()
+      .find((m) => m.role === 'user')?.text ?? '';
+  const errorText = (code: Message['errorCode']): string => {
+    switch (code) {
+      case 'TIMEOUT':
+        return s.chat.errorTimeout;
+      case 'NETWORK':
+        return s.chat.errorNetwork;
+      case 'RATE_LIMITED':
+        return s.chat.errorRateLimited;
+      default:
+        return s.errors.CHAT_FAILED;
+    }
+  };
+  const phase = progressPhase(startedAt === undefined ? 0 : now - startedAt);
+  const progressText =
+    phase === 'slow'
+      ? s.chat.searchingSlow
+      : phase === 'longer'
+        ? s.chat.searchingLonger
+        : pending?.kind === 'external'
+          ? s.chat.searchingExternal
+          : s.chat.searching;
   const suggestions = [
     { label: s.chat.suggestions[0], run: () => send(s.live.prompts[0] ?? '') },
     ...(PREVIEW
@@ -98,7 +144,8 @@ export default function Conversation() {
     { label: s.chat.suggestions[2], run: () => send(s.live.prompts[1] ?? '') },
   ];
 
-  const renderMascot = (m: Message, isLast: boolean) => {
+  const renderMascot = (m: Message, index: number) => {
+    const isLast = index === messages.length - 1;
     switch (m.kind) {
       case 'answer':
         return (
@@ -140,9 +187,19 @@ export default function Conversation() {
           </MascotBubble>
         );
       case 'notFound':
+        if (m.unclear) {
+          // Pregunta demasiado corta o ambigua: buscar fuera no ayudaría; basta con "Editar".
+          return (
+            <MascotBubble key={m.id}>
+              <Text variant="small">{s.chat.notFoundUnclear(questionBefore(index))}</Text>
+            </MascotBubble>
+          );
+        }
         return (
           <MascotBubble key={m.id}>
-            <Text variant="small">{s.chat.notFound}</Text>
+            <Text variant="small">
+              {m.reason === 'validation_failed' ? s.chat.notFoundUnverified : s.chat.notFound}
+            </Text>
             {isLast ? (
               <View style={styles.actions}>
                 <Tap
@@ -216,9 +273,28 @@ export default function Conversation() {
         );
       case 'error':
         return (
-          <Banner key={m.id} tone="danger" title={s.chat.failedTitle} body={s.errors.CHAT_FAILED}>
-            <TextLink label={s.chat.retry} color="danger" onPress={() => send(lastQuestion)} />
+          <Banner key={m.id} tone="danger" title={s.chat.failedTitle} body={errorText(m.errorCode)}>
+            {isLast && !thinking ? (
+              <TextLink label={s.chat.retry} color="danger" onPress={retry} />
+            ) : null}
           </Banner>
+        );
+      case 'cancelled':
+        return (
+          <View key={m.id} style={styles.cancelled}>
+            <View style={styles.row}>
+              <Mascot size={28} mood="sleepy" />
+              <Text variant="caption" color="textMuted">
+                {s.chat.cancelled}
+              </Text>
+            </View>
+            {isLast && !thinking ? (
+              <View style={styles.actions}>
+                <TextLink label={s.chat.retry} variant="caption" onPress={retry} />
+                <TextLink label={s.chat.editQuestion} variant="caption" onPress={edit} />
+              </View>
+            ) : null}
+          </View>
         );
       default:
         return (
@@ -256,6 +332,8 @@ export default function Conversation() {
             value={draft}
             onChangeText={setDraft}
             onSend={() => send(draft)}
+            onStop={stop}
+            hint={thinking && draft.trim().length > 0 ? s.chat.pendingDraftHint : null}
           />
         </>
       }
@@ -263,9 +341,14 @@ export default function Conversation() {
       {messages.length === 0 ? <MascotStage label={s.chat.animated} /> : null}
       {messages.map((m, i) =>
         m.role === 'user' ? (
-          <UserBubble key={m.id} text={m.text} />
+          <View key={m.id} style={styles.userTurn}>
+            <UserBubble text={m.text} />
+            {i === lastUserIndex && !thinking ? (
+              <TextLink label={s.chat.edit} variant="caption" color="textMuted" onPress={edit} />
+            ) : null}
+          </View>
         ) : (
-          renderMascot(m, i === messages.length - 1)
+          renderMascot(m, i)
         ),
       )}
       {thinking ? (
@@ -277,9 +360,12 @@ export default function Conversation() {
             <View style={styles.row} accessibilityLiveRegion="polite">
               <Icon name="refresh-cw" size={14} color="primary" />
               <Text variant="smallStrong" color="primary">
-                {s.chat.searching}
+                {progressText}
               </Text>
             </View>
+            {phase === 'slow' ? (
+              <TextLink label={s.chat.stop} color="danger" onPress={stop} />
+            ) : null}
             {[0.95, 0.8, 0.6].map((w) => (
               <View
                 key={w}
@@ -321,5 +407,7 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   center: { alignItems: 'center' },
+  userTurn: { alignSelf: 'stretch', alignItems: 'flex-end', gap: space.xs },
+  cancelled: { alignSelf: 'flex-start', gap: space.xs },
   skeleton: { height: 8, borderRadius: 4, minWidth: 180 },
 });

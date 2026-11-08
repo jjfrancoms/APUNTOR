@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db/client';
 import {
   documentChunks,
@@ -8,6 +8,7 @@ import {
   type ChunkSectionMetadata,
   type DocumentStatus,
 } from '../../../db/schema';
+import type { TopicRow } from '../../../api/src/topic-content';
 import type { FlatTopic } from '../topics/topic-tree';
 
 export interface IngestionDocument {
@@ -35,6 +36,8 @@ export interface IngestionRepository {
   insertChunks(chunks: readonly EmbeddedChunk[]): Promise<void>;
   /** Reemplaza el árbol de temas del documento (padres antes que hijos). */
   replaceTopics(documentId: string, topics: readonly FlatTopic[]): Promise<void>;
+  /** Temas guardados del documento, con sus ids (para generar los resúmenes). */
+  listTopics(documentId: string): Promise<TopicRow[]>;
   markCompleted(documentId: string, totalPages: number): Promise<void>;
   markFailed(documentId: string, errorMessage: string): Promise<void>;
 }
@@ -86,6 +89,19 @@ export class DrizzleIngestionRepository implements IngestionRepository {
       await tx.delete(topics).where(eq(topics.documentId, documentId));
       if (rows.length > 0) await tx.insert(topics).values(rows);
     });
+  }
+
+  async listTopics(documentId: string): Promise<TopicRow[]> {
+    return this.db
+      .select({
+        id: topics.id,
+        parentId: topics.parentTopicId,
+        title: topics.title,
+        sourcePages: topics.sourcePages,
+      })
+      .from(topics)
+      .where(eq(topics.documentId, documentId))
+      .orderBy(asc(topics.createdAt));
   }
 
   async markCompleted(documentId: string, totalPages: number): Promise<void> {

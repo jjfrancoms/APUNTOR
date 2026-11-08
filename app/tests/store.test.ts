@@ -422,6 +422,190 @@ describe('chat', () => {
   });
 });
 
+describe('chat: respuesta en camino', () => {
+  /** api.ask que espera hasta que se aborte su señal (como el fetch real). */
+  function askUntilAborted() {
+    api.ask.mockImplementationOnce(
+      (_q: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () =>
+            reject(new FakeApiError('CANCELLED', 0)),
+          );
+        }),
+    );
+  }
+
+  it('marca la conversación como pendiente durante la llamada y la limpia al terminar', async () => {
+    await signedIn();
+    let resolve: (value: unknown) => void = () => undefined;
+    api.ask.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    const id = store.startConversation();
+    store.askQuestion(id, 'Hola');
+    const pending = store.answerQuestion(id, 'Hola');
+    expect(store.isAnswerPending(store.getState(), id)).toBe(true);
+    expect(store.getState().pendingAnswers[id]).toMatchObject({ question: 'Hola', kind: 'notes' });
+    expect(api.ask).toHaveBeenCalledWith('Hola', {
+      signal: expect.any(AbortSignal),
+      timeoutMs: store.CHAT_TIMEOUT_MS,
+    });
+    // Una pregunta a la vez: la segunda no llama al servidor.
+    await store.answerQuestion(id, 'otra');
+    expect(api.ask).toHaveBeenCalledTimes(1);
+    resolve({ status: 'small_talk', kind: 'greeting' });
+    await pending;
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+    expect(store.getState().conversations[0]?.messages.at(-1)?.kind).toBe('smallTalk');
+  });
+
+  it('detener deja un aviso de cancelación y limpia el pendiente', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, '¿Qué es un límite?');
+    const pending = store.answerQuestion(id, '¿Qué es un límite?');
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+    expect(store.getState().conversations[0]?.messages.map((m) => m.kind)).toEqual([
+      'text',
+      'cancelled',
+    ]);
+    // Sin nada en camino, detener no hace nada.
+    expect(() => store.cancelAnswer(id)).not.toThrow();
+  });
+
+  it('cerrar sesión corta la petición sin dejar avisos', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, 'x');
+    const pending = store.answerQuestion(id, 'x');
+    await store.signOut();
+    await pending;
+    expect(store.getState().pendingAnswers).toEqual({});
+    expect(store.getState().conversations[0]?.messages.map((m) => m.kind)).toEqual(['text']);
+  });
+
+  it('tiempo agotado, red y saturación llegan como error con su código', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockRejectedValueOnce(new FakeApiError('TIMEOUT', 0));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('RATE_LIMITED', 429));
+    await store.answerQuestion(id, 'x');
+    api.ask.mockRejectedValueOnce(new FakeApiError('INTERNAL', 500));
+    await store.answerQuestion(id, 'x');
+    expect(store.getState().conversations[0]?.messages.map((m) => [m.kind, m.errorCode])).toEqual([
+      ['error', 'TIMEOUT'],
+      ['error', 'NETWORK'],
+      ['error', 'RATE_LIMITED'],
+      ['error', 'CHAT_FAILED'],
+    ]);
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+  });
+
+  it('reintentar no repite la burbuja de la persona', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    store.askQuestion(id, '¿Qué es un límite?');
+    api.ask.mockRejectedValueOnce(new FakeApiError('TIMEOUT', 0));
+    await store.answerQuestion(id, '¿Qué es un límite?');
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'thanks' });
+    store.retryLastQuestion(id);
+    await vi.waitFor(() => expect(store.isAnswerPending(store.getState(), id)).toBe(false));
+    expect(api.ask).toHaveBeenLastCalledWith('¿Qué es un límite?', expect.anything());
+    expect(store.getState().conversations[0]?.messages.map((m) => [m.role, m.kind])).toEqual([
+      ['user', 'text'],
+      ['mascot', 'smallTalk'],
+    ]);
+  });
+
+  it('editar quita la última pregunta con su respuesta y devuelve el texto', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    store.askQuestion(id, 'primera');
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'greeting' });
+    await store.answerQuestion(id, 'primera');
+    store.askQuestion(id, 'segunda');
+    api.ask.mockRejectedValueOnce(new FakeApiError('CHAT_FAILED', 502));
+    await store.answerQuestion(id, 'segunda');
+    expect(store.editLastQuestion(id)).toBe('segunda');
+    expect(store.getState().conversations[0]?.messages.map((m) => m.text || m.kind)).toEqual([
+      'primera',
+      'smallTalk',
+    ]);
+  });
+
+  it('no se puede editar ni reintentar mientras hay una respuesta en camino', async () => {
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    store.askQuestion(id, 'x');
+    const pending = store.answerQuestion(id, 'x');
+    expect(store.editLastQuestion(id)).toBeNull();
+    store.retryLastQuestion(id);
+    expect(api.ask).toHaveBeenCalledTimes(1);
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.editLastQuestion(store.startConversation())).toBeNull();
+  });
+
+  it('"no encontrado" lleva el motivo y marca las preguntas que parecen incompletas', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: '', reason: 'no_matches' });
+    await store.answerQuestion(id, 'loa');
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: '', reason: 'no_matches' });
+    await store.answerQuestion(id, '¿Qué dice el teorema de Bolzano?');
+    api.ask.mockResolvedValueOnce({
+      status: 'abstained',
+      message: '',
+      reason: 'validation_failed',
+    });
+    await store.answerQuestion(id, 'loa');
+    const [first, second, third] = store.getState().conversations[0]?.messages ?? [];
+    expect(first).toMatchObject({ kind: 'notFound', reason: 'no_matches', unclear: true });
+    expect(second).toMatchObject({ kind: 'notFound', reason: 'no_matches' });
+    expect(second?.unclear).toBeUndefined();
+    expect(third).toMatchObject({ kind: 'notFound', reason: 'validation_failed' });
+    expect(third?.unclear).toBeUndefined();
+  });
+
+  it('buscar fuera usa el mismo pendiente y se puede detener', async () => {
+    await signedIn();
+    api.external.mockImplementationOnce(
+      (_q: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () =>
+            reject(new FakeApiError('CANCELLED', 0)),
+          );
+        }),
+    );
+    const id = store.startConversation();
+    const pending = store.searchOutside(id, 'x');
+    expect(store.getState().pendingAnswers[id]?.kind).toBe('external');
+    store.cancelAnswer(id);
+    await pending;
+    expect(store.getState().conversations[0]?.messages.at(-1)?.kind).toBe('cancelled');
+    expect(store.isAnswerPending(store.getState(), id)).toBe(false);
+  });
+
+  it('el pendiente nunca se guarda en el dispositivo', async () => {
+    const storage = (await import('@react-native-async-storage/async-storage')).default;
+    await signedIn();
+    askUntilAborted();
+    const id = store.startConversation();
+    const pending = store.answerQuestion(id, 'x');
+    const calls = vi.mocked(storage.setItem).mock.calls;
+    const saved = calls.at(-1)?.[1] ?? '';
+    expect(saved).not.toContain('pendingAnswers');
+    store.cancelAnswer(id);
+    await pending;
+  });
+});
+
 describe('consentimientos', () => {
   it('registra Términos y Política con la versión vigente', async () => {
     const { LEGAL_VERSION } = await import('../src/i18n/legal');

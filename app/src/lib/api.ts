@@ -85,11 +85,15 @@ export interface ApiClaim {
   citations: { chunkId: string; documentId: string; pageNumber: number; quote: string }[];
 }
 
+/** Por qué el servidor no respondió con los apuntes. */
+export type AbstainReason = 'empty_question' | 'no_matches' | 'validation_failed';
+
 export type SmallTalkKind = 'greeting' | 'thanks' | 'identity' | 'farewell';
 
 export type ApiAnswer =
   | { status: 'answered'; claims: ApiClaim[] }
-  | { status: 'abstained'; message: string }
+  /** Sin respaldo en los apuntes; `reason` dice por qué (si el servidor lo manda). */
+  | { status: 'abstained'; message: string; reason?: AbstainReason }
   /** Saludo o cortesía: se responde con un texto de la app, sin buscar ni gastar cuota. */
   | { status: 'small_talk'; kind: SmallTalkKind };
 
@@ -176,33 +180,73 @@ function pageQuery(page: number, extra: Record<string, string> = {}): string {
   return `?${params.toString()}`;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** Opciones de una petición: cancelarla desde fuera y/o ponerle un tiempo máximo. */
+export interface RequestOptions {
+  /** Al abortarse, la petición falla con `CANCELLED`. */
+  signal?: AbortSignal;
+  /** Tiempo máximo en ms; al vencer, la petición falla con `TIMEOUT`. */
+  timeoutMs?: number;
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options: RequestOptions = {},
+): Promise<T> {
   if (!config.apiUrl) throw new ApiRequestError('NOT_CONFIGURED', 0);
+  const { signal, timeoutMs } = options;
+  if (signal?.aborted) throw new ApiRequestError('CANCELLED', 0);
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  let response: Response;
+  // Un solo controlador junta la señal de quien llama y el tiempo máximo
+  // (`AbortSignal.any` puede no existir en React Native).
+  const controller = new AbortController();
+  let reason: 'CANCELLED' | 'TIMEOUT' | null = null;
+  const onAbort = (): void => {
+    reason ??= 'CANCELLED';
+    controller.abort();
+  };
+  signal?.addEventListener('abort', onAbort);
+  const timer =
+    timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => {
+          reason ??= 'TIMEOUT';
+          controller.abort();
+        }, timeoutMs);
+  if (signal?.aborted) onAbort();
   try {
-    response = await fetch(`${config.apiUrl}${path}`, {
-      method,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-  } catch {
-    throw new ApiRequestError('NETWORK', 0);
+    let response: Response;
+    try {
+      response = await fetch(`${config.apiUrl}${path}`, {
+        method,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: controller.signal,
+      });
+    } catch {
+      throw new ApiRequestError(reason ?? 'NETWORK', 0);
+    }
+    if (response.status === 204) return undefined as T;
+    const json: unknown = await response.json().catch(() => null);
+    // Si se canceló o venció mientras llegaba el cuerpo, gana la cancelación.
+    if (reason) throw new ApiRequestError(reason, 0);
+    if (!response.ok) {
+      const code =
+        typeof json === 'object' && json !== null && 'error' in json
+          ? String((json as { error: { code?: unknown } }).error.code ?? 'INTERNAL')
+          : 'INTERNAL';
+      throw new ApiRequestError(code, response.status);
+    }
+    return json as T;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
   }
-  if (response.status === 204) return undefined as T;
-  const json: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const code =
-      typeof json === 'object' && json !== null && 'error' in json
-        ? String((json as { error: { code?: unknown } }).error.code ?? 'INTERNAL')
-        : 'INTERNAL';
-    throw new ApiRequestError(code, response.status);
-  }
-  return json as T;
 }
 
 export const api = {
@@ -226,8 +270,10 @@ export const api = {
       'GET',
       `/v1/documents/${documentId}/pages/${page}`,
     ),
-  ask: (question: string) => request<ApiAnswer>('POST', '/v1/questions', { question }),
-  external: (question: string) => request<ApiExternal>('POST', '/v1/external', { question }),
+  ask: (question: string, options?: RequestOptions) =>
+    request<ApiAnswer>('POST', '/v1/questions', { question }, options),
+  external: (question: string, options?: RequestOptions) =>
+    request<ApiExternal>('POST', '/v1/external', { question }, options),
   /** Registra la aceptación (idempotente: repetirla con la misma versión no duplica). */
   acceptConsent: (document: LegalDocument, version: string) =>
     request<ApiConsent>('POST', '/v1/consents', { document, version }),

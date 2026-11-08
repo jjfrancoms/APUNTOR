@@ -51,6 +51,7 @@ import {
   type DocRecord,
   type Level,
   type Message,
+  type PendingAnswer,
   type Plan,
   type SessionUser,
   type Settings,
@@ -364,6 +365,7 @@ function startSession(user: User): Promise<void> {
 }
 
 function endSession(): void {
+  abortAllAnswers();
   setState((s) => ({
     ...createInitialState(),
     settings: s.settings,
@@ -1220,26 +1222,121 @@ function courseTitleOf(documentId: string): string {
   return state.courses.find((c) => c.id === doc?.courseId)?.title ?? '';
 }
 
+/** Tiempo máximo de espera de una respuesta del chat (la IA puede tardar). */
+export const CHAT_TIMEOUT_MS = 90_000;
+
+/** Controlador de la petición en curso de cada conversación (no va al estado: no se guarda). */
+const answerControllers = new Map<string, AbortController>();
+
+/** true si la conversación espera una respuesta (se muestra "pensando" y el botón detener). */
+export function isAnswerPending(s: AppState, conversationId: string): boolean {
+  return conversationId in s.pendingAnswers;
+}
+
+function clearPending(conversationId: string): void {
+  if (!(conversationId in state.pendingAnswers)) return;
+  setState((s) => {
+    const { [conversationId]: _done, ...rest } = s.pendingAnswers;
+    return { ...s, pendingAnswers: rest };
+  });
+}
+
+type ChatErrorCode = NonNullable<Message['errorCode']>;
+const CHAT_ERROR_CODES: readonly ChatErrorCode[] = ['TIMEOUT', 'NETWORK', 'RATE_LIMITED'];
+
+/** Aviso de la mascota para un fallo de la petición del chat. */
+function chatFailureMessage(error: unknown): Message {
+  const code = error instanceof ApiRequestError ? error.code : null;
+  if (code === 'CANCELLED') return { id: newId('m'), role: 'mascot', kind: 'cancelled', text: '' };
+  if (code === 'CHAT_DAILY_LIMIT')
+    return { id: newId('m'), role: 'mascot', kind: 'limit', text: '' };
+  const errorCode = CHAT_ERROR_CODES.find((c) => c === code) ?? 'CHAT_FAILED';
+  return { id: newId('m'), role: 'mascot', kind: 'error', errorCode, text: '' };
+}
+
+/**
+ * Corre una petición del chat con su respuesta "en camino": una a la vez por conversación,
+ * cancelable con `cancelAnswer` y con tiempo máximo. Siempre limpia el pendiente al terminar.
+ */
+async function runPending(
+  conversationId: string,
+  question: string,
+  kind: PendingAnswer['kind'],
+  call: (signal: AbortSignal) => Promise<void>,
+): Promise<void> {
+  if (isAnswerPending(state, conversationId) || answerControllers.has(conversationId)) return;
+  const controller = new AbortController();
+  answerControllers.set(conversationId, controller);
+  setState((s) => ({
+    ...s,
+    pendingAnswers: {
+      ...s.pendingAnswers,
+      [conversationId]: { question, startedAt: Date.now(), kind },
+    },
+  }));
+  // Si la sesión terminó mientras tanto, el controlador ya no está y no se agrega nada.
+  const current = (): boolean => answerControllers.get(conversationId) === controller;
+  try {
+    await call(controller.signal);
+  } catch (error) {
+    if (current()) appendMessages(conversationId, [chatFailureMessage(error)]);
+  } finally {
+    if (current()) {
+      answerControllers.delete(conversationId);
+      clearPending(conversationId);
+    }
+  }
+  void refreshUsage();
+}
+
+/** Detiene la respuesta en camino de esa conversación (si no hay ninguna, no hace nada). */
+export function cancelAnswer(conversationId: string): void {
+  answerControllers.get(conversationId)?.abort();
+}
+
+/** Corta todas las peticiones del chat sin dejar avisos (al cerrar sesión o en pruebas). */
+function abortAllAnswers(): void {
+  const controllers = [...answerControllers.values()];
+  answerControllers.clear();
+  controllers.forEach((c) => c.abort());
+}
+
+/** Pregunta corta que parece incompleta o con errores ("loa"): a lo sumo 2 palabras y 12 letras. */
+function looksUnclear(question: string): boolean {
+  const text = question.trim();
+  return text.split(/\s+/).filter(Boolean).length <= 2 && text.length <= 12;
+}
+
 /**
  * Pregunta al servidor: responde solo con fragmentos propios y cada afirmación lleva su
  * página, verificada por el validador. Si no hay respaldo, la mascota lo dice.
  */
 export async function answerQuestion(conversationId: string, question: string): Promise<void> {
+  if (isAnswerPending(state, conversationId)) return;
   if (!state.settings.useDocs) {
     appendMessages(conversationId, [
       { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
     ]);
     return;
   }
-  try {
-    const answer = await api.ask(question);
+  await runPending(conversationId, question, 'notes', async (signal) => {
+    const answer = await api.ask(question, { signal, timeoutMs: CHAT_TIMEOUT_MS });
+    if (answerControllers.get(conversationId)?.signal !== signal) return;
     if (answer.status === 'small_talk') {
       appendMessages(conversationId, [
         { id: newId('m'), role: 'mascot', kind: 'smallTalk', smallTalk: answer.kind, text: '' },
       ]);
     } else if (answer.status === 'abstained') {
+      const unclear = answer.reason === 'no_matches' && looksUnclear(question);
       appendMessages(conversationId, [
-        { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
+        {
+          id: newId('m'),
+          role: 'mascot',
+          kind: 'notFound',
+          text: '',
+          ...(answer.reason ? { reason: answer.reason } : {}),
+          ...(unclear ? { unclear } : {}),
+        },
       ]);
     } else {
       const sources = new Map<string, { page: number; klass: number; documentId: string }>();
@@ -1274,13 +1371,7 @@ export async function answerQuestion(conversationId: string, question: string): 
         first ? { course: courseTitleOf(first.documentId) } : {},
       );
     }
-  } catch (error) {
-    const limit = error instanceof ApiRequestError && error.code === 'CHAT_DAILY_LIMIT';
-    appendMessages(conversationId, [
-      { id: newId('m'), role: 'mascot', kind: limit ? 'limit' : 'error', text: '' },
-    ]);
-  }
-  void refreshUsage();
+  });
 }
 
 function hostOf(url: string): string {
@@ -1293,8 +1384,9 @@ function hostOf(url: string): string {
 
 /** "Buscar fuera" (pantalla 30): resultados de internet aparte, cada uno con su fuente. */
 export async function searchOutside(conversationId: string, question: string): Promise<void> {
-  try {
-    const { results } = await api.external(question);
+  await runPending(conversationId, question, 'external', async (signal) => {
+    const { results } = await api.external(question, { signal, timeoutMs: CHAT_TIMEOUT_MS });
+    if (answerControllers.get(conversationId)?.signal !== signal) return;
     const messages: Message[] =
       results.length === 0
         ? [{ id: newId('m'), role: 'mascot', kind: 'external', text: '' }]
@@ -1306,13 +1398,58 @@ export async function searchOutside(conversationId: string, question: string): P
             external: { title: r.title, host: hostOf(r.url), url: r.url },
           }));
     appendMessages(conversationId, messages);
-  } catch (error) {
-    const limit = error instanceof ApiRequestError && error.code === 'CHAT_DAILY_LIMIT';
-    appendMessages(conversationId, [
-      { id: newId('m'), role: 'mascot', kind: limit ? 'limit' : 'error', text: '' },
-    ]);
+  });
+}
+
+function lastUserIndex(conv: Conversation): number {
+  for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
+    if (conv.messages[i]?.role === 'user') return i;
   }
-  void refreshUsage();
+  return -1;
+}
+
+function replaceMessages(conversationId: string, messages: Message[]): void {
+  setState((s) => ({
+    ...s,
+    conversations: s.conversations.map((c) =>
+      c.id === conversationId ? { ...c, messages, updatedAt: Date.now() } : c,
+    ),
+  }));
+}
+
+/**
+ * Vuelve a preguntar lo último tras un fallo o una cancelación, sin repetir la burbuja de la
+ * persona: quita los avisos de error/cancelación que siguen a su última pregunta. El límite
+ * diario lo revisa el servidor.
+ */
+export function retryLastQuestion(conversationId: string): void {
+  if (isAnswerPending(state, conversationId)) return;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (!conv) return;
+  const index = lastUserIndex(conv);
+  const last = conv.messages[index];
+  if (!last) return;
+  const kept = conv.messages.filter(
+    (m, i) =>
+      i <= index || !(m.role === 'mascot' && (m.kind === 'error' || m.kind === 'cancelled')),
+  );
+  if (kept.length !== conv.messages.length) replaceMessages(conversationId, kept);
+  void answerQuestion(conversationId, last.text);
+}
+
+/**
+ * Quita la última pregunta y todo lo que vino después, y devuelve su texto para volver a
+ * escribirla. null si hay una respuesta en camino o no hay preguntas.
+ */
+export function editLastQuestion(conversationId: string): string | null {
+  if (isAnswerPending(state, conversationId)) return null;
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (!conv) return null;
+  const index = lastUserIndex(conv);
+  const last = conv.messages[index];
+  if (!last) return null;
+  replaceMessages(conversationId, conv.messages.slice(0, index));
+  return last.text;
 }
 
 // --- Estudio (fase 3: quizzes y tarjetas generados desde tus documentos) ------------
@@ -1522,6 +1659,7 @@ export function topicDetail(s: AppState, topicId: string): TopicDetail | null {
 
 /** Para pruebas: vuelve al estado inicial. */
 export function resetForTests(): void {
+  abortAllAnswers();
   state = createInitialState();
   codeExchanges.clear();
   pickedFiles.clear();

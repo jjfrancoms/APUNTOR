@@ -849,6 +849,43 @@ describe('preguntas', () => {
     expect(response.body).not.toContain('secreto');
   });
 
+  it('sin respuesta dice el motivo', async () => {
+    const { app } = await createWorld({
+      answer: {
+        embedder: fakeEmbedder,
+        search: () => Promise.resolve([]),
+        generator: fakeGenerator(VALID_ANSWER),
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload,
+    });
+    expect(response.json()).toMatchObject({ status: 'abstained', reason: 'no_matches' });
+  });
+
+  it('la IA saturada responde RATE_LIMITED para reintentar luego', async () => {
+    const { app } = await createWorld({
+      answer: {
+        embedder: fakeEmbedder,
+        search: () => Promise.resolve([CHUNK]),
+        generator: {
+          generateJson: () =>
+            Promise.reject(new Error('{"error":{"code":503,"status":"UNAVAILABLE"}}')),
+        },
+      },
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/questions',
+      headers: AUTH,
+      payload,
+    });
+    expect(errorCode(response)).toBe('RATE_LIMITED');
+  });
+
   it('rechaza una pregunta vacía', async () => {
     const { app } = await createWorld();
     const response = await app.inject({

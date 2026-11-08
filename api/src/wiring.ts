@@ -7,6 +7,7 @@ import {
   VertexEmbeddingProvider,
   VertexGenerator,
 } from './llm/vertex';
+import { resolveModels } from './llm/models';
 import { REQUEST_AI_RETRY, withRetries, type RetryPolicy } from './llm/retry';
 import { createChunkSearch } from './rag/retriever';
 import { R2FileStorage } from './storage/file-storage';
@@ -24,11 +25,19 @@ export function createInfrastructure(
     createGenAiModels(chooseGenAiBackend(env)),
     options.aiRetry ?? REQUEST_AI_RETRY,
   );
+  const modelChoice = resolveModels(env);
   return {
     db,
     models,
+    modelChoice,
     embedder: new VertexEmbeddingProvider(models, EMBEDDING_DIMENSIONS),
-    generator: new VertexGenerator(models, env.GENERATION_MODEL),
+    /** Chat con el modelo rápido. */
+    generator: new VertexGenerator(models, modelChoice.chat),
+    /** Segundo intento del chat con el modelo fuerte (solo si es otro modelo). */
+    fallbackGenerator:
+      modelChoice.strong === modelChoice.chat
+        ? undefined
+        : new VertexGenerator(models, modelChoice.strong),
     search: createChunkSearch(db),
     storage: new R2FileStorage(
       env.R2_ACCOUNT_ID,

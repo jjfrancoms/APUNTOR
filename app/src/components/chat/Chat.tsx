@@ -65,13 +65,19 @@ export function Composer({
   value,
   onChangeText,
   onSend,
+  onStop,
+  hint,
 }: {
   placeholder: string;
+  /** Hay una respuesta en curso: el botón de enviar pasa a ser "Detener" (llama a `onStop`). */
   busy?: boolean;
   disabled?: boolean;
   value?: string;
   onChangeText?: (v: string) => void;
   onSend?: () => void;
+  onStop?: () => void;
+  /** Aviso pequeño sobre el campo (p. ej. que el borrador se enviará al terminar). */
+  hint?: string | null;
 }) {
   const s = useStrings();
   const { c } = useTheme();
@@ -95,6 +101,8 @@ export function Composer({
     setKeyboardHint(true);
     input.current?.focus();
   };
+  // Mientras responde se puede seguir escribiendo; solo no se envía (Enter conserva el borrador).
+  const stopEnabled = busy && !disabled && onStop !== undefined;
   const notice = dictation.listening
     ? s.chat.micListening
     : dictation.error === 'denied'
@@ -119,6 +127,11 @@ export function Composer({
           {notice}
         </Text>
       ) : null}
+      {hint && !notice ? (
+        <Text variant="caption" color="textMuted" accessibilityLiveRegion="polite">
+          {hint}
+        </Text>
+      ) : null}
       <View style={styles.composer}>
         <View
           style={[
@@ -131,10 +144,14 @@ export function Composer({
             accessibilityLabel={placeholder}
             placeholder={placeholder}
             placeholderTextColor={c.textMuted}
-            editable={!busy && !disabled}
+            editable={!disabled}
             value={value}
             onChangeText={onChangeText}
-            onSubmitEditing={() => canSend && onSend?.()}
+            onSubmitEditing={() => {
+              if (canSend) onSend?.();
+            }}
+            // Con una respuesta en curso, Enter no envía ni borra lo escrito.
+            submitBehavior={busy ? 'submit' : 'blurAndSubmit'}
             returnKeyType="send"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -144,8 +161,8 @@ export function Composer({
             <Tap
               accessibilityRole="button"
               accessibilityLabel={dictation.listening ? s.chat.micStop : s.chat.mic}
-              accessibilityState={{ selected: dictation.listening, disabled: busy || disabled }}
-              disabled={busy || disabled}
+              accessibilityState={{ selected: dictation.listening, disabled }}
+              disabled={disabled}
               onPress={onMic}
               hitSlop={8}
               style={[styles.mic, dictation.listening && { backgroundColor: c.primarySoft }]}
@@ -161,14 +178,14 @@ export function Composer({
         <Tap
           accessibilityRole="button"
           accessibilityLabel={busy ? s.chat.stop : s.chat.send}
-          accessibilityState={{ disabled: !canSend && !busy }}
-          disabled={!canSend && !busy}
-          onPress={onSend}
+          accessibilityState={{ disabled: busy ? !stopEnabled : !canSend }}
+          disabled={busy ? !stopEnabled : !canSend}
+          onPress={busy ? onStop : onSend}
           style={[
             styles.send,
             {
               backgroundColor: busy ? c.textMuted : c.primary,
-              opacity: disabled || (!canSend && !busy) ? 0.5 : 1,
+              opacity: (busy ? !stopEnabled : !canSend) ? 0.5 : 1,
             },
           ]}
         >

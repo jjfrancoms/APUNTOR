@@ -627,25 +627,38 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // --- Preguntas -------------------------------------------------------------------
 
-  app.post('/v1/questions', strictLimit, async (request) => {
+  app.post('/v1/questions', strictLimit, async (request, reply) => {
     const userId = await requireUser(request);
     const body = parse(questionBody, request.body);
+    // Si el estudiante detiene la pregunta (cierra la conexión), se corta la IA y la pregunta
+    // no se descuenta del límite diario.
+    const stop = new AbortController();
+    const onClose = (): void => {
+      if (!reply.sent) stop.abort();
+    };
+    request.raw.on('close', onClose);
     try {
       const result = await answerQuestion(
         { ...deps.answer, quota: deps.quota },
         {
           userId,
           question: body.question,
+          signal: stop.signal,
           ...(body.documentIds === undefined ? {} : { documentIds: body.documentIds }),
         },
       );
       if (result.status === 'answered') return { status: result.status, claims: result.claims };
       if (result.status === 'small_talk') return { status: result.status, kind: result.kind };
-      return { status: result.status, message: result.message };
+      // El motivo deja a la app explicar por qué no hubo respuesta.
+      return { status: result.status, message: result.message, reason: result.reason };
     } catch (error) {
       if (error instanceof ApiError) throw error;
+      if (stop.signal.aborted) throw new ApiError('CHAT_CANCELLED', 499);
+      if (isTransientAiError(error)) throw new ApiError('RATE_LIMITED', 429);
       request.log.error(error);
       throw new ApiError('CHAT_FAILED', 502);
+    } finally {
+      request.raw.off('close', onClose);
     }
   });
 

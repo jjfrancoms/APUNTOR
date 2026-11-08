@@ -8,6 +8,7 @@ import { EMBEDDING_DIMENSIONS } from '../../../db/schema';
 import { buildTopicTree, flattenTopicTree } from '../topics/topic-tree';
 import type { EmbeddedChunk, IngestionRepository } from './document-repository';
 import { storePageArtifacts, type PageRenderer } from './page-artifacts';
+import type { SummaryPregenerator } from './topic-summaries';
 import {
   chunkPages,
   DEFAULT_CHUNKING_OPTIONS,
@@ -40,6 +41,11 @@ export interface IngestionDeps {
   embeddingBatchSize?: number;
   /** Dibuja las páginas (PDF) para mostrarlas tal cual en el contenido de un tema. */
   pageRenderer?: PageRenderer;
+  /**
+   * Resúmenes de los temas generados tras marcar `completed` (el estudiante ya puede usar el
+   * documento). Sus fallos nunca cambian el estado del documento ni el resultado del trabajo.
+   */
+  summaries?: SummaryPregenerator;
 }
 
 export class DocumentNotFoundError extends Error {
@@ -126,6 +132,8 @@ export async function processDocument(
     return { documentId, totalPages: 0, chunkCount: 0, topicCount: 0, skipped: true };
   }
 
+  let result: IngestionJobResult;
+  let completedChunks: TextChunk[];
   try {
     await repository.markProcessing(documentId);
     await onProgress({ stage: 'parsing', processedChunks: 0, totalChunks: 0 });
@@ -178,17 +186,54 @@ export async function processDocument(
 
     await repository.markCompleted(documentId, parsed.totalPages);
     await onProgress({ stage: 'done', processedChunks: processed, totalChunks: chunks.length });
-    return {
+    result = {
       documentId,
       totalPages: parsed.totalPages,
       chunkCount: chunks.length,
       topicCount: topicRows.length,
       skipped: false,
     };
+    completedChunks = chunks;
   } catch (error) {
     if (markFailedOnError || error instanceof PermanentIngestionError) {
       await repository.markFailed(documentId, toErrorMessage(error));
     }
     throw error;
+  }
+
+  // Ya está `completed`: lo que sigue no puede marcarlo como fallido.
+  if (deps.summaries && result.topicCount > 0) {
+    await pregenerateSummaries(deps.summaries, repository, document, completedChunks);
+  }
+  return result;
+}
+
+async function pregenerateSummaries(
+  summaries: SummaryPregenerator,
+  repository: IngestionRepository,
+  document: { id: string; filePath: string },
+  chunks: readonly TextChunk[],
+): Promise<void> {
+  try {
+    const topics = await repository.listTopics(document.id);
+    const outcome = await summaries.generate({
+      documentId: document.id,
+      filePath: document.filePath,
+      topics,
+      chunks: chunks.map((c) => ({
+        pageNumber: c.pageNumber,
+        chunkIndex: c.chunkIndex,
+        content: c.content,
+        sectionPath: c.sectionPath,
+        charStart: c.charStart,
+        charEnd: c.charEnd,
+      })),
+    });
+    console.info(
+      `[resúmenes] ${document.id}: ${outcome.generated} listos, ${outcome.failed} fallidos, ` +
+        `${outcome.skipped} pendientes`,
+    );
+  } catch {
+    console.warn(`[resúmenes] ${document.id}: no se pudieron generar los resúmenes`);
   }
 }

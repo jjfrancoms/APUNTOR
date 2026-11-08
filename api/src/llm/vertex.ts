@@ -24,7 +24,13 @@ export interface LlmResult {
 }
 
 export interface JsonGenerator {
-  generateJson(request: { system: string; user: string; schema: object }): Promise<LlmResult>;
+  generateJson(request: {
+    system: string;
+    user: string;
+    schema: object;
+    /** Corta la llamada si el estudiante detuvo la pregunta. */
+    signal?: AbortSignal;
+  }): Promise<LlmResult>;
 }
 
 export interface OcrProvider {
@@ -50,6 +56,8 @@ export interface GenAiModels {
       maxOutputTokens?: number;
       /** Tokens de razonamiento previo: poco basta para resumir y responde mucho antes. */
       thinkingConfig?: { thinkingBudget?: number };
+      /** Corta la llamada (el estudiante detuvo la pregunta). */
+      abortSignal?: AbortSignal;
     };
   }): Promise<{
     text?: string;
@@ -140,6 +148,7 @@ export class VertexGenerator implements JsonGenerator {
     system: string;
     user: string;
     schema: object;
+    signal?: AbortSignal;
   }): Promise<LlmResult> {
     const response = await this.models.generateContent({
       model: this.model,
@@ -149,6 +158,7 @@ export class VertexGenerator implements JsonGenerator {
         temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: request.schema,
+        ...(request.signal ? { abortSignal: request.signal } : {}),
       },
     });
     return {

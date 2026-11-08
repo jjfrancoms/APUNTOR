@@ -116,7 +116,22 @@ export interface Message {
   id: string;
   role: 'user' | 'mascot';
   text: string;
-  kind: 'text' | 'answer' | 'notFound' | 'external' | 'error' | 'limit' | 'smallTalk';
+  kind:
+    | 'text'
+    | 'answer'
+    | 'notFound'
+    | 'external'
+    | 'error'
+    | 'limit'
+    | 'smallTalk'
+    /** La persona detuvo la respuesta (no se cobra la pregunta). */
+    | 'cancelled';
+  /** Para `notFound`: por qué no hubo respuesta con los apuntes (si el servidor lo dijo). */
+  reason?: 'empty_question' | 'no_matches' | 'validation_failed';
+  /** Para `notFound`: la pregunta parece incompleta o con errores (p. ej. "loa"). */
+  unclear?: boolean;
+  /** Para `error`: qué falló, para mostrar el aviso adecuado. */
+  errorCode?: 'TIMEOUT' | 'NETWORK' | 'RATE_LIMITED' | 'CHAT_FAILED';
   /** Para `smallTalk`: qué cortesía responder (el texto sale de los textos de la app). */
   smallTalk?: 'greeting' | 'thanks' | 'identity' | 'farewell';
   sources?: { page: number; klass: number; documentId: string }[];
@@ -148,6 +163,13 @@ export interface Usage {
   storageLimit: number;
 }
 
+/** Respuesta en camino para una conversación (una pregunta a la vez). */
+export interface PendingAnswer {
+  question: string;
+  startedAt: number;
+  kind: 'notes' | 'external';
+}
+
 export interface AppState {
   version: 3;
   session: SessionUser | null;
@@ -163,6 +185,11 @@ export interface AppState {
   chunks: Chunk[];
   uploads: UploadJob[];
   conversations: Conversation[];
+  /**
+   * Respuestas en camino por id de conversación. Solo en memoria: nunca se guarda en el
+   * dispositivo (al reabrir la app no queda ninguna petición viva).
+   */
+  pendingAnswers: Record<string, PendingAnswer>;
   usage: Usage;
   /** Estado de la última carga desde el servidor. */
   sync: { loading: boolean; error: ErrorCode | null };
@@ -233,6 +260,7 @@ export function createInitialState(): AppState {
     chunks: [],
     uploads: [],
     conversations: [],
+    pendingAnswers: {},
     usage: DEFAULT_USAGE,
     sync: { loading: false, error: null },
     consent: 'unknown',

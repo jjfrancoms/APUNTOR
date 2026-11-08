@@ -16,6 +16,7 @@ export type ApiErrorCode =
   | 'UP_NETWORK'
   | 'CHAT_DAILY_LIMIT'
   | 'CHAT_FAILED'
+  | 'CHAT_CANCELLED'
   /** Demasiadas peticiones en poco tiempo: reintentar en unos segundos (cabecera Retry-After). */
   | 'RATE_LIMITED'
   /** Con sesión, pero sin permiso: rutas /v1/admin/* para quien no está en ADMIN_EMAILS. */
