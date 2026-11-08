@@ -189,6 +189,8 @@ app/                      # app Expo/React Native (Expo Router, SDK 58), paquete
 └── src/data/mock.ts      # contenido estático de ejemplo para las pantallas
 ```
 
+**Agentes:** antes de lanzar agentes, sigue `docs/agentes/orquestacion.md`: cada uno con su perfil de `.claude/agents/` según la dificultad y como máximo 2 a la vez.
+
 ## Comandos clave
 
 | Comando               | Qué hace                                         |

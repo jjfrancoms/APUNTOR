@@ -28,3 +28,6 @@ yarn-error.log*
 
 # Python
 __pycache__/
+
+# Copias de trabajo de los agentes
+.claude/worktrees/
