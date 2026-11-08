@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
 import { createAccountExportRepository } from './account-export';
 import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
+import { createSearchRepository } from './search';
 import { createTopicSummarizer } from './topic-summary';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
     consents: createConsentsRepository(db),
     waitlist: createWaitlistRepository(db),
     accountExport: createAccountExportRepository(db),
+    contentSearch: createSearchRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),

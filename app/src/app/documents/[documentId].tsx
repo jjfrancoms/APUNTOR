@@ -79,7 +79,12 @@ export default function DocumentDetail() {
           }
         />
       }
-      footer={<Button label={s.document.ask} onPress={() => router.push('/conversation')} />}
+      footer={
+        <Button
+          label={s.document.ask}
+          onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
+        />
+      }
     >
       <View>
         <Text variant="title" accessibilityRole="header">
@@ -150,7 +155,10 @@ export default function DocumentDetail() {
             setSheet(null);
             router.push({
               pathname: '/conversation',
-              params: { q: s.document.summaryPrompt(record.name.replace(/\.[^.]+$/u, '')) },
+              params: {
+                q: s.document.summaryPrompt(record.name.replace(/\.[^.]+$/u, '')),
+                docs: record.id,
+              },
             });
           }}
         />

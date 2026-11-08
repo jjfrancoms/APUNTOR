@@ -82,6 +82,14 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   };
   const app = await buildApp({
     authenticate: (token) => Promise.resolve(SESSIONS[token] ?? null),
+    contentSearch: {
+      search: (userId, query) =>
+        Promise.resolve({
+          documents: [{ id: userId, title: query }],
+          topics: [],
+          snippets: [],
+        }),
+    },
     documents: {
       create(input) {
         docs.set(input.id, {
@@ -878,6 +886,39 @@ describe('cuenta', () => {
     expect([...world.courses.values()].map((c) => c.title)).toEqual(['Ajeno']);
     expect(world.deletedUsers).toEqual([USER]);
     expect(world.consents.map((c) => c.userId)).toEqual([OTHER]);
+  });
+});
+
+describe('búsqueda en los apuntes', () => {
+  it('pide sesión y busca solo con el usuario de la sesión', async () => {
+    const { app } = await createWorld();
+    const anonymous = await app.inject({ method: 'GET', url: '/v1/search?q=limites' });
+    expect(anonymous.statusCode).toBe(401);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/search?q=${encodeURIComponent('  límites ')}`,
+      headers: AUTH,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      documents: [{ id: USER, title: 'límites' }],
+      topics: [],
+      snippets: [],
+    });
+  });
+
+  it('valida el largo de la consulta', async () => {
+    const { app } = await createWorld();
+    for (const query of ['', '?q=', '?q=a', `?q=${'a'.repeat(201)}`, '?q=%20a%20']) {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/search${query}`,
+        headers: AUTH,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: 'REQ_INVALID' } });
+    }
   });
 });
 

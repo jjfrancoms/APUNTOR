@@ -1252,12 +1252,19 @@ export function uploadSummary(s: AppState): {
 
 // --- Chat --------------------------------------------------------------------------
 
-export function startConversation(): string {
+export function startConversation(scopeDocIds: readonly string[] = []): string {
   const id = newId('conv');
   setState((s) => ({
     ...s,
     conversations: [
-      { id, title: '', course: '', updatedAt: Date.now(), messages: [] },
+      {
+        id,
+        title: '',
+        course: '',
+        updatedAt: Date.now(),
+        messages: [],
+        ...(scopeDocIds.length > 0 ? { scopeDocIds: [...scopeDocIds] } : {}),
+      },
       ...s.conversations,
     ],
   }));
@@ -1394,7 +1401,14 @@ function looksUnclear(question: string): boolean {
  * Pregunta al servidor: responde solo con fragmentos propios y cada afirmación lleva su
  * página, verificada por el validador. Si no hay respaldo, la mascota lo dice.
  */
-export async function answerQuestion(conversationId: string, question: string): Promise<void> {
+export async function answerQuestion(
+  conversationId: string,
+  question: string,
+  scope?: readonly string[],
+): Promise<void> {
+  // Sin alcance explícito se usa el guardado en la conversación (así reintentar lo conserva).
+  const documentIds =
+    scope ?? state.conversations.find((c) => c.id === conversationId)?.scopeDocIds ?? [];
   if (isAnswerPending(state, conversationId)) return;
   if (!state.settings.useDocs) {
     appendMessages(conversationId, [
@@ -1403,7 +1417,11 @@ export async function answerQuestion(conversationId: string, question: string): 
     return;
   }
   await runPending(conversationId, question, 'notes', async (signal) => {
-    const answer = await api.ask(question, { signal, timeoutMs: CHAT_TIMEOUT_MS });
+    const answer = await api.ask(question, {
+      signal,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      ...(documentIds.length > 0 ? { documentIds } : {}),
+    });
     if (answerControllers.get(conversationId)?.signal !== signal) return;
     if (answer.status === 'small_talk') {
       appendMessages(conversationId, [
@@ -1482,6 +1500,18 @@ export async function searchOutside(conversationId: string, question: string): P
           }));
     appendMessages(conversationId, messages);
   });
+}
+
+/** Quita el alcance de la conversación: las siguientes preguntas usan todos los apuntes. */
+export function widenConversationScope(conversationId: string): void {
+  setState((s) => ({
+    ...s,
+    conversations: s.conversations.map((c) => {
+      if (c.id !== conversationId || !c.scopeDocIds) return c;
+      const { scopeDocIds: _quitado, ...rest } = c;
+      return rest;
+    }),
+  }));
 }
 
 function lastUserIndex(conv: Conversation): number {

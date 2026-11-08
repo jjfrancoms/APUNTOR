@@ -367,6 +367,24 @@ describe('chat', () => {
     expect(store.getState().conversations[0]?.course).toBe('Cálculo I');
   });
 
+  it('el alcance viaja al servidor, se conserva al reintentar y se puede ampliar', async () => {
+    await signedIn();
+    api.ask.mockResolvedValue({ status: 'small_talk', kind: 'greeting' });
+    const id = store.startConversation(['d1']);
+    expect(store.getState().conversations[0]?.scopeDocIds).toEqual(['d1']);
+    store.askQuestion(id, 'Hola');
+    await store.answerQuestion(id, 'Hola');
+    expect(api.ask.mock.calls.at(-1)?.[1]).toMatchObject({ documentIds: ['d1'] });
+    store.retryLastQuestion(id);
+    await vi.waitFor(() => expect(api.ask.mock.calls.length).toBeGreaterThan(1));
+    expect(api.ask.mock.calls.at(-1)?.[1]).toMatchObject({ documentIds: ['d1'] });
+    await vi.waitFor(() => expect(store.getState().pendingAnswers[id]).toBeUndefined());
+    store.widenConversationScope(id);
+    expect(store.getState().conversations[0]?.scopeDocIds).toBeUndefined();
+    await store.answerQuestion(id, 'Hola otra vez');
+    expect(api.ask.mock.calls.at(-1)?.[1]).not.toHaveProperty('documentIds');
+  });
+
   it('un saludo se responde con un texto de la app', async () => {
     await signedIn();
     api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'greeting' });
