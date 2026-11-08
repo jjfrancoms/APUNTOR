@@ -1,102 +1,178 @@
-import { previewOnly } from '@/components/domain/PreviewOnly';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { pickFiles } from '@/lib/pick-files';
-import { enqueueUploads } from '@/store/store';
-import { Linking, StyleSheet, View } from 'react-native';
-import { Chip, EmptyState, Icon, IconButton, Screen, Text, TopBar } from '@/components/ui';
-import { scanReading } from '@/data/mock';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { AppState, Image, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Banner, Chip, EmptyState, Icon, IconButton, Screen, Text, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { MAX_SCAN_PAGES } from '@/lib/scan';
+import {
+  cameraAllowed,
+  pickPhotos,
+  recoverPendingPhotos,
+  takePhoto,
+  type ScanCapture,
+} from '@/lib/scan-picker';
+import {
+  addScanPages,
+  clearScan,
+  getScanSession,
+  setCameraDenied,
+  useScanSession,
+} from '@/lib/scan-session';
 import { palettes, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
-/** Pantalla 28 · Escanear apunte. Visor simulado: la cámara real llega con expo-camera. */
-function Scan() {
+/**
+ * Pantalla 28 · Escanear apunte (con 47, cámara denegada). La foto se toma con la cámara del
+ * sistema; el visor muestra cómo encuadrar la hoja y, después, la última foto.
+ */
+export default function Scan() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
-  const [flash, setFlash] = useState(false);
-  const [pages, setPages] = useState(1);
-  const fromGallery = () =>
-    void pickFiles().then((files) => {
-      if (files.length === 0) return;
-      enqueueUploads(files);
-      router.replace('/upload/progress');
+  const { pages, cameraDenied } = useScanSession();
+  const [notice, setNotice] = useState<'failed' | 'limit' | null>(null);
+  const denied = demo === 'denied' || cameraDenied;
+  const room = MAX_SCAN_PAGES - pages.length;
+  const last = pages.at(-1);
+
+  useEffect(() => {
+    void recoverPendingPhotos().then(addScanPages);
+    // Las fotos solo viven mientras se escanea: al salir no quedan en memoria.
+    return clearScan;
+  }, []);
+
+  // Al volver de Ajustes con el permiso concedido, se recupera el visor.
+  useEffect(() => {
+    if (!cameraDenied) return undefined;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void cameraAllowed().then((allowed) => allowed && setCameraDenied(false));
     });
+    return () => sub.remove();
+  }, [cameraDenied]);
+
+  const apply = (result: ScanCapture) => {
+    if (result.status === 'canceled') return;
+    if (result.status === 'denied') {
+      setCameraDenied(true);
+      return;
+    }
+    if (result.status === 'failed') {
+      setNotice('failed');
+      return;
+    }
+    setCameraDenied(false);
+    const added = addScanPages(result.pages);
+    setNotice(added < result.pages.length ? 'limit' : null);
+  };
+
+  const shoot = () => {
+    if (getScanSession().pages.length >= MAX_SCAN_PAGES) {
+      setNotice('limit');
+      return;
+    }
+    void takePhoto().then(apply);
+  };
+  const fromGallery = () => {
+    const free = MAX_SCAN_PAGES - getScanSession().pages.length;
+    if (free <= 0) {
+      setNotice('limit');
+      return;
+    }
+    void pickPhotos(free).then(apply);
+  };
+
   // Pantalla 47 · Cámara denegada.
-  if (demo === 'denied') {
+  if (denied) {
     return (
-      <Screen>
-        <Text variant="display" accessibilityRole="header">
-          {s.scanner.header}
-        </Text>
+      <Screen header={<TopBar icon="x" title={s.scanner.header} />}>
         <EmptyState
           mood="worried"
           title={s.empty.cameraTitle}
-          body={s.empty.cameraBody}
-          primary={{ label: s.empty.openSettings, onPress: () => void Linking.openSettings() }}
-          secondary={{
-            label: s.empty.pickGallery,
-            onPress: fromGallery,
-          }}
+          body={s.scanner.deniedBody}
+          // En web no hay ajustes del teléfono que abrir.
+          {...(Platform.OS === 'web'
+            ? {}
+            : {
+                primary: {
+                  label: s.empty.openSettings,
+                  onPress: () => void Linking.openSettings(),
+                },
+              })}
+          secondary={{ label: s.empty.pickGallery, onPress: fromGallery }}
         />
       </Screen>
     );
   }
+
   return (
     <Screen
       header={
         <TopBar
           icon="x"
           title={s.scanner.header}
-          subtitle={s.scanner.page(pages)}
+          subtitle={s.scanner.page(Math.min(pages.length + 1, MAX_SCAN_PAGES))}
           right={
-            <Tap
-              accessibilityRole="button"
-              accessibilityLabel={s.scanner.done}
-              onPress={() => router.push('/upload/scan-review')}
-              hitSlop={10}
-            >
-              <Chip label={s.scanner.done} tone="primary" />
-            </Tap>
+            pages.length > 0 ? (
+              <Tap
+                accessibilityRole="button"
+                accessibilityLabel={s.scanner.done}
+                onPress={() => router.push('/upload/scan-review')}
+                hitSlop={10}
+              >
+                <Chip label={s.scanner.done} tone="primary" />
+              </Tap>
+            ) : undefined
           }
         />
       }
     >
-      <View style={styles.viewfinder} accessibilityLabel={s.scanner.frame}>
-        <View style={[styles.frameTag, { backgroundColor: c.surface }]}>
-          <Icon name="camera" size={12} />
-          <Text variant="caption">{s.scanner.frame}</Text>
+      {notice === 'failed' ? <Banner tone="danger" title={s.scanner.failed} /> : null}
+      {notice === 'limit' ? (
+        <Banner tone="warning" title={s.scanner.limit(MAX_SCAN_PAGES)} />
+      ) : null}
+      {last ? (
+        <Image
+          source={{ uri: last.uri }}
+          accessibilityLabel={s.scanner.lastPhoto}
+          resizeMode="contain"
+          style={styles.viewfinder}
+        />
+      ) : (
+        <View style={styles.viewfinder} accessibilityLabel={s.scanner.frame}>
+          <View style={[styles.frameTag, { backgroundColor: c.surface }]}>
+            <Icon name="camera" size={12} />
+            <Text variant="caption">{s.scanner.frame}</Text>
+          </View>
+          <View style={styles.sheet}>
+            {[0.8, 0.6, 0.7, 0.5, 0.75, 0.55].map((w, i) => (
+              <View key={i} style={[styles.line, { width: `${w * 100}%` }]} />
+            ))}
+          </View>
         </View>
-        <View style={styles.sheet}>
-          {[0.8, 0.6, 0.7, 0.5, 0.75, 0.55].map((w, i) => (
-            <View key={i} style={[styles.line, { width: `${w * 100}%` }]} />
-          ))}
-        </View>
-      </View>
+      )}
       <View style={styles.controls}>
         <IconButton icon="image" label={s.scanner.gallery} onPress={fromGallery} />
         <Tap
           accessibilityRole="button"
           accessibilityLabel={s.scanner.shutter}
-          onPress={() => setPages((n) => n + 1)}
-          style={[styles.shutter, { borderColor: c.primary }]}
+          accessibilityState={{ disabled: room <= 0 }}
+          onPress={shoot}
+          style={[styles.shutter, { borderColor: c.primary, opacity: room <= 0 ? 0.5 : 1 }]}
         >
           <View style={[styles.shutterInner, { backgroundColor: c.primary }]} />
         </Tap>
-        <IconButton
-          icon={flash ? 'zap' : 'zap-off'}
-          label={flash ? s.sheets.flashOn : s.sheets.flashOff}
-          onPress={() => setFlash(!flash)}
-        />
+        {/* Ocupa el lugar del tercer control para que el disparador quede centrado. */}
+        <View style={styles.balance} />
       </View>
       <Text variant="caption" color="textMuted" align="center">
         {s.scanner.hint}
       </Text>
-      <View style={styles.chips}>
-        <Chip label={s.scanner.pages(pages)} tone="primary" icon="file-text" />
-        <Chip label={s.scanner.language} icon="globe" />
-      </View>
+      {pages.length > 0 ? (
+        <View style={styles.chips}>
+          <Chip label={s.scanner.pages(pages.length)} tone="primary" icon="file-text" />
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -107,6 +183,7 @@ const styles = StyleSheet.create({
     backgroundColor: palettes.dark.surface,
     borderRadius: radius.lg,
     aspectRatio: 0.82,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: space.xl,
@@ -141,8 +218,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   shutterInner: { width: 54, height: 54, borderRadius: 27 },
+  balance: { width: 44, height: 44 },
   chips: { flexDirection: 'row', justifyContent: 'center', gap: space.sm },
 });
-
-// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
-export default previewOnly(Scan);

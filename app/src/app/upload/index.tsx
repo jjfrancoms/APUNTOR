@@ -13,7 +13,6 @@ import {
   TopBar,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { PREVIEW } from '@/lib/config';
 import { pickFiles } from '@/lib/pick-files';
 import { extLabel } from '@/lib/upload-rules';
 import { failureTitle, jobTone } from '@/lib/upload-view';
@@ -53,15 +52,12 @@ export default function Upload() {
       header={<TopBar title={s.upload.header} />}
       footer={
         <>
-          {/* El escáner llega en otra fase; las fotos ya se suben desde el selector. */}
-          {PREVIEW ? (
-            <Button
-              label={s.upload.scan}
-              variant="secondary"
-              icon="camera"
-              onPress={() => router.push('/upload/scan')}
-            />
-          ) : null}
+          <Button
+            label={s.upload.scan}
+            variant="secondary"
+            icon="camera"
+            onPress={() => router.push('/upload/scan')}
+          />
           <Button
             label={s.upload.confirm}
             disabled={jobs.length === 0}
