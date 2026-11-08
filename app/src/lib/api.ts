@@ -47,10 +47,10 @@ export interface ApiCourse {
 /** Bloque del resumen de un tema (la estructura del original: tablas, fórmulas, figuras). */
 export type ApiSummaryBlock =
   | { type: 'heading'; text: string }
-  | { type: 'paragraph'; text: string; pages: number[] }
-  | { type: 'list'; items: string[]; pages: number[] }
+  | { type: 'paragraph'; text: string; pages: number[]; unverified?: boolean }
+  | { type: 'list'; items: string[]; pages: number[]; unverified?: boolean }
   | { type: 'table'; header: string[]; rows: string[][]; pages: number[] }
-  | { type: 'formula'; text: string; pages: number[] }
+  | { type: 'formula'; text: string; pages: number[]; unverified?: boolean }
   | { type: 'figure'; page: number; caption: string; url: string; width: number; height: number };
 
 export interface ApiTopicSummary {

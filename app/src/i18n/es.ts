@@ -23,6 +23,10 @@ export const es = {
     errorBody: 'Inténtalo de nuevo en un momento.',
     busyTitle: 'Illari está ocupado',
     busyBody: 'Hay muchas peticiones a la IA ahora. Inténtalo en un minuto.',
+    limitTitle: 'Se acabaron los resúmenes nuevos de hoy',
+    limitBody:
+      'Los resúmenes que ya guardaste siguen abriéndose sin límite. La cuota de resúmenes nuevos se renueva a la medianoche.',
+    unverified: 'No verificado con el documento',
     retry: 'Reintentar',
     loading: 'Illari está preparando el resumen…',
     loadingHint: 'La primera vez tarda unos segundos; después queda guardado.',

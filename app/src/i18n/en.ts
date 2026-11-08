@@ -20,6 +20,10 @@ export const en: Strings = {
     errorBody: 'Try again in a moment.',
     busyTitle: 'Illari is busy',
     busyBody: 'There are many AI requests right now. Try again in a minute.',
+    limitTitle: "You've used up today's new summaries",
+    limitBody:
+      'Summaries you already saved still open with no limit. The quota for new summaries renews at midnight.',
+    unverified: 'Not verified against the document',
     retry: 'Try again',
     loading: 'Illari is preparing the summary…',
     loadingHint: 'The first time takes a few seconds; then it is saved.',

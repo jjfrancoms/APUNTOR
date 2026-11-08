@@ -19,7 +19,7 @@ const SNIPPET_CONTEXT_BEFORE = 50;
  * Tabla de plegado (sin acentos ni mayúsculas): la misma en SQL (`translate`) y en JS, y sin
  * depender de la extensión `unaccent`, que no existe en PGlite y no es inmutable. Las marcas
  * combinantes del final no tienen pareja: `translate` las borra. El índice GIN de
- * `db/pending/search.sql` usa exactamente estas dos cadenas: si cambian, hay que recrearlo.
+ * `db/migrations/0015_search_fts_index.sql` usa exactamente estas dos cadenas: si cambian, hay que recrearlo.
  */
 export const FOLD_FROM = 'ÁÀÄÂÃáàäâãÉÈËÊéèëêÍÌÏÎíìïîÓÒÖÔÕóòöôõÚÙÜÛúùüûÑñÇç̀́̂̃̈';
 export const FOLD_TO = 'aaaaaaaaaaeeeeeeeeiiiiiiiioooooooooouuuuuuuunncc';

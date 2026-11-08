@@ -19,8 +19,6 @@ const migrations = readdirSync(join(ROOT, 'migrations'))
   .filter((f) => f.endsWith('.sql'))
   .sort()
   .map((f) => readFileSync(join(ROOT, 'migrations', f), 'utf8'));
-/** La tabla `waitlist` aún no tiene migración generada (ver `db/pending/account.sql`). */
-const hasWaitlistTable = migrations.some((sql) => sql.includes('CREATE TABLE "waitlist"'));
 
 function unit(): string {
   return `[${Array.from({ length: 768 }, (_, i) => (i === 0 ? 1 : 0)).join(',')}]`;
@@ -67,7 +65,7 @@ describe('exportación de la cuenta', () => {
   });
 });
 
-describe.runIf(hasWaitlistTable)('lista de espera', () => {
+describe('lista de espera', () => {
   it('guarda el correo normalizado, es idempotente y se puede borrar', async () => {
     const repository = createWaitlistRepository(db);
     await repository.join({ email: 'Tutor@Example.com', consent: true, source: 'web' });

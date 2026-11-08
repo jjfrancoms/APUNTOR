@@ -101,7 +101,7 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **Cuota y verificación de resúmenes:** generar un resumen desde la API cuesta 1 de la cuota
   diaria `summaries` (30 en el plan gratis; 429 `SUMMARY_DAILY_LIMIT`). Abrir uno guardado es
   gratis, si la generación falla se devuelve y el worker nunca cobra. La restricción
-  `usage_quotas_kind_valid` debe admitir `summaries` antes de desplegar (`db/pending/documents.sql`).
+  `usage_quotas_kind_valid` debe admitir `summaries` antes de desplegar (`0013_thankful_stingray`).
   `verifySummaryBlocks()` (`api/src/summary-grounding.ts`) compara cada párrafo y cada punto de
   lista con las páginas que cita (palabras con contenido) y exige las fórmulas en esas páginas
   sin contar espacios: lo que falla se conserva, sin página y con `unverified: true`.
@@ -290,7 +290,12 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 - Migraciones `0011_admin_audit` y `0012_admin_audit_rls` escritas pero **sin aplicar** en
   Supabase; falta definir `ADMIN_EMAILS` en Railway. El admin necesita el correo confirmado en
   Supabase (se comprueba con la Admin API); mantener activada la confirmación de correo.
-- Lista de espera de menores (44): el correo solo queda en el dispositivo; nadie recibe el aviso.
+- Migraciones `0013_thankful_stingray` (tabla `waitlist` + restricción `usage_quotas_kind_valid`
+  con `summaries`), `0014_waitlist_rls` (RLS de `waitlist`) y `0015_search_fts_index` (índice de
+  texto completo de la búsqueda) escritas pero **sin aplicar** en Supabase. Orden: 0013, 0014,
+  0015, y **antes de desplegar la API** (sin 0013 los resúmenes nuevos y la lista de espera fallan).
+- Lista de espera de menores (44): el correo ya viaja al servidor (`POST /v1/waitlist`) y no se
+  queda en el dispositivo; falta que alguien reciba el aviso cuando haya plan para menores.
 - Cuentas escolares `student_restricted`: las reglas siguen por definir.
 - Animación Rive de 7 estados de la mascota.
 - Los 200 casos reales de `eval/` y la prueba con 20 documentos reales.

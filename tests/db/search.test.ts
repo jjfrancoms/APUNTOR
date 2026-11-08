@@ -155,11 +155,11 @@ describe('búsqueda de contenido (SQL real)', () => {
     expect((await pg.query('SELECT 1 FROM documents')).rows).toHaveLength(4);
   });
 
-  it('el índice pendiente aplica y su expresión es la que usa el repositorio', async () => {
-    const pending = readFileSync(join(ROOT, 'pending', 'search.sql'), 'utf8');
-    expect(pending).toContain(FOLD_FROM);
-    expect(pending).toContain(FOLD_TO);
-    await pg.exec(pending);
+  it('el índice de la migración 0015 aplica y su expresión es la que usa el repositorio', async () => {
+    const indexSql = readFileSync(join(ROOT, 'migrations', '0015_search_fts_index.sql'), 'utf8');
+    expect(indexSql).toContain(FOLD_FROM);
+    expect(indexSql).toContain(FOLD_TO);
+    await pg.exec(indexSql);
     await pg.exec('SET enable_seqscan = off');
     const plan = await pg.query<{ 'QUERY PLAN': string }>(`
       EXPLAIN SELECT 1 FROM document_chunks

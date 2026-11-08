@@ -4,7 +4,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'app/**', 'db/migrations/**', 'coverage/**', '.claude/skills/**'],
+    ignores: [
+      'node_modules/**',
+      'app/**',
+      'db/migrations/**',
+      'coverage/**',
+      '.claude/skills/**',
+      '.claude/worktrees/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
