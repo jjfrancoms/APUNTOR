@@ -24,6 +24,12 @@ export const UPLOAD_CONTENT_TYPES: Readonly<Record<string, string>> = {
   heic: 'image/heic',
 };
 
+/** Dos títulos de curso son el mismo si solo cambian mayúsculas o espacios. */
+export function sameCourseTitle(a: string, b: string): boolean {
+  const normalize = (title: string): string => title.trim().replace(/\s+/gu, ' ').toLowerCase();
+  return normalize(a) === normalize(b);
+}
+
 export function extensionOf(fileName: string): string {
   const index = fileName.lastIndexOf('.');
   return index === -1 ? '' : fileName.slice(index + 1).toLowerCase();

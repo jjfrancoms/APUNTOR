@@ -3,6 +3,7 @@ import {
   bigint,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -48,6 +49,10 @@ export const courses = pgTable(
   ],
 );
 
+/** Estado de la sugerencia de curso: el usuario siempre confirma lo que propone la IA. */
+export const CLASSIFICATION_STATUSES = ['none', 'suggested', 'confirmed', 'dismissed'] as const;
+export type ClassificationStatus = (typeof CLASSIFICATION_STATUSES)[number];
+
 export const documents = pgTable(
   'documents',
   {
@@ -62,6 +67,17 @@ export const documents = pgTable(
     totalPages: integer('total_pages'),
     status: documentStatusEnum('status').notNull().default('pending'),
     errorMessage: text('error_message'),
+    /** Curso que propone la IA; con `null` y título, la propuesta es crear ese curso. */
+    suggestedCourseId: uuid('suggested_course_id').references(() => courses.id, {
+      onDelete: 'set null',
+    }),
+    suggestedCourseTitle: text('suggested_course_title'),
+    suggestionConfidence: doublePrecision('suggestion_confidence'),
+    suggestionReason: text('suggestion_reason'),
+    classificationStatus: text('classification_status')
+      .$type<ClassificationStatus>()
+      .notNull()
+      .default('none'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -70,6 +86,38 @@ export const documents = pgTable(
     index('documents_course_id_idx').on(t.courseId),
     index('documents_status_idx').on(t.status),
     check('documents_total_pages_positive', sql`${t.totalPages} IS NULL OR ${t.totalPages} > 0`),
+    check(
+      'documents_classification_status_valid',
+      sql`${t.classificationStatus} IN ('none', 'suggested', 'confirmed', 'dismissed')`,
+    ),
+    check(
+      'documents_suggestion_confidence_range',
+      sql`${t.suggestionConfidence} IS NULL OR ${t.suggestionConfidence} BETWEEN 0 AND 1`,
+    ),
+  ],
+);
+
+/**
+ * "Aprende de tus correcciones": cuando el usuario cambia el curso que propuso la IA, se guarda
+ * documento → curso, y las últimas van como ejemplos en el prompt de sus siguientes documentos.
+ * Una fila por documento; desaparece con el documento o con el curso (nada queda tras borrarlos).
+ */
+export const classificationCorrections = pgTable(
+  'classification_corrections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    courseId: uuid('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('classification_corrections_document_idx').on(t.documentId),
+    index('classification_corrections_user_created_idx').on(t.userId, t.createdAt),
   ],
 );
 

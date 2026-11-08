@@ -18,6 +18,9 @@ INSERT INTO courses (user_id, title) VALUES
   ('11111111-1111-4111-8111-111111111111', 'Curso A'),
   ('22222222-2222-4222-8222-222222222222', 'Curso B');
 
+INSERT INTO classification_corrections (user_id, document_id, course_id)
+SELECT d.user_id, d.id, c.id FROM documents d JOIN courses c ON c.user_id = d.user_id;
+
 INSERT INTO usage_quotas (user_id, kind, period_start, used) VALUES
   ('11111111-1111-4111-8111-111111111111', 'questions', '2026-01-01', 1),
   ('22222222-2222-4222-8222-222222222222', 'questions', '2026-01-01', 1);
@@ -39,6 +42,7 @@ BEGIN
   IF (SELECT count(*) FROM document_chunks) <> 1 THEN RAISE EXCEPTION 'RLS chunks: ve chunks ajenos'; END IF;
   IF (SELECT count(*) FROM topics) <> 1 THEN RAISE EXCEPTION 'RLS topics: ve temas ajenos'; END IF;
   IF (SELECT count(*) FROM courses) <> 1 THEN RAISE EXCEPTION 'RLS cursos: ve cursos ajenos'; END IF;
+  IF (SELECT count(*) FROM classification_corrections) <> 1 THEN RAISE EXCEPTION 'RLS correcciones: ve correcciones ajenas'; END IF;
   IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
   IF (SELECT count(*) FROM consents) <> 1 THEN RAISE EXCEPTION 'RLS consentimientos: ve consentimientos ajenos'; END IF;
   -- La auditoría del administrador es solo del backend: ni siquiera el propio admin la lee así.
