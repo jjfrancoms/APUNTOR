@@ -2,7 +2,11 @@ import { EMBEDDING_DIMENSIONS } from '../../db/schema';
 import type { EmbeddingProvider } from '../../api/src/llm/embedding-provider';
 import type { JsonGenerator } from '../../api/src/llm/vertex';
 import type { RetrievedChunk } from '../../api/src/rag/retriever';
-import { normalizeWaitlistEmail, type WaitlistRecord, type WaitlistRepository } from '../../api/src/waitlist';
+import {
+  normalizeWaitlistEmail,
+  type WaitlistRecord,
+  type WaitlistRepository,
+} from '../../api/src/waitlist';
 
 export const CHUNK: RetrievedChunk = {
   id: '00000000-0000-4000-8000-000000000001',

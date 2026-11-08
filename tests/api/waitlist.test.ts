@@ -102,9 +102,9 @@ describe('POST /v1/waitlist', () => {
     expect(blocked.statusCode).toBe(429);
     expect(blocked.json()).toEqual({ error: { code: 'RATE_LIMITED' } });
     // Otra IP sigue teniendo su cupo.
-    expect((await join(app, { email: 'c@example.com', consent: true }, '10.0.0.2')).statusCode).toBe(
-      201,
-    );
+    expect(
+      (await join(app, { email: 'c@example.com', consent: true }, '10.0.0.2')).statusCode,
+    ).toBe(201);
   });
 });
 

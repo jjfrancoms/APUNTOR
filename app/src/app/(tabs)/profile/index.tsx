@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
+import { Banner, Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
+import { useDataDownload } from '@/lib/use-data-download';
 import { signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { LANGUAGES } from '@/i18n/language';
@@ -14,6 +15,7 @@ export default function Profile() {
   const st = useStore((x) => x.settings);
   // Solo para cuentas que el servidor reconoce como administradoras (nunca se guarda).
   const isAdmin = useStore((x) => x.isAdmin);
+  const download = useDataDownload();
   const user = {
     fullName: session?.fullName ?? '',
     email: session?.email ?? '',
@@ -136,11 +138,18 @@ export default function Profile() {
         />
         <ListRow
           icon="download"
+          title={download.busy ? s.dataExport.preparing : s.dataExport.title}
+          onPress={() => void download.run()}
+        />
+        <ListRow
+          icon="trash-2"
           title={s.profile.data}
           divider={false}
           onPress={() => router.push('/profile/delete-account')}
         />
       </Card>
+      {download.done ? <Banner tone="info" icon="check" title={s.dataExport.done} /> : null}
+      {download.error ? <Banner tone="danger" title={download.error} /> : null}
       {isAdmin ? (
         <Card style={styles.list}>
           <ListRow

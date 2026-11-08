@@ -73,6 +73,8 @@ const api = {
   updateDocument: vi.fn(async () => ({})),
   deleteDocument: vi.fn(async () => undefined),
   deleteAccount: vi.fn(async () => undefined),
+  exportAccount: vi.fn(async (): Promise<unknown> => ({ profile: { id: 'u1' } })),
+  joinWaitlist: vi.fn(async () => ({ status: 'joined' as const })),
   ask: vi.fn(),
   external: vi.fn(),
   acceptConsent: vi.fn(async (document: string, version: string) => ({
@@ -397,6 +399,125 @@ describe('chat', () => {
       text: 'Dato',
       external: { host: 'es.wikipedia.org', url: 'https://es.wikipedia.org/wiki/X' },
     });
+  });
+});
+
+describe('exportación de datos', () => {
+  it('une lo del servidor con lo del dispositivo', async () => {
+    await signedIn();
+    const id = store.startConversation();
+    api.ask.mockResolvedValueOnce({ status: 'abstained', message: 'nada' });
+    await store.answerQuestion(id, 'una pregunta');
+    const result = await store.exportAccountData();
+    if (!result.ok) throw new Error('debía funcionar');
+    const data = JSON.parse(result.json) as {
+      servidor: unknown;
+      dispositivo: { conversaciones: unknown[]; ajustes: unknown; progresoDeEstudio: unknown };
+    };
+    expect(data.servidor).toEqual({ profile: { id: 'u1' } });
+    expect(data.dispositivo.conversaciones).toHaveLength(1);
+    expect(data.dispositivo.ajustes).toBeDefined();
+    expect(data.dispositivo.progresoDeEstudio).toBeDefined();
+  });
+
+  it('si el servidor falla, no entrega un archivo a medias', async () => {
+    await signedIn();
+    api.exportAccount.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.exportAccountData()).toEqual({ ok: false, error: 'NET_UNAVAILABLE' });
+  });
+});
+
+describe('borrar la cuenta desde Perfil', () => {
+  const google = {
+    ...user('g2'),
+    app_metadata: { provider: 'google', providers: ['google'] },
+  };
+
+  it('con contraseña incorrecta no borra nada', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {},
+      error: { status: 400, code: 'invalid_credentials' },
+    });
+    expect(await store.deleteAccountConfirmed('mala')).toBe('wrong_password');
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+    expect(store.getState().session).not.toBeNull();
+  });
+
+  it('si no se pudo comprobar la contraseña, tampoco borra', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {},
+      error: { status: 0, code: undefined },
+    });
+    expect(await store.deleteAccountConfirmed('buena')).toBe('failed');
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('con la contraseña correcta comprueba con Supabase y luego borra', async () => {
+    await signedIn();
+    auth.signInWithPassword.mockClear();
+    auth.signInWithPassword.mockResolvedValueOnce({ data: { user: user('u1') }, error: null });
+    expect(await store.deleteAccountConfirmed('buena')).toBe('deleted');
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'u1@correo.com',
+      password: 'buena',
+    });
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(store.getState().session).toBeNull();
+  });
+
+  it('una cuenta de Google no pide contraseña', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({ data: { user: google }, error: null });
+    await store.signIn('g2@correo.com', 'x');
+    await vi.waitFor(() => expect(store.getState().sync.loading).toBe(false));
+    expect(store.getState().session?.hasPassword).toBe(false);
+    auth.signInWithPassword.mockClear();
+    expect(await store.deleteAccountConfirmed('')).toBe('deleted');
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+    expect(api.deleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('una cuenta con correo y Google sí pide contraseña', async () => {
+    auth.signInWithPassword.mockResolvedValueOnce({
+      data: {
+        user: {
+          ...user('m1'),
+          app_metadata: { provider: 'google', providers: ['google', 'email'] },
+        },
+      },
+      error: null,
+    });
+    await store.signIn('m1@correo.com', 'x');
+    await vi.waitFor(() => expect(store.getState().sync.loading).toBe(false));
+    expect(store.getState().session?.hasPassword).toBe(true);
+  });
+});
+
+describe('lista de espera', () => {
+  it('envía el correo al servidor y no lo guarda en el dispositivo', async () => {
+    expect(await store.joinWaitlist(' tutor@correo.com ', true, 'web')).toBe('ok');
+    expect(api.joinWaitlist).toHaveBeenCalledWith({
+      email: 'tutor@correo.com',
+      consent: true,
+      source: 'web',
+    });
+    expect(JSON.stringify(store.getState())).not.toContain('tutor@correo.com');
+  });
+
+  it('sin consentimiento o con correo inválido no llama a la API', async () => {
+    expect(await store.joinWaitlist('tutor@correo.com', false, 'app')).toBe('invalid');
+    expect(await store.joinWaitlist('no-es-correo', true, 'app')).toBe('invalid');
+    expect(api.joinWaitlist).not.toHaveBeenCalled();
+  });
+
+  it('traduce los errores del servidor', async () => {
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('RATE_LIMITED', 429));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('limited');
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('REQ_INVALID', 400));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('invalid');
+    api.joinWaitlist.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    expect(await store.joinWaitlist('a@correo.com', true, 'app')).toBe('failed');
   });
 });
 

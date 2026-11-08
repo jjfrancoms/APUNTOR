@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { deleteUserAccount, type AuthUserDeleter } from './account';
+import { buildAccountExport, confirmedEmail, type AccountExportRepository } from './account-export';
 import {
   authHasMore,
   countAuthUsers,
@@ -76,6 +77,8 @@ export interface AppDeps {
   consents: ConsentsRepository;
   /** Lista de espera de menores: solo la escribe y lee el backend. */
   waitlist: WaitlistRepository;
+  /** Consultas propias de la exportación de datos (ARCO). */
+  accountExport: AccountExportRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -373,10 +376,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
+  /** Si esa cuenta dejó su correo confirmado en la lista de espera, también se borra. */
+  async function forgetWaitlistEntry(userId: string): Promise<void> {
+    const email = await confirmedEmail(deps.authUsers, userId);
+    if (email !== null) await deps.waitlist.removeByEmail(email);
+  }
+
+  // Derecho de acceso (ARCO): todo lo del usuario en un JSON que se descarga. Es una consulta
+  // cara (todo el texto de sus documentos): usa el límite estricto.
+  app.get('/v1/account/export', strictLimit, async (request, reply) => {
+    const session = await sessionUser(request);
+    if (session === null) throw new ApiError('AUTH_REQUIRED', 401);
+    const data = await buildAccountExport(deps, session);
+    return reply
+      .header('Content-Disposition', 'attachment; filename="apuntor-mis-datos.json"')
+      .header('Cache-Control', 'no-store')
+      .send(data);
+  });
+
   // Borra archivos, datos y el usuario de Supabase Auth, en ese orden: si algo falla, se
   // puede reintentar porque la sesión sigue siendo válida.
   app.delete('/v1/account', async (request, reply) => {
     const userId = await requireUser(request);
+    await forgetWaitlistEntry(userId);
     await deleteUserAccount(deps, userId);
     return reply.status(204).send();
   });
@@ -667,6 +689,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const admin = await requireAdmin(request);
     const { id } = parse(idParams, request.params);
     if (id === admin.userId) throw new ApiError('ADMIN_TARGET_IS_SELF', 409);
+    await forgetWaitlistEntry(id);
     await deleteUserAccount(deps, id);
     adminGate.forget(id);
     await deps.admin.recordAudit({

@@ -22,6 +22,8 @@ export interface SessionUser {
    * Google no pasó por el registro con fecha de nacimiento y debe confirmarlo antes de seguir.
    */
   adultConfirmed: boolean;
+  /** true si puede entrar con correo y contraseña: al borrar la cuenta se le vuelve a pedir. */
+  hasPassword: boolean;
 }
 
 /** Apariencia: 'system' sigue el modo claro/oscuro del dispositivo. */

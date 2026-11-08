@@ -57,6 +57,10 @@ export interface AuthUserIdentity {
   email: string | null;
   /** Fecha en que confirmó su correo; `null` si nunca lo confirmó. */
   emailConfirmedAt: Date | null;
+  /** Alta de la cuenta (se usa en la exportación de datos). */
+  createdAt?: Date | null;
+  /** `user_metadata` tal cual; solo la exportación de datos lee campos concretos de aquí. */
+  metadata?: Record<string, unknown>;
 }
 
 /** Usuarios de Supabase Auth (Admin API). Inyectada para simularla en las pruebas. */
@@ -155,6 +159,8 @@ const supabaseIdentitySchema = z.object({
   id: z.uuid(),
   email: z.string().nullish(),
   email_confirmed_at: z.string().nullish(),
+  created_at: z.string().nullish(),
+  user_metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 /** Admin API de Supabase con la service role key: solo en el servidor. */
@@ -174,10 +180,13 @@ export function createSupabaseUsersDirectory(
       }
       const user = supabaseIdentitySchema.parse(await response.json());
       const confirmed = user.email_confirmed_at ? new Date(user.email_confirmed_at) : null;
+      const created = user.created_at ? new Date(user.created_at) : null;
       return {
         id: user.id,
         email: user.email ?? null,
         emailConfirmedAt: confirmed && !Number.isNaN(confirmed.getTime()) ? confirmed : null,
+        createdAt: created && !Number.isNaN(created.getTime()) ? created : null,
+        metadata: user.user_metadata ?? {},
       };
     },
     async list(page, perPage) {

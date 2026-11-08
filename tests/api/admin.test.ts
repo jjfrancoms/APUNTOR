@@ -131,6 +131,8 @@ describe('usuarios de Supabase Auth', () => {
             id,
             email: 'ana@example.com',
             email_confirmed_at: url.includes(id) ? '2026-11-01T10:00:00Z' : null,
+            created_at: 'no es una fecha',
+            user_metadata: { full_name: 'Ana' },
           }),
           { status: 200 },
         ),
@@ -141,6 +143,8 @@ describe('usuarios de Supabase Auth', () => {
       id,
       email: 'ana@example.com',
       emailConfirmedAt: new Date('2026-11-01T10:00:00Z'),
+      createdAt: null,
+      metadata: { full_name: 'Ana' },
     });
     expect(calls[0]?.url).toBe(`https://demo.supabase.co/auth/v1/admin/users/${id}`);
     expect(calls[0]?.headers.get('apikey')).toBe('service-key');

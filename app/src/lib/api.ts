@@ -189,6 +189,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   usage: () => request<ApiUsage>('GET', '/v1/me/usage'),
   deleteAccount: () => request<void>('DELETE', '/v1/account'),
+  /** Todo lo que el servidor guarda de esta cuenta (derecho de acceso). */
+  exportAccount: () => request<unknown>('GET', '/v1/account/export'),
   courses: () => request<{ courses: ApiCourse[] }>('GET', '/v1/courses'),
   createCourse: (title: string) => request<ApiCourse>('POST', '/v1/courses', { title }),
   documents: () => request<{ documents: ApiDocument[] }>('GET', '/v1/documents'),

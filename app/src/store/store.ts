@@ -283,6 +283,19 @@ function isLevel(value: unknown): value is Level {
   return value === 'school' || value === 'university' || value === 'other';
 }
 
+/**
+ * `app_metadata.providers` lista las formas de entrar (`provider`, la primera). Sin ese dato se
+ * pide la contraseña: ante la duda, el camino más seguro.
+ */
+function hasPasswordLogin(appMetadata: unknown): boolean {
+  if (typeof appMetadata !== 'object' || appMetadata === null) return true;
+  const { provider, providers } = appMetadata as { provider?: unknown; providers?: unknown };
+  const names = [...(Array.isArray(providers) ? (providers as unknown[]) : []), provider].filter(
+    (name) => typeof name === 'string',
+  );
+  return names.length === 0 || names.includes('email');
+}
+
 function toSessionUser(user: User): SessionUser {
   const meta: Record<string, unknown> = user.user_metadata;
   const email = user.email ?? '';
@@ -297,6 +310,7 @@ function toSessionUser(user: User): SessionUser {
     email,
     level: isLevel(meta.level) ? meta.level : 'university',
     adultConfirmed: meta.adult_confirmed === true,
+    hasPassword: hasPasswordLogin(user.app_metadata),
   };
 }
 
@@ -658,6 +672,33 @@ export async function deleteAccount(): Promise<boolean> {
   await supabase.auth.signOut().catch(() => undefined);
   setState((s) => ({ ...createInitialState(), settings: s.settings }));
   return true;
+}
+
+export type DeleteAccountResult = 'deleted' | 'wrong_password' | 'failed';
+
+/**
+ * Borrado pedido desde Perfil (40). Si la cuenta tiene contraseña, Supabase la comprueba antes
+ * de llamar a `DELETE /v1/account`: con una contraseña incorrecta no se borra nada.
+ */
+export async function deleteAccountConfirmed(password: string): Promise<DeleteAccountResult> {
+  const session = state.session;
+  if (!session) return 'failed';
+  if (session.hasPassword) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: session.email,
+        password,
+      });
+      if (error) {
+        return error.status === 400 || error.code === 'invalid_credentials'
+          ? 'wrong_password'
+          : 'failed';
+      }
+    } catch {
+      return 'failed';
+    }
+  }
+  return (await deleteAccount()) ? 'deleted' : 'failed';
 }
 
 export type WaitlistResult = 'ok' | 'invalid' | 'limited' | 'failed';
@@ -1491,10 +1532,27 @@ export function exportUserData(s: AppState = state): string {
         titulo: c.title,
         mensajes: c.messages.map((m) => ({ de: m.role, texto: m.text })),
       })),
+      progresoDeEstudio: s.study,
     },
     null,
     2,
   );
+}
+
+/**
+ * Exportación completa (derecho de acceso): lo que guarda el servidor (`GET /v1/account/export`)
+ * y lo que solo está en este dispositivo. Si el servidor falla no se entrega un archivo a medias.
+ */
+export async function exportAccountData(): Promise<
+  { ok: true; json: string } | { ok: false; error: ErrorCode }
+> {
+  try {
+    const servidor = await api.exportAccount();
+    const dispositivo: unknown = JSON.parse(exportUserData());
+    return { ok: true, json: JSON.stringify({ servidor, dispositivo }, null, 2) };
+  } catch (error) {
+    return { ok: false, error: toErrorCode(error, 'NET_UNAVAILABLE') };
+  }
 }
 
 // --- Contenido por clase y temas (fase 2) --------------------------------------------
