@@ -165,6 +165,10 @@ export const screenGroups: { title: string; screens: ScreenEntry[] }[] = [
       { n: 62, name: 'Panel · Auditoría', href: '/admin/audit', designed: false },
     ],
   },
+  {
+    title: 'Contenido',
+    screens: [{ n: 63, name: 'Contenido del tema', href: '/topic', designed: false }],
+  },
 ];
 
 export const allScreens: ScreenEntry[] = screenGroups.flatMap((g) => g.screens);

@@ -5,6 +5,20 @@ import type { Strings } from './es';
  * Error codes stay the same; only their text changes.
  */
 export const en: Strings = {
+  topicView: {
+    header: 'Topic',
+    fromNotes: 'What your notes say',
+    page: (n: number) => `Page ${n}`,
+    ask: 'Ask Illari about this topic',
+    openDocument: 'See document',
+    truncated: "This topic is long: here's the beginning. Ask Illari about the rest.",
+    emptyTitle: 'This topic has no text of its own',
+    emptyBody: 'Its content is in the subtopics. You can still ask Illari.',
+    errorTitle: "We couldn't load the topic",
+    errorBody: 'Check your connection and try again.',
+    retry: 'Try again',
+    loading: 'Loading the content…',
+  },
   common: {
     back: 'Back',
     close: 'Close',
@@ -210,6 +224,11 @@ export const en: Strings = {
     pendingReview: (n: number) => `${n} documents are waiting for your review`,
     classesTopics: (classes: number, topics: number) => `${classes} classes · ${topics} topics`,
     sections: (n: number) => `${n} sections`,
+    topicsCount: (n: number) => `${n} topics`,
+    loadingTopics: 'Loading topics…',
+    noTopics: "We didn't find headings in this document. You can still ask it anything.",
+    askAbout: (topic: string) => `Explain “${topic}”`,
+    openTopicLabel: (topic: string) => `See the content of ${topic}`,
     emptyTitle: "You don't have any courses yet",
     emptyBody:
       "Upload your first document and I'll organize it by course, class and topic for you.",
@@ -244,6 +263,7 @@ export const en: Strings = {
     page: (n: number, total: number) => `Page ${n} of ${total}`,
     classifiedIn: 'Filed under',
     detectedTopics: 'Detected topics',
+    pages: (n: number, ranges: string) => (n === 1 ? `p. ${ranges}` : `pp. ${ranges}`),
     share: 'Share',
     rename: 'Rename',
     delete: 'Delete',

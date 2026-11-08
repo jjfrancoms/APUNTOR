@@ -27,6 +27,7 @@ import {
 import { useStrings } from '@/i18n/es';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { layout, radius, space, useTheme } from '@/theme';
+import { TopicOutline } from '@/components/domain/TopicOutline';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 19 · Detalle de documento, con la confirmación de eliminación (27). */
@@ -111,16 +112,14 @@ export default function DocumentDetail() {
           <TextLink label={s.common.change} onPress={() => setSheet('move')} />
         </View>
       </Card>
-      {doc.topics.length > 0 ? (
+      {doc.outline && doc.outline.length > 0 ? (
         <>
           <Text variant="subheading" accessibilityRole="header">
             {s.document.detectedTopics}
           </Text>
-          <View style={styles.chips}>
-            {doc.topics.map((t) => (
-              <Chip key={t} label={t} tone="primary" />
-            ))}
-          </View>
+          <Card>
+            <TopicOutline documentId={doc.id} outline={doc.outline} />
+          </Card>
         </>
       ) : null}
       <View style={styles.actions}>
@@ -285,7 +284,6 @@ function ActionButton({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   actions: { flexDirection: 'row', gap: space.sm },
   action: {
     flex: 1,

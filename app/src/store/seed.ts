@@ -49,6 +49,17 @@ export interface StoreCourse extends Course {
 
 export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+/** Tema detectado en el documento (lo genera el worker a partir de sus títulos). */
+export interface DocTopic {
+  id: string;
+  parentId: string | null;
+  title: string;
+  /** Páginas donde aparece el tema o sus subtemas. */
+  pages: number[];
+  /** 1 = tema raíz. */
+  depth: number;
+}
+
 export interface DocRecord {
   id: string;
   name: string;
@@ -58,6 +69,8 @@ export interface DocRecord {
   courseId: string;
   path: string[];
   topics: string[];
+  /** Índice de temas con páginas; `undefined` mientras no se haya cargado. */
+  outline?: DocTopic[];
   uploadedLabel: string;
   status: DocumentStatus;
   topicCount: number;

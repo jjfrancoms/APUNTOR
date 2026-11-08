@@ -92,6 +92,7 @@ export interface AppDeps {
 }
 
 const idParams = z.object({ id: z.uuid() });
+const topicParams = z.object({ topicId: z.uuid() });
 const courseTitle = z.string().trim().min(1).max(MAX_COURSE_TITLE);
 const createDocumentBody = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -460,6 +461,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const userId = await requireUser(request);
     const document = await requireDocument(userId, request.params);
     return { topics: await deps.documents.topics(userId, document.id) };
+  });
+
+  // Contenido del documento bajo un tema, para leerlo antes de preguntar. Es del propio
+  // usuario: el panel de administrador nunca lo expone.
+  app.get('/v1/documents/:id/topics/:topicId', async (request) => {
+    const userId = await requireUser(request);
+    const document = await requireDocument(userId, request.params);
+    const { topicId } = parse(topicParams, request.params);
+    const content = await deps.documents.topicContent(userId, document.id, topicId);
+    // Un tema de otro documento (o ajeno) responde igual que un documento inexistente.
+    if (!content) throw new ApiError('DOC_NOT_FOUND', 404);
+    return {
+      topic: content.topic,
+      path: content.path,
+      blocks: content.blocks,
+      truncated: content.truncated,
+      document: { id: document.id, title: document.title },
+    };
   });
 
   app.patch('/v1/documents/:id', async (request) => {

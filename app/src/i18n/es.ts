@@ -7,6 +7,20 @@ import { useLanguage, type Language } from './language';
  * Los mensajes de error usan los códigos de docs/producto/mvp-ux.md §4.
  */
 export const es = {
+  topicView: {
+    header: 'Tema',
+    fromNotes: 'Lo que dicen tus apuntes',
+    page: (n: number) => `Página ${n}`,
+    ask: 'Preguntar a Illari sobre este tema',
+    openDocument: 'Ver documento',
+    truncated: 'El tema es largo: aquí está el comienzo. Pregúntale a Illari por el resto.',
+    emptyTitle: 'Este tema no tiene texto propio',
+    emptyBody: 'Su contenido está en los subtemas. Igual puedes preguntarle a Illari.',
+    errorTitle: 'No pudimos cargar el tema',
+    errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
+    retry: 'Reintentar',
+    loading: 'Cargando el contenido…',
+  },
   common: {
     back: 'Volver',
     close: 'Cerrar',
@@ -214,6 +228,11 @@ export const es = {
     pendingReview: (n: number) => `${n} documentos esperan tu revisión`,
     classesTopics: (classes: number, topics: number) => `${classes} clases · ${topics} temas`,
     sections: (n: number) => `${n} secciones`,
+    topicsCount: (n: number) => `${n} temas`,
+    loadingTopics: 'Cargando temas…',
+    noTopics: 'No encontramos títulos en este documento. Igual puedes preguntarle lo que quieras.',
+    askAbout: (topic: string) => `Explícame «${topic}»`,
+    openTopicLabel: (topic: string) => `Ver el contenido de ${topic}`,
     emptyTitle: 'Aún no tienes cursos',
     emptyBody: 'Sube tu primer documento y lo organizo por curso, clase y tema para ti.',
     emptyUpload: 'Subir mi primer documento',
@@ -247,6 +266,7 @@ export const es = {
     page: (n: number, total: number) => `Página ${n} de ${total}`,
     classifiedIn: 'Clasificado en',
     detectedTopics: 'Temas detectados',
+    pages: (n: number, ranges: string) => (n === 1 ? `pág. ${ranges}` : `págs. ${ranges}`),
     share: 'Compartir',
     rename: 'Renombrar',
     delete: 'Eliminar',

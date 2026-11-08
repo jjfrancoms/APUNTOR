@@ -7,10 +7,22 @@
  * `[pág. X]` sea verificable contra el documento original.
  */
 
+import {
+  detectStyledHeadings,
+  headingKey,
+  isNumberedOrKeyword,
+  looksLikeTitle,
+  repeatedLineKeys,
+  type DetectedHeading,
+  type StyledLine,
+} from './headings';
+
 export interface PageText {
   /** Número de página 1-based, tal como aparece en el visor del PDF. */
   pageNumber: number;
   text: string;
+  /** Líneas con su formato (tamaño, negrita, color), si el formato lo informa. */
+  lines?: StyledLine[];
 }
 
 export interface ParsedDocument {
@@ -61,15 +73,21 @@ export function estimateTokens(text: string): number {
 const NUMBERED_HEADING = /^(\d+(?:\.\d+){0,4})\.?\s+\S.{0,118}$/u;
 const KEYWORD_HEADING = /^(cap[ií]tulo|tema|unidad|secci[oó]n|chapter|section)\s+[\w.-]+/iu;
 
+const MARKDOWN_HEADING = /^(#{1,4})\s+\S/u;
+
 /**
- * Detecta encabezados típicos de apuntes y libros:
+ * Detecta encabezados por el texto, cuando no hay formato visual (fotos, texto plano):
+ * - Markdown ("# Tema", "## Subtema"): así marca los títulos el OCR.
  * - Numerados: "2. Célula", "2.3.1 Mitosis" (nivel = cantidad de segmentos).
  * - Palabra clave: "Capítulo 4", "Tema 2: ...".
  * - Líneas cortas en MAYÚSCULAS sin punto final.
+ * Nunca filas de tablas ("0 1 1", "V F F"), fórmulas ni números sueltos.
  */
 export function defaultHeadingDetector(rawLine: string): number | null {
   const line = rawLine.trim();
-  if (line.length < 3 || line.length > 120) return null;
+  const markdown = MARKDOWN_HEADING.exec(line);
+  if (markdown?.[1] !== undefined) return markdown[1].length;
+  if (line.length < 3 || line.length > 120 || !looksLikeTitle(line)) return null;
 
   const numbered = NUMBERED_HEADING.exec(line);
   if (numbered?.[1] !== undefined && !line.endsWith('.') && !/[,;]$/u.test(line)) {
@@ -118,6 +136,50 @@ interface Segment {
   words: Word[];
 }
 
+/** Por encima de esta densidad, la detección por texto está viendo ruido (tablas, listas). */
+const MAX_TEXT_HEADINGS_PER_PAGE = 3;
+const MIN_TEXT_HEADINGS_CAP = 30;
+
+/**
+ * Elige cómo detectar títulos en cada página: por formato visual si el documento lo trae, o
+ * por texto. Las líneas que se repiten en muchas páginas (encabezado o pie) nunca son títulos.
+ */
+function buildHeadingLookup(
+  pages: readonly PageText[],
+  custom: ((line: string) => number | null) | undefined,
+): (pageNumber: number) => HeadingLookup {
+  const asHeading = (line: string, level: number | null): DetectedHeading | null =>
+    level === null ? null : { level, title: line.trim(), continuation: false };
+  if (custom) return () => (line) => asHeading(line, custom(line));
+
+  const styledPages = pages.flatMap((p) =>
+    p.lines ? [{ pageNumber: p.pageNumber, lines: p.lines }] : [],
+  );
+  const styled = styledPages.length > 0 ? detectStyledHeadings(styledPages) : null;
+
+  const textLines = pages.map((p) => ({ lines: normalizePageText(p.text).split('\n') }));
+  const repeated = repeatedLineKeys(textLines);
+  let textDetector = (line: string): number | null =>
+    repeated.has(headingKey(line)) ? null : defaultHeadingDetector(line);
+  const textCount = textLines
+    .flatMap((p) => p.lines)
+    .filter((line) => textDetector(line) !== null).length;
+  if (textCount > Math.max(MIN_TEXT_HEADINGS_CAP, pages.length * MAX_TEXT_HEADINGS_PER_PAGE)) {
+    // Demasiados "títulos": solo se confía en los numerados o con palabra clave.
+    const loose = textDetector;
+    textDetector = (line) => (isNumberedOrKeyword(line.trim()) ? loose(line) : null);
+  }
+
+  return (pageNumber) => {
+    const page = pages.find((p) => p.pageNumber === pageNumber);
+    if (styled && page?.lines) {
+      const onPage = styled.get(pageNumber);
+      return (line) => onPage?.get(headingKey(line)) ?? null;
+    }
+    return (line) => asHeading(line, textDetector(line));
+  };
+}
+
 function updateSectionPath(path: string[], heading: string, level: number): string[] {
   const depth = Math.max(1, level);
   return [...path.slice(0, depth - 1), heading];
@@ -127,10 +189,12 @@ function updateSectionPath(path: string[], heading: string, level: number): stri
  * Divide una página en segmentos homogéneos por sección. Un encabezado abre un
  * segmento nuevo; el encabezado se incluye en el contenido para que sea buscable.
  */
+type HeadingLookup = (line: string) => DetectedHeading | null;
+
 function segmentPage(
   text: string,
   initialPath: string[],
-  detectHeading: (line: string) => number | null,
+  detectHeading: HeadingLookup,
 ): { segments: Segment[]; finalPath: string[] } {
   const segments: Segment[] = [];
   let path = initialPath;
@@ -138,10 +202,10 @@ function segmentPage(
   let offset = 0;
 
   for (const line of text.split('\n')) {
-    const level = line.length > 0 ? detectHeading(line) : null;
-    if (level !== null) {
+    const heading = line.length > 0 ? detectHeading(line) : null;
+    if (heading !== null && !heading.continuation) {
       if (current.words.length > 0) segments.push(current);
-      path = updateSectionPath(path, line.trim(), level);
+      path = updateSectionPath(path, heading.title.replace(/^#{1,4}\s+/u, ''), heading.level);
       current = { sectionPath: path, words: [] };
     }
     const wordRegex = /\S+/gu;
@@ -178,9 +242,8 @@ export function chunkPages(pages: readonly PageText[], options: ChunkingOptions)
   const { maxTokens, overlapTokens } = options;
   assertValidOptions(maxTokens, overlapTokens);
   const countTokens = options.countTokens ?? estimateTokens;
-  const detectHeading = options.detectHeading ?? defaultHeadingDetector;
-
   const sorted = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
+  const headingsFor = buildHeadingLookup(sorted, options.detectHeading);
   const chunks: TextChunk[] = [];
   let sectionPath: string[] = [];
   let chunkIndex = 0;
@@ -192,7 +255,7 @@ export function chunkPages(pages: readonly PageText[], options: ChunkingOptions)
     const text = normalizePageText(page.text);
     if (text.length === 0) continue;
 
-    const { segments, finalPath } = segmentPage(text, sectionPath, detectHeading);
+    const { segments, finalPath } = segmentPage(text, sectionPath, headingsFor(page.pageNumber));
     sectionPath = finalPath;
 
     for (const segment of segments) {

@@ -9,6 +9,7 @@ import { useRef, useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
 import { LEGAL_VERSION } from '@/i18n/legal';
+import { withDepth } from '@/lib/outline';
 import {
   api,
   ApiRequestError,
@@ -271,20 +272,32 @@ export async function refreshAll(): Promise<void> {
   if (data.status === 'fulfilled') {
     const [{ courses }, { documents }, usage] = data.value;
     const titles = new Map(courses.map((c) => [c.id, c.title]));
-    const docs = documents.map((d) =>
+    const fresh = documents.map((d) =>
       toDocRecord(d, d.courseId ? titles.get(d.courseId) : undefined),
     );
-    setState((s) => ({
-      ...s,
-      documents: docs,
-      courses: buildCourses(courses, docs),
-      consent: consent ?? s.consent,
-      sync: {
-        loading: false,
-        error:
-          consents.status === 'rejected' ? toErrorCode(consents.reason, 'NET_UNAVAILABLE') : null,
-      },
-    }));
+    setState((s) => {
+      // Los temas ya cargados se conservan mientras el documento no cambie.
+      const docs = fresh.map((d) => {
+        const old = s.documents.find((o) => o.id === d.id);
+        return old?.outline &&
+          old.outline.length > 0 &&
+          old.status === d.status &&
+          old.topicCount === d.topicCount
+          ? { ...d, outline: old.outline, topics: old.topics }
+          : d;
+      });
+      return {
+        ...s,
+        documents: docs,
+        courses: buildCourses(courses, docs),
+        consent: consent ?? s.consent,
+        sync: {
+          loading: false,
+          error:
+            consents.status === 'rejected' ? toErrorCode(consents.reason, 'NET_UNAVAILABLE') : null,
+        },
+      };
+    });
     applyUsage(usage);
   } else {
     setState((s) => ({
@@ -901,13 +914,20 @@ export async function moveDocument(id: string, courseId: string): Promise<boolea
 export async function loadDocumentTopics(id: string): Promise<void> {
   try {
     const { topics } = await api.topics(id);
-    const titles = topics.map((t) => t.title);
+    const outline = withDepth(topics);
     setState((s) => ({
       ...s,
-      documents: s.documents.map((d) => (d.id === id ? { ...d, topics: titles } : d)),
+      documents: s.documents.map((d) =>
+        d.id === id ? { ...d, outline, topics: outline.map((t) => t.title) } : d,
+      ),
     }));
   } catch {
-    // Sin temas: la pantalla muestra el documento igual.
+    // Sin temas: la pantalla muestra el documento igual. Se marca como cargado para no
+    // reintentar en cada render.
+    setState((s) => ({
+      ...s,
+      documents: s.documents.map((d) => (d.id === id && !d.outline ? { ...d, outline: [] } : d)),
+    }));
   }
 }
 

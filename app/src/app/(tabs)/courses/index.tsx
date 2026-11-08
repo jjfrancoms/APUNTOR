@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
-import { pendingReview, useStore } from '@/store/store';
+import { TopicOutline } from '@/components/domain/TopicOutline';
+import { loadDocumentTopics, pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
@@ -145,10 +146,17 @@ function CourseCard({
   const s = useStrings();
   const { c } = useTheme();
   const items = useStore((st) => st.items);
+  const documents = useStore((st) => st.documents);
   // Por defecto se abre la primera clase sin terminar.
   const [openClass, setOpenClass] = useState<string | null>(
     course.classes.find((k) => k.progress < 1)?.id ?? null,
   );
+  // Hasta la fase 2 cada documento es una clase: sus temas se piden al abrirla.
+  const openDoc = open ? documents.find((d) => d.id === openClass) : undefined;
+  const needsTopics = openDoc?.status === 'completed' && openDoc.outline === undefined;
+  useEffect(() => {
+    if (needsTopics && openClass) void loadDocumentTopics(openClass);
+  }, [needsTopics, openClass]);
   return (
     <Card style={styles.course}>
       <Tap
@@ -178,6 +186,14 @@ function CourseCard({
               },
             ].filter((sec) => sec.list.length > 0);
             const expanded = openClass === klass.id;
+            const doc = documents.find((d) => d.id === klass.id);
+            const roots = doc?.outline?.filter((t) => t.depth === 1).length;
+            const countLabel =
+              sections.length > 0
+                ? s.courses.sections(sections.length)
+                : roots !== undefined && roots > 0
+                  ? s.courses.sections(roots)
+                  : s.courses.topicsCount(klass.topicCount);
             return (
               <View key={klass.id} style={styles.klass}>
                 <Tap
@@ -196,11 +212,30 @@ function CourseCard({
                     {klass.title}
                   </Text>
                   <Text variant="caption" color="textMuted">
-                    {s.courses.sections(sections.length)}
+                    {countLabel}
                   </Text>
                 </Tap>
                 {expanded ? (
                   <>
+                    {sections.length === 0 && doc ? (
+                      <View style={styles.section}>
+                        {doc.status !== 'completed' ? (
+                          <Text variant="small" color="textMuted">
+                            {s.live.status[doc.status]}
+                          </Text>
+                        ) : doc.outline === undefined ? (
+                          <Text variant="small" color="textMuted">
+                            {s.courses.loadingTopics}
+                          </Text>
+                        ) : doc.outline.length === 0 ? (
+                          <Text variant="small" color="textMuted">
+                            {s.courses.noTopics}
+                          </Text>
+                        ) : (
+                          <TopicOutline documentId={doc.id} outline={doc.outline} />
+                        )}
+                      </View>
+                    ) : null}
                     {sections.map((section) => (
                       <View key={section.title} style={styles.section}>
                         <Text variant="overline" color="textMuted">

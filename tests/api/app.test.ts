@@ -98,6 +98,19 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
         return Promise.resolve();
       },
       topics: (userId, id) => Promise.resolve(own(userId, id) ? (topics.get(id) ?? []) : []),
+      topicContent(userId, id, topicId) {
+        const topic = own(userId, id) ? topics.get(id)?.find((t) => t.id === topicId) : undefined;
+        return Promise.resolve(
+          topic
+            ? {
+                topic,
+                path: [topic.title],
+                blocks: [{ pageNumber: 2, sectionPath: [topic.title], text: 'Texto del tema' }],
+                truncated: false,
+              }
+            : null,
+        );
+      },
       listCourses: (userId) =>
         Promise.resolve([...courses.values()].filter((c) => c.userId === userId)),
       getCourse(userId, id) {
@@ -453,6 +466,35 @@ describe('documentos', () => {
       headers: AUTH_OTHER,
     });
     expect(theirs.statusCode).toBe(404);
+  });
+
+  it('devuelve el contenido de un tema solo a su dueño', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const url = `/v1/documents/${id}/topics/${topicId}`;
+    const mine = await world.app.inject({ method: 'GET', url, headers: AUTH });
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json()).toMatchObject({
+      path: ['1. Límites'],
+      blocks: [{ pageNumber: 2, text: 'Texto del tema' }],
+      document: { id },
+    });
+    const theirs = await world.app.inject({ method: 'GET', url, headers: AUTH_OTHER });
+    expect(theirs.statusCode).toBe(404);
+    const missing = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/00000000-0000-4000-8000-000000000000`,
+      headers: AUTH,
+    });
+    expect(errorCode(missing)).toBe('DOC_NOT_FOUND');
+    const invalid = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/no-es-uuid`,
+      headers: AUTH,
+    });
+    expect(errorCode(invalid)).toBe('REQ_INVALID');
   });
 
   it('otro usuario no ve, completa, cambia ni borra el documento', async () => {

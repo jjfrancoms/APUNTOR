@@ -44,6 +44,15 @@ export interface ApiCourse {
   createdAt: string;
 }
 
+/** Texto del documento bajo un tema, por página (la página sale del fragmento). */
+export interface ApiTopicContent {
+  topic: ApiTopic;
+  path: string[];
+  blocks: { pageNumber: number; sectionPath: string[]; text: string }[];
+  truncated: boolean;
+  document: { id: string; title: string };
+}
+
 export interface ApiTopic {
   id: string;
   parentId: string | null;
@@ -186,6 +195,8 @@ export const api = {
   documents: () => request<{ documents: ApiDocument[] }>('GET', '/v1/documents'),
   document: (id: string) => request<ApiDocument>('GET', `/v1/documents/${id}`),
   topics: (id: string) => request<{ topics: ApiTopic[] }>('GET', `/v1/documents/${id}/topics`),
+  topicContent: (documentId: string, topicId: string) =>
+    request<ApiTopicContent>('GET', `/v1/documents/${documentId}/topics/${topicId}`),
   createDocument: (input: { fileName: string; sizeBytes: number; courseId?: string }) =>
     request<ApiUploadTicket>('POST', '/v1/documents', input),
   completeDocument: (id: string) => request<unknown>('POST', `/v1/documents/${id}/complete`),
