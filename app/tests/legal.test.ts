@@ -11,7 +11,7 @@ const DOCS: readonly LegalDoc[] = ['terms', 'privacy', 'subscription'];
 
 describe('textos legales', () => {
   it('LEGAL_VERSION es una fecha ISO y hay fecha legible por idioma', () => {
-    expect(LEGAL_VERSION).toBe('2026-11-07');
+    expect(LEGAL_VERSION).toBe('2026-11-08');
     expect(LEGAL_UPDATED.es.trim()).not.toBe('');
     expect(LEGAL_UPDATED.en.trim()).not.toBe('');
   });
