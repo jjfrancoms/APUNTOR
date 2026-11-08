@@ -153,7 +153,7 @@ export const usageQuotas = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.kind, t.periodStart] }),
     check('usage_quotas_used_non_negative', sql`${t.used} >= 0`),
-    check('usage_quotas_kind_valid', sql`${t.kind} IN ('questions', 'storage_bytes')`),
+    check('usage_quotas_kind_valid', sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries')`),
   ],
 );
 

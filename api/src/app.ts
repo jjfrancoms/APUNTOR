@@ -42,7 +42,7 @@ import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { createManifestCache } from './page-manifest';
 import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
 import { withPageStructure } from './topic-content';
-import type { SummaryBlock, TopicSummarizer } from './topic-summary';
+import { SummaryLimitError, type SummaryBlock, type TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
@@ -336,6 +336,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       questionsLimit: FREE_LIMITS.questions,
       storageBytes: used.storage_bytes,
       storageLimit: FREE_LIMITS.storage_bytes,
+      summariesToday: used.summaries,
+      summariesLimit: FREE_LIMITS.summaries,
     };
   });
 
@@ -548,14 +550,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
     let summary;
     try {
-      summary = await deps.summaries.get({
-        filePath: document.filePath,
-        topic: content.topic,
-        path: content.path,
-        blocks,
-        manifest,
-      });
+      // Solo se cobra si hay que generarlo: abrir un resumen ya guardado es gratis.
+      summary = await deps.summaries.get(
+        {
+          filePath: document.filePath,
+          topic: content.topic,
+          path: content.path,
+          blocks,
+          manifest,
+        },
+        {
+          reserve: () => deps.quota.consume(userId, 'summaries', 1),
+          release: () => deps.quota.release(userId, 'summaries', 1),
+        },
+      );
     } catch (error) {
+      if (error instanceof SummaryLimitError) throw new ApiError('SUMMARY_DAILY_LIMIT', 429);
       if (isTransientAiError(error)) throw new ApiError('RATE_LIMITED', 429);
       request.log.error({ err: error instanceof Error ? error.message : 'error' }, 'resumen');
       throw new ApiError('CHAT_FAILED', 502);

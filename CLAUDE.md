@@ -98,6 +98,13 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   `WORKER_AI_RETRY` y como mucho 20 min (menos que el vencimiento del trabajo); un fallo nunca
   cambia el estado del documento y lo que falte se genera al pedirlo. La app muestra cada parte
   con su página, que abre la página original para comprobarla.
+- **Cuota y verificación de resúmenes:** generar un resumen desde la API cuesta 1 de la cuota
+  diaria `summaries` (30 en el plan gratis; 429 `SUMMARY_DAILY_LIMIT`). Abrir uno guardado es
+  gratis, si la generación falla se devuelve y el worker nunca cobra. La restricción
+  `usage_quotas_kind_valid` debe admitir `summaries` antes de desplegar (`db/pending/documents.sql`).
+  `verifySummaryBlocks()` (`api/src/summary-grounding.ts`) compara cada párrafo y cada punto de
+  lista con las páginas que cita (palabras con contenido) y exige las fórmulas en esas páginas
+  sin contar espacios: lo que falla se conserva, sin página y con `unverified: true`.
 - El índice de temas de la app (`TopicOutline`) es desplegable: solo se ven los temas raíz y al
   tocar uno se muestran sus secciones (al cerrarlo se cierran también sus subtemas).
 - `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
