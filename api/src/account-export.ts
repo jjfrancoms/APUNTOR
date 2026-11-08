@@ -1,4 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Database } from '../../db/client';
 import { documentChunks, documents, topics, usageQuotas } from '../../db/schema';
 import type { AuthUsersDirectory } from './admin';
@@ -6,11 +7,15 @@ import type { AuthSession } from './auth';
 import type { ConsentsRepository } from './consents';
 import type { DocumentsRepository } from './documents';
 import { FREE_LIMITS, type QuotaService } from './quota';
+import type { FileStorage } from './storage/file-storage';
+import { summaryKey } from './topic-summary';
 import type { WaitlistRepository } from './waitlist';
 
 /*
  * Derecho de acceso (ARCO): todo lo que el servidor guarda del usuario, en un JSON. Cada consulta
  * filtra por `documents.user_id` o `user_id`; aquí nunca entra `file_path` ni los embeddings.
+ * Los resúmenes de IA guardados en R2 se leen solo con las rutas de los documentos del usuario y
+ * se copian a una lista cerrada de campos: ni claves de almacenamiento ni nombres de modelo.
  */
 
 export interface ExportChunkRecord {
@@ -118,8 +123,78 @@ export function groupChunksByPage(chunks: readonly ExportChunkRecord[]): Map<str
   return byDocument;
 }
 
+const pagesSchema = z.array(z.number().int());
+/** Lo que se exporta de cada bloque de un resumen. Zod descarta el resto (claves de figuras, etc.). */
+const exportBlockSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('heading'), text: z.string() }),
+  z.object({ type: z.literal('paragraph'), text: z.string(), pages: pagesSchema }),
+  z.object({ type: z.literal('list'), items: z.array(z.string()), pages: pagesSchema }),
+  z.object({
+    type: z.literal('table'),
+    caption: z.string().optional(),
+    header: z.array(z.string()),
+    rows: z.array(z.array(z.string())),
+    pages: pagesSchema,
+  }),
+  z.object({ type: z.literal('formula'), text: z.string(), pages: pagesSchema }),
+  z.object({ type: z.literal('figure'), page: z.number().int(), caption: z.string() }),
+]);
+const storedSummaryExportSchema = z.object({ blocks: z.array(z.unknown()) });
+
+export type ExportSummaryBlock = z.infer<typeof exportBlockSchema>;
+
+export interface ExportSummary {
+  topicId: string;
+  blocks: ExportSummaryBlock[];
+}
+
+/** Cuántos resúmenes se leen de R2 a la vez. */
+const SUMMARY_READ_CONCURRENCY = 8;
+
+/** Resumen guardado de un tema, o `null` si falta, está dañado o no se puede leer. */
+async function readSummary(
+  storage: Pick<FileStorage, 'download'>,
+  filePath: string,
+  topicId: string,
+): Promise<ExportSummary | null> {
+  try {
+    const raw: unknown = JSON.parse(
+      new TextDecoder().decode(await storage.download(summaryKey(filePath, topicId))),
+    );
+    const stored = storedSummaryExportSchema.safeParse(raw);
+    if (!stored.success) return null;
+    const blocks = stored.data.blocks.flatMap((block) => {
+      const parsed = exportBlockSchema.safeParse(block);
+      return parsed.success ? [parsed.data] : [];
+    });
+    return blocks.length > 0 ? { topicId, blocks } : null;
+  } catch {
+    // Un archivo faltante o corrupto no debe romper la exportación.
+    return null;
+  }
+}
+
+/**
+ * Resúmenes de IA guardados de los temas de UN documento del usuario, por tema. Solo se consultan
+ * las rutas de los documentos que la sesión ya posee y los ids de temas que salen de sus propias filas.
+ */
+export async function readDocumentSummaries(
+  storage: Pick<FileStorage, 'download'>,
+  filePath: string,
+  topicIds: readonly string[],
+): Promise<ExportSummary[]> {
+  const found: (ExportSummary | null)[] = [];
+  for (let i = 0; i < topicIds.length; i += SUMMARY_READ_CONCURRENCY) {
+    const batch = topicIds.slice(i, i + SUMMARY_READ_CONCURRENCY);
+    found.push(...(await Promise.all(batch.map((id) => readSummary(storage, filePath, id)))));
+  }
+  return found.filter((summary): summary is ExportSummary => summary !== null);
+}
+
 export interface AccountExportDeps {
   documents: Pick<DocumentsRepository, 'list' | 'listCourses'>;
+  /** Solo se lee (`download`) con las rutas de resúmenes de los documentos del usuario. */
+  storage: Pick<FileStorage, 'download'>;
   consents: Pick<ConsentsRepository, 'list'>;
   accountExport: AccountExportRepository;
   quota: Pick<QuotaService, 'usage'>;
@@ -160,6 +235,14 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
   const verifiedEmail = identity?.emailConfirmedAt ? identity.email : null;
   const waitlist = verifiedEmail === null ? null : await deps.waitlist.findByEmail(verifiedEmail);
   const pages = groupChunksByPage(chunks);
+  const summaries = new Map<string, ExportSummary[]>();
+  for (const document of documents) {
+    const topicIds = topicRows.filter((t) => t.documentId === document.id).map((t) => t.id);
+    summaries.set(
+      document.id,
+      await readDocumentSummaries(deps.storage, document.filePath, topicIds),
+    );
+  }
   // Lista cerrada: `user_metadata` también trae datos del proveedor que no se reenvían a ciegas.
   const metadata = identity?.metadata ?? {};
 
@@ -195,6 +278,7 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
         .filter((topic) => topic.documentId === document.id)
         .map(({ documentId: _documentId, ...topic }) => topic),
       pages: pages.get(document.id) ?? [],
+      aiSummaries: summaries.get(document.id) ?? [],
     })),
     usage: {
       questionsToday: usage.questions,
@@ -212,9 +296,16 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
             source: waitlist.source,
             createdAt: waitlist.createdAt.toISOString(),
           },
-    // Lo que el servidor también guarda y no va aquí: los archivos subidos y los derivados en
-    // R2 (imágenes de página, texto por página, resúmenes de IA), los vectores, que no se pueden
-    // leer, y el detalle técnico de los fallos de ingesta, que puede citar rutas internas.
-    notIncluded: ['uploaded_files', 'derived_files', 'embeddings', 'ingestion_error_details'],
+    // Lo que el servidor también guarda y no va aquí: los archivos subidos, los derivados en R2
+    // que son imágenes (páginas y figuras recortadas de los resúmenes) o texto por página (ya va
+    // en `pages`), los vectores, que no se pueden leer, y el detalle técnico de los fallos de
+    // ingesta, que puede citar rutas internas. Los resúmenes de IA van en `aiSummaries`.
+    notIncluded: [
+      'uploaded_files',
+      'page_images',
+      'summary_figure_images',
+      'embeddings',
+      'ingestion_error_details',
+    ],
   };
 }
