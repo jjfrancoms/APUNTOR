@@ -32,9 +32,10 @@ export const es = {
     AUTH_PASSWORD_MISMATCH: 'Las contraseñas no coinciden.',
     AUTH_BIRTHDATE_INVALID: 'Escribe una fecha válida (DD/MM/AAAA).',
     AUTH_MINOR: 'Por ahora la app es solo para mayores de 18 años.',
-    UP_FORMAT: 'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC).',
+    UP_FORMAT:
+      'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC).',
     UP_SIZE: 'Supera el límite de 50 MB.',
-    UP_QUOTA: 'Tu espacio está al 96 %. Libera espacio o cambia de plan.',
+    UP_QUOTA: 'No queda espacio suficiente. Libera espacio borrando documentos que ya no uses.',
     UP_NETWORK: 'Sin conexión durante la subida. No se perdió nada.',
     // Provisionales: la tabla de la especificación se transcribió solo hasta UP_NETWORK.
     UP_LANGUAGE: 'Por ahora solo leemos documentos en español e inglés.',
@@ -237,6 +238,8 @@ export const es = {
   },
   document: {
     header: 'Documento',
+    today: 'hoy',
+    summaryPrompt: (name: string) => `Resumen de ${name}`,
     meta: (type: string, size: string, pages: number, when: string) =>
       `${type} · ${size} · ${pages} páginas · subido ${when}`,
     page: (n: number, total: number) => `Página ${n} de ${total}`,
@@ -281,11 +284,19 @@ export const es = {
     page: (n: number) => `Página ${n}`,
     empty: (q: string) => `No encontramos nada para "${q}".`,
     emptyHint: 'Prueba con otras palabras.',
+    pagesCount: (n: number) => `${n} páginas`,
+    chatTitle: (title: string) => `Chat · ${title}`,
+    chatTag: 'Chat',
   },
   help: {
     header: 'Ayuda',
     search: 'Buscar en la ayuda…',
-    categories: ['Subir documentos', 'Cuenta y privacidad', 'Respuestas y fuentes', 'Planes y pagos'],
+    categories: [
+      'Subir documentos',
+      'Cuenta y privacidad',
+      'Respuestas y fuentes',
+      'Planes y pagos',
+    ],
     faqHeader: 'Preguntas frecuentes',
     faqs: [
       '¿Qué formatos puedo subir?',
@@ -361,7 +372,8 @@ export const es = {
     retry: 'Reintentar',
     space: 'Espacio usado',
     spaceValue: (used: number, total: number) => `${used} de ${total} MB`,
-    seePlans: 'Ver planes',
+    freeSpaceHint: 'Libera espacio borrando documentos que ya no uses.',
+    seeDocuments: 'Ver mis documentos',
     retryFailed: 'Reintentar los que fallaron',
     dismiss: 'Quitar',
   },
@@ -449,6 +461,8 @@ export const es = {
     limitBody: (used: number, total: number, renew: string) =>
       `Usaste ${used} de ${total} preguntas gratis. Se renuevan en ${renew}.`,
     seePlans: 'Ver planes',
+    limitUsed: (used: number, total: number) => `Usaste ${used} de ${total} preguntas gratis.`,
+    plansSoon: 'Los planes de pago llegarán pronto. Tu límite se renueva a la medianoche.',
     offlineBanner: 'Sin conexión. Puedo ayudarte con lo guardado en tu dispositivo.',
     notFound: 'Eso no aparece en tus documentos. ¿Quieres que lo busque fuera?',
     searchOutside: 'Buscar fuera',
@@ -946,6 +960,11 @@ export type Strings = Widen<typeof es>;
 export type ErrorCode = keyof typeof es.errors;
 
 const dictionaries: Record<Language, Strings> = { es, en };
+
+/** Textos de un idioma fuera de un componente (en el almacén, donde no hay hooks). */
+export function stringsFor(language: Language): Strings {
+  return dictionaries[language];
+}
 
 /** Textos del idioma elegido en Perfil › Idioma (español por defecto). */
 export function useStrings(): Strings {

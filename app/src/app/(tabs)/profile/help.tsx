@@ -118,9 +118,7 @@ export default function Help() {
       {/* El formulario de contacto (pantalla 43) aún no envía nada: se escribe por correo. */}
       <Tap
         accessibilityRole="link"
-        onPress={() =>
-          void Linking.openURL(`mailto:${s.help.supportEmail}`).catch(() => undefined)
-        }
+        onPress={() => void Linking.openURL(`mailto:${s.help.supportEmail}`).catch(() => undefined)}
       >
         <Card tone="primary" style={styles.row}>
           <View style={styles.flex}>

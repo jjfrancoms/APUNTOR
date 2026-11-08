@@ -5,12 +5,15 @@ import { normalize } from '@/lib/text-search';
 import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
+import { useLanguage } from '@/i18n/language';
+import { localeFor } from '@/lib/format';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 23 · Conversaciones (el historial se guarda hasta que lo borres). */
 export default function Conversations() {
   const s = useStrings();
+  const locale = localeFor(useLanguage());
   const { c } = useTheme();
   const all = useStore((st) => st.conversations);
   const [query, setQuery] = useState('');
@@ -29,11 +32,11 @@ export default function Conversations() {
       group: cv.updatedAt >= startOfToday ? 'today' : 'week',
       time:
         cv.updatedAt >= startOfToday
-          ? new Date(cv.updatedAt).toLocaleTimeString('es-PE', {
+          ? new Date(cv.updatedAt).toLocaleTimeString(locale, {
               hour: '2-digit',
               minute: '2-digit',
             })
-          : new Date(cv.updatedAt).toLocaleDateString('es-PE', { weekday: 'short' }),
+          : new Date(cv.updatedAt).toLocaleDateString(locale, { weekday: 'short' }),
       preview: cv.messages.at(-1)?.text || cv.title,
     }))
     .sort((a, b) => b.updatedAt - a.updatedAt);

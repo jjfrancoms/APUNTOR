@@ -29,9 +29,10 @@ export const en: Strings = {
     AUTH_PASSWORD_MISMATCH: "The passwords don't match.",
     AUTH_BIRTHDATE_INVALID: 'Enter a valid date (DD/MM/YYYY).',
     AUTH_MINOR: 'For now the app is only for people 18 and over.',
-    UP_FORMAT: 'For now we accept PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos (JPG, PNG, HEIC).',
+    UP_FORMAT:
+      'For now we accept PDF, Word (.docx), PowerPoint (.pptx), text (.txt, .md) and photos (JPG, PNG, HEIC).',
     UP_SIZE: 'It goes over the 50 MB limit.',
-    UP_QUOTA: 'Your storage is 96 % full. Free up space or change your plan.',
+    UP_QUOTA: 'Not enough space left. Free up space by deleting documents you no longer use.',
     UP_NETWORK: 'The connection dropped during the upload. Nothing was lost.',
     UP_LANGUAGE: 'For now we only read documents in Spanish and English.',
     UP_UNREADABLE: "We couldn't read this file.",
@@ -234,6 +235,8 @@ export const en: Strings = {
   },
   document: {
     header: 'Document',
+    today: 'today',
+    summaryPrompt: (name: string) => `Summary of ${name}`,
     meta: (type: string, size: string, pages: number, when: string) =>
       `${type} · ${size} · ${pages} pages · uploaded ${when}`,
     page: (n: number, total: number) => `Page ${n} of ${total}`,
@@ -281,6 +284,9 @@ export const en: Strings = {
     page: (n: number) => `Page ${n}`,
     empty: (q: string) => `We didn't find anything for "${q}".`,
     emptyHint: 'Try other words.',
+    pagesCount: (n: number) => `${n} pages`,
+    chatTitle: (title: string) => `Chat · ${title}`,
+    chatTag: 'Chat',
   },
   help: {
     header: 'Help',
@@ -366,7 +372,8 @@ export const en: Strings = {
     retry: 'Try again',
     space: 'Space used',
     spaceValue: (used: number, total: number) => `${used} of ${total} MB`,
-    seePlans: 'See plans',
+    freeSpaceHint: 'Free up space by deleting documents you no longer use.',
+    seeDocuments: 'See my documents',
     retryFailed: 'Retry the ones that failed',
     dismiss: 'Remove',
   },
@@ -453,6 +460,8 @@ export const en: Strings = {
     limitBody: (used: number, total: number, renew: string) =>
       `You used ${used} of ${total} free questions. They renew in ${renew}.`,
     seePlans: 'See plans',
+    limitUsed: (used: number, total: number) => `You used ${used} of ${total} free questions.`,
+    plansSoon: 'Paid plans are coming soon. Your limit renews at midnight (Peru time).',
     offlineBanner: "You're offline. I can help with what's saved on your device.",
     notFound: "That isn't in your documents. Do you want me to look outside?",
     searchOutside: 'Search outside',

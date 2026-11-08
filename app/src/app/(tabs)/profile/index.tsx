@@ -4,6 +4,7 @@ import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/comp
 import { signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { LANGUAGES } from '@/i18n/language';
+import { PREVIEW } from '@/lib/config';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 7 · Perfil y ajustes */
@@ -96,11 +97,14 @@ export default function Profile() {
           title={s.profile.notifications}
           onPress={() => router.push('/profile/notifications')}
         />
-        <ListRow
-          icon="credit-card"
-          title={s.profile.subscription}
-          onPress={() => router.push('/profile/subscription')}
-        />
+        {/* Sin pagos todavía: la suscripción (32) solo existe en la vista previa. */}
+        {PREVIEW ? (
+          <ListRow
+            icon="credit-card"
+            title={s.profile.subscription}
+            onPress={() => router.push('/profile/subscription')}
+          />
+        ) : null}
         <ListRow
           icon="help-circle"
           title={s.profile.help}

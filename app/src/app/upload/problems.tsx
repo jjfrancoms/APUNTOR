@@ -61,10 +61,10 @@ export default function UploadProblems() {
         };
       case 'UP_QUOTA':
         return {
-          title: s.errors.UP_QUOTA,
-          body: p.spaceValue(used, quota),
-          action: p.seePlans,
-          onPress: () => router.push('/plans'),
+          title: p.quotaTitle,
+          body: p.freeSpaceHint,
+          action: p.seeDocuments,
+          onPress: () => router.navigate('/courses'),
         };
       case 'UP_LANGUAGE':
         return {
@@ -131,7 +131,7 @@ export default function UploadProblems() {
           <Text variant="smallStrong">{p.spaceValue(used, quota)}</Text>
         </View>
         <ProgressBar value={used / quota} tone="accent" label={p.space} />
-        <TextLink label={p.seePlans} onPress={() => router.push('/plans')} />
+        <TextLink label={p.seeDocuments} onPress={() => router.navigate('/courses')} />
       </Card>
     </Screen>
   );

@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
-import type { ErrorCode } from '@/i18n/es';
+import { stringsFor, type ErrorCode } from '@/i18n/es';
+import { formatDate } from '@/lib/format';
 import { LEGAL_VERSION } from '@/i18n/legal';
 import {
   api,
@@ -151,11 +152,6 @@ function stripExtension(name: string): string {
   return name.replace(/\.[^.]+$/u, '');
 }
 
-function uploadedLabel(iso: string): string {
-  const date = new Date(iso);
-  return todayKey(date) === todayKey() ? 'hoy' : date.toLocaleDateString('es-PE');
-}
-
 /** Documentos del servidor con la forma que usan las pantallas. */
 export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): DocRecord {
   return {
@@ -166,7 +162,6 @@ export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): 
     courseId: doc.courseId ?? '',
     path: courseTitle ? [courseTitle, stripExtension(doc.title)] : [],
     topics: [],
-    uploadedLabel: uploadedLabel(doc.createdAt),
     status: doc.status,
     topicCount: doc.topicCount,
     createdAt: doc.createdAt,
@@ -1337,6 +1332,7 @@ function matches(query: string, text: string): boolean {
 
 export function searchAll(query: string, s: AppState = state): SearchHit[] {
   if (query.trim().length === 0) return [];
+  const labels = stringsFor(s.settings.language).search;
   const hits: SearchHit[] = [];
   for (const doc of s.documents) {
     const course = s.courses.find((c) => c.id === doc.courseId)?.title ?? '';
@@ -1346,7 +1342,7 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         kind: 'document',
         targetId: doc.id,
         title: doc.name,
-        location: doc.pages > 0 ? `${doc.pages} páginas` : '',
+        location: doc.pages > 0 ? labels.pagesCount(doc.pages) : '',
         snippet: doc.topics.join(' · '),
         tag: course,
       });
@@ -1359,10 +1355,10 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         id: conv.id,
         kind: 'chat',
         targetId: conv.id,
-        title: `Chat · ${conv.title}`,
-        location: new Date(conv.updatedAt).toLocaleDateString('es-PE'),
+        title: labels.chatTitle(conv.title),
+        location: formatDate(new Date(conv.updatedAt).toISOString(), s.settings.language),
         snippet: snippetAround(msg?.text ?? conv.title, query),
-        tag: conv.course || 'Chat',
+        tag: conv.course || labels.chatTag,
       });
     }
   }

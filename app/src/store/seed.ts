@@ -54,7 +54,6 @@ export interface DocRecord {
   courseId: string;
   path: string[];
   topics: string[];
-  uploadedLabel: string;
   status: DocumentStatus;
   topicCount: number;
   createdAt: string;

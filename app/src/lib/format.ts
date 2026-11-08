@@ -11,6 +11,16 @@ export function formatPercent(value: number): string {
 
 const LOCALES = { es: 'es-PE', en: 'en-US' } as const;
 
+/** Configuración regional para las fechas, según el idioma de la app. */
+export function localeFor(language: 'es' | 'en'): string {
+  return LOCALES[language];
+}
+
+/** ¿La fecha ISO cae hoy (en la hora del dispositivo)? Una fecha inválida no es hoy. */
+export function isToday(iso: string): boolean {
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
 /** 1536 → "1.5 KB"; 12 582 912 → "12 MB" (unidades de 1024, una cifra decimal como máximo). */
 export function formatBytes(bytes: number, language: 'es' | 'en' = 'es'): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
