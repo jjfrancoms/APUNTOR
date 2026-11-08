@@ -21,6 +21,8 @@ import {
   type ApiAdminUser,
   type ApiAdminWaitlistEntry,
   type ApiConsent,
+  type ApiConversationDetail,
+  type ApiConversationSummary,
   type ApiDocument,
   type ApiDocumentStatus,
   type ApiUsage,
@@ -60,6 +62,28 @@ import {
   type StoreCourse,
   type UploadJob,
 } from './seed';
+import {
+  clearDeletedConversation,
+  clearDeletedMessages,
+  conversationInput,
+  conversationsToFetch,
+  emptyConversationSync,
+  hasPendingWork,
+  isUuid,
+  markConversationRemoved,
+  markMessagesRemoved,
+  mergeConversations,
+  messageBatches,
+  metaKey,
+  newUuid,
+  recordCreated,
+  recordMeta,
+  recordUploaded,
+  toServerMessage,
+  unsentMessages,
+  withUuidIds,
+  type ConversationSyncState,
+} from './conversation-sync';
 
 export * from './seed';
 export * from './content';
@@ -95,6 +119,7 @@ interface Persisted {
   ownerId: string | null;
   settings: Settings;
   conversations: Conversation[];
+  conversationSync?: ConversationSyncState;
   study: AppState['study'];
 }
 
@@ -104,6 +129,7 @@ async function persist(): Promise<void> {
     ownerId: state.ownerId,
     settings: state.settings,
     conversations: state.conversations,
+    conversationSync: state.conversationSync,
     study: state.study,
   };
   try {
@@ -367,20 +393,24 @@ function startSession(user: User): Promise<void> {
           isAdmin,
           ownerId: session.id,
           conversations: [],
+          conversationSync: emptyConversationSync(),
           study: createInitialState().study,
           uploads: [],
         };
   });
+  void syncConversations({ pull: true });
   return Promise.all([refreshAll(), refreshAdmin()]).then(() => undefined);
 }
 
 function endSession(): void {
   abortAllAnswers();
+  stopConversationSync();
   setState((s) => ({
     ...createInitialState(),
     settings: s.settings,
     ownerId: s.ownerId,
     conversations: s.conversations,
+    conversationSync: s.conversationSync,
     study: s.study,
   }));
 }
@@ -398,7 +428,8 @@ export async function hydrate(): Promise<void> {
           ...state,
           ownerId: parsed.ownerId ?? null,
           settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
-          conversations: parsed.conversations ?? [],
+          conversations: withUuidIds(parsed.conversations ?? []),
+          conversationSync: parsed.conversationSync ?? emptyConversationSync(),
           study: parsed.study ?? state.study,
         };
       }
@@ -703,6 +734,7 @@ export async function deleteAccount(): Promise<boolean> {
   } catch {
     return false;
   }
+  stopConversationSync();
   await supabase.auth.signOut().catch(() => undefined);
   setState((s) => ({ ...createInitialState(), settings: s.settings }));
   return true;
@@ -1267,7 +1299,7 @@ export function uploadSummary(s: AppState): {
 // --- Chat --------------------------------------------------------------------------
 
 export function startConversation(scopeDocIds: readonly string[] = []): string {
-  const id = newId('conv');
+  const id = newUuid();
   setState((s) => ({
     ...s,
     conversations: [
@@ -1298,6 +1330,7 @@ function appendMessages(
         : c,
     ),
   }));
+  scheduleConversationSync();
 }
 
 /** Registra la pregunta. Devuelve false si ya se alcanzó el límite diario (no se envía). */
@@ -1305,11 +1338,11 @@ export function askQuestion(conversationId: string, question: string): boolean {
   const text = question.trim();
   if (!text) return false;
   const conv = state.conversations.find((c) => c.id === conversationId);
-  const userMsg: Message = { id: newId('m'), role: 'user', kind: 'text', text };
+  const userMsg: Message = { id: newUuid(), role: 'user', kind: 'text', text };
   if (limitReached(state)) {
     appendMessages(conversationId, [
       userMsg,
-      { id: newId('m'), role: 'mascot', kind: 'limit', text: '' },
+      { id: newUuid(), role: 'mascot', kind: 'limit', text: '' },
     ]);
     return false;
   }
@@ -1351,11 +1384,11 @@ const CHAT_ERROR_CODES: readonly ChatErrorCode[] = ['TIMEOUT', 'NETWORK', 'RATE_
 /** Aviso de la mascota para un fallo de la petición del chat. */
 function chatFailureMessage(error: unknown): Message {
   const code = error instanceof ApiRequestError ? error.code : null;
-  if (code === 'CANCELLED') return { id: newId('m'), role: 'mascot', kind: 'cancelled', text: '' };
+  if (code === 'CANCELLED') return { id: newUuid(), role: 'mascot', kind: 'cancelled', text: '' };
   if (code === 'CHAT_DAILY_LIMIT')
-    return { id: newId('m'), role: 'mascot', kind: 'limit', text: '' };
+    return { id: newUuid(), role: 'mascot', kind: 'limit', text: '' };
   const errorCode = CHAT_ERROR_CODES.find((c) => c === code) ?? 'CHAT_FAILED';
-  return { id: newId('m'), role: 'mascot', kind: 'error', errorCode, text: '' };
+  return { id: newUuid(), role: 'mascot', kind: 'error', errorCode, text: '' };
 }
 
 /**
@@ -1425,9 +1458,7 @@ export async function answerQuestion(
     scope ?? state.conversations.find((c) => c.id === conversationId)?.scopeDocIds ?? [];
   if (isAnswerPending(state, conversationId)) return;
   if (!state.settings.useDocs) {
-    appendMessages(conversationId, [
-      { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
-    ]);
+    appendMessages(conversationId, [{ id: newUuid(), role: 'mascot', kind: 'notFound', text: '' }]);
     return;
   }
   await runPending(conversationId, question, 'notes', async (signal) => {
@@ -1439,13 +1470,13 @@ export async function answerQuestion(
     if (answerControllers.get(conversationId)?.signal !== signal) return;
     if (answer.status === 'small_talk') {
       appendMessages(conversationId, [
-        { id: newId('m'), role: 'mascot', kind: 'smallTalk', smallTalk: answer.kind, text: '' },
+        { id: newUuid(), role: 'mascot', kind: 'smallTalk', smallTalk: answer.kind, text: '' },
       ]);
     } else if (answer.status === 'abstained') {
       const unclear = answer.reason === 'no_matches' && looksUnclear(question);
       appendMessages(conversationId, [
         {
-          id: newId('m'),
+          id: newUuid(),
           role: 'mascot',
           kind: 'notFound',
           text: '',
@@ -1475,7 +1506,7 @@ export async function answerQuestion(
         conversationId,
         [
           {
-            id: newId('m'),
+            id: newUuid(),
             role: 'mascot',
             kind: 'answer',
             text: lines.join('\n'),
@@ -1504,9 +1535,9 @@ export async function searchOutside(conversationId: string, question: string): P
     if (answerControllers.get(conversationId)?.signal !== signal) return;
     const messages: Message[] =
       results.length === 0
-        ? [{ id: newId('m'), role: 'mascot', kind: 'external', text: '' }]
+        ? [{ id: newUuid(), role: 'mascot', kind: 'external', text: '' }]
         : results.map((r) => ({
-            id: newId('m'),
+            id: newUuid(),
             role: 'mascot',
             kind: 'external',
             text: r.snippet,
@@ -1526,6 +1557,7 @@ export function widenConversationScope(conversationId: string): void {
       return rest;
     }),
   }));
+  scheduleConversationSync();
 }
 
 function lastUserIndex(conv: Conversation): number {
@@ -1536,12 +1568,33 @@ function lastUserIndex(conv: Conversation): number {
 }
 
 function replaceMessages(conversationId: string, messages: Message[]): void {
+  setState((s) => {
+    const kept = new Set(messages.map((m) => m.id));
+    const removed = (s.conversations.find((c) => c.id === conversationId)?.messages ?? [])
+      .filter((m) => !kept.has(m.id))
+      .map((m) => m.id);
+    return {
+      ...s,
+      conversations: s.conversations.map((c) =>
+        c.id === conversationId ? { ...c, messages, updatedAt: Date.now() } : c,
+      ),
+      conversationSync: markMessagesRemoved(s.conversationSync, conversationId, removed),
+    };
+  });
+  scheduleConversationSync();
+}
+
+/** Borra la conversación aquí y, en cuanto se pueda, en el servidor. */
+export function deleteConversation(conversationId: string): void {
+  answerControllers.get(conversationId)?.abort();
   setState((s) => ({
     ...s,
-    conversations: s.conversations.map((c) =>
-      c.id === conversationId ? { ...c, messages, updatedAt: Date.now() } : c,
-    ),
+    conversations: s.conversations.filter((c) => c.id !== conversationId),
+    conversationSync: isUuid(conversationId)
+      ? markConversationRemoved(s.conversationSync, conversationId)
+      : s.conversationSync,
   }));
+  scheduleConversationSync(0);
 }
 
 /**
@@ -1577,6 +1630,242 @@ export function editLastQuestion(conversationId: string): string | null {
   if (!last) return null;
   replaceMessages(conversationId, conv.messages.slice(0, index));
   return last.text;
+}
+
+// --- Sincronización de conversaciones con el servidor -------------------------------
+
+const SYNC_DEBOUNCE_MS = 800;
+const SYNC_RETRY_MIN_MS = 15_000;
+const SYNC_RETRY_MAX_MS = 5 * 60_000;
+const SYNC_MAX_PAGES = 20;
+/** Descargas completas por vuelta: las que falten llegan en la siguiente sincronización. */
+const SYNC_MAX_DETAILS = 60;
+const SYNC_DELETE_BATCH = 500;
+
+let syncRunning = false;
+let syncAgain = false;
+let syncPullWanted = false;
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let syncRetryDelay = SYNC_RETRY_MIN_MS;
+/** Conversaciones que el servidor rechazó (4xx) en esta sesión: siguen guardadas aquí. */
+const syncRejected = new Set<string>();
+
+function clearSyncTimer(): void {
+  if (syncTimer !== null) clearTimeout(syncTimer);
+  syncTimer = null;
+}
+
+function stopConversationSync(): void {
+  clearSyncTimer();
+  syncAgain = false;
+  syncPullWanted = false;
+  syncRetryDelay = SYNC_RETRY_MIN_MS;
+  syncRejected.clear();
+}
+
+function scheduleConversationSync(delay: number = SYNC_DEBOUNCE_MS): void {
+  if (!backendConfigured || !state.session) return;
+  clearSyncTimer();
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    void syncConversations();
+  }, delay);
+}
+
+/** Sin red, sesión vencida, límite o fallo del servidor: se reintenta. El resto es definitivo. */
+function isTransientSyncError(error: unknown): boolean {
+  if (!(error instanceof ApiRequestError)) return true;
+  return (
+    error.status === 0 ||
+    error.status === 401 ||
+    error.status === 408 ||
+    error.status === 429 ||
+    error.status >= 500
+  );
+}
+
+function updateConversationSync(
+  change: (sync: ConversationSyncState, conversations: Conversation[]) => ConversationSyncState,
+): void {
+  setState((s) => ({
+    ...s,
+    conversationSync: change(s.conversationSync, s.conversations),
+  }));
+}
+
+async function pullConversations(owner: string): Promise<void> {
+  const summaries: ApiConversationSummary[] = [];
+  let complete = false;
+  for (let page = 1; page <= SYNC_MAX_PAGES; page += 1) {
+    const result = await api.conversations(page);
+    if (state.session?.id !== owner) return;
+    summaries.push(...result.conversations);
+    if (!result.hasMore) {
+      complete = true;
+      break;
+    }
+  }
+  const ids = conversationsToFetch(state.conversations, state.conversationSync, summaries).slice(
+    0,
+    SYNC_MAX_DETAILS,
+  );
+  const details: ApiConversationDetail[] = [];
+  for (const id of ids) {
+    try {
+      details.push(await api.conversation(id));
+    } catch (error) {
+      if (isTransientSyncError(error)) throw error;
+    }
+    if (state.session?.id !== owner) return;
+  }
+  setState((s) => {
+    const merged = mergeConversations(
+      s.conversations,
+      s.conversationSync,
+      summaries,
+      details,
+      complete,
+    );
+    return merged.changed
+      ? { ...s, conversations: merged.conversations, conversationSync: merged.sync }
+      : s;
+  });
+}
+
+async function pushDeletions(owner: string): Promise<void> {
+  for (const id of [...state.conversationSync.deletedConversations]) {
+    if (state.session?.id !== owner) return;
+    try {
+      await api.deleteConversation(id);
+    } catch (error) {
+      if (isTransientSyncError(error)) throw error;
+    }
+    updateConversationSync((sync) => clearDeletedConversation(sync, id));
+  }
+  for (const [id, messageIds] of Object.entries(state.conversationSync.deletedMessages)) {
+    for (let start = 0; start < messageIds.length; start += SYNC_DELETE_BATCH) {
+      if (state.session?.id !== owner) return;
+      const batch = messageIds.slice(start, start + SYNC_DELETE_BATCH);
+      try {
+        await api.deleteConversationMessages(id, batch);
+      } catch (error) {
+        if (isTransientSyncError(error)) throw error;
+      }
+      updateConversationSync((sync) => clearDeletedMessages(sync, id, batch));
+    }
+  }
+}
+
+async function pushConversation(owner: string, conversationId: string): Promise<void> {
+  const current = () => state.conversations.find((c) => c.id === conversationId);
+  const initial = current();
+  if (!initial) return;
+  const pendingMessages = unsentMessages(initial, state.conversationSync);
+  if (state.conversationSync.synced[conversationId] === undefined) {
+    if (pendingMessages.length === 0) return;
+    await api.createConversation({
+      id: conversationId,
+      ...conversationInput(initial),
+      updatedAt: new Date(initial.updatedAt).toISOString(),
+    });
+    if (state.session?.id !== owner) return;
+    updateConversationSync((sync) => recordCreated(sync, conversationId, metaKey(initial)));
+  }
+  for (const batch of messageBatches(pendingMessages)) {
+    if (state.session?.id !== owner) return;
+    await api.appendConversationMessages(
+      conversationId,
+      batch.map(toServerMessage),
+      new Date(initial.updatedAt).toISOString(),
+    );
+    updateConversationSync((sync, conversations) =>
+      recordUploaded(
+        sync,
+        conversations.find((c) => c.id === conversationId),
+        conversationId,
+        batch.map((m) => m.id),
+      ),
+    );
+  }
+  const latest = current();
+  const entry = state.conversationSync.synced[conversationId];
+  if (latest && entry && entry.meta !== metaKey(latest) && state.session?.id === owner) {
+    await api.updateConversation(conversationId, conversationInput(latest));
+    updateConversationSync((sync) => recordMeta(sync, conversationId, metaKey(latest)));
+  }
+}
+
+async function pushConversations(owner: string): Promise<void> {
+  await pushDeletions(owner);
+  for (const { id } of [...state.conversations]) {
+    if (state.session?.id !== owner) return;
+    if (syncRejected.has(id)) continue;
+    try {
+      await pushConversation(owner, id);
+    } catch (error) {
+      if (isTransientSyncError(error)) throw error;
+      syncRejected.add(id);
+    }
+  }
+}
+
+/**
+ * Une con el servidor y sube lo pendiente; nunca corren dos vueltas a la vez, así una subida no
+ * se confunde con un borrado hecho en otro dispositivo. Si falla, lo local queda intacto y se
+ * reintenta con espera creciente; el servidor descarta lo repetido por id.
+ */
+export async function syncConversations(options: { pull?: boolean } = {}): Promise<void> {
+  if (options.pull) syncPullWanted = true;
+  if (!backendConfigured) return;
+  if (syncRunning) {
+    syncAgain = true;
+    return;
+  }
+  const owner = state.session?.id;
+  if (!owner) return;
+  syncRunning = true;
+  try {
+    do {
+      syncAgain = false;
+      if (syncPullWanted) {
+        await pullConversations(owner);
+        syncPullWanted = false;
+      }
+      await pushConversations(owner);
+    } while (syncAgain && state.session?.id === owner);
+    syncRetryDelay = SYNC_RETRY_MIN_MS;
+  } catch {
+    if (state.session?.id === owner) {
+      clearSyncTimer();
+      syncTimer = setTimeout(() => {
+        syncTimer = null;
+        void syncConversations();
+      }, syncRetryDelay);
+      syncRetryDelay = Math.min(syncRetryDelay * 2, SYNC_RETRY_MAX_MS);
+    }
+  } finally {
+    syncRunning = false;
+    // Cambió la cuenta durante la vuelta: la cuenta nueva aún no sincronizó.
+    if (state.session && state.session.id !== owner) scheduleConversationSync(0);
+  }
+}
+
+let lastConversationRefresh = 0;
+const SYNC_REFRESH_MS = 30_000;
+
+/** Al abrir el historial trae lo escrito en otros dispositivos, sin insistir en cada visita. */
+export function refreshConversations(now: number = Date.now()): void {
+  if (now - lastConversationRefresh < SYNC_REFRESH_MS) return;
+  lastConversationRefresh = now;
+  void syncConversations({ pull: true });
+}
+
+/** Volvió la conexión: reintenta ya, sin esperar el temporizador. */
+export function retryConversationSync(): void {
+  if (!state.session) return;
+  if (hasPendingWork(state.conversations, state.conversationSync) || syncPullWanted) {
+    scheduleConversationSync(0);
+  }
 }
 
 // --- Estudio (fase 3: quizzes y tarjetas generados desde tus documentos) ------------
@@ -1805,6 +2094,8 @@ export function topicDetail(s: AppState, topicId: string): TopicDetail | null {
 /** Para pruebas: vuelve al estado inicial. */
 export function resetForTests(): void {
   abortAllAnswers();
+  stopConversationSync();
+  lastConversationRefresh = 0;
   state = createInitialState();
   codeExchanges.clear();
   pickedFiles.clear();

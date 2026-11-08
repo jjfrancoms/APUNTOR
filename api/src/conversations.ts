@@ -456,21 +456,25 @@ export function registerConversationRoutes(
     );
   });
 
-  app.post('/v1/conversations/:id/messages', { bodyLimit: MESSAGES_BODY_LIMIT }, async (request) => {
-    const userId = await requireUser(request);
-    const { id } = parse(idParams, request.params);
-    const body = parse(appendBody, request.body);
-    return toPublicSummary(
-      found(
-        await repository.appendMessages(
-          userId,
-          id,
-          body.messages,
-          body.updatedAt === undefined ? null : new Date(body.updatedAt),
+  app.post(
+    '/v1/conversations/:id/messages',
+    { bodyLimit: MESSAGES_BODY_LIMIT },
+    async (request) => {
+      const userId = await requireUser(request);
+      const { id } = parse(idParams, request.params);
+      const body = parse(appendBody, request.body);
+      return toPublicSummary(
+        found(
+          await repository.appendMessages(
+            userId,
+            id,
+            body.messages,
+            body.updatedAt === undefined ? null : new Date(body.updatedAt),
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   // Editar la última pregunta o reintentar quita mensajes: es un POST porque lleva cuerpo.
   app.post('/v1/conversations/:id/messages/delete', async (request) => {

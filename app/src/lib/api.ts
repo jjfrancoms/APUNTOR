@@ -1,4 +1,5 @@
 import { es, type ErrorCode } from '@/i18n/es';
+import type { Message } from '@/store/seed';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -156,6 +157,8 @@ export interface ApiAdminStats {
   storageBytes: number;
   questionsToday: number;
   consents: { currentVersionUsers: number };
+  /** Solo cuántas hay: el panel nunca ve títulos ni mensajes. */
+  conversations: { total: number; messages: number };
 }
 
 export interface ApiAdminUser {
@@ -286,6 +289,35 @@ async function request<T>(
   }
 }
 
+/** Conversación guardada en el servidor (fase 2). */
+export interface ApiConversationInput {
+  title: string;
+  course: string;
+  scopeDocumentIds: string[] | null;
+}
+
+export interface ApiConversationSummary extends ApiConversationInput {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface ApiConversationMessage {
+  id: string;
+  role: Message['role'];
+  kind: Message['kind'];
+  text: string;
+  payload: Pick<
+    Message,
+    'claims' | 'sources' | 'reason' | 'unclear' | 'errorCode' | 'smallTalk' | 'external'
+  >;
+}
+
+export interface ApiConversationDetail extends ApiConversationSummary {
+  messages: ApiConversationMessage[];
+}
+
 export const api = {
   usage: () => request<ApiUsage>('GET', '/v1/me/usage'),
   deleteAccount: () => request<void>('DELETE', '/v1/account'),
@@ -335,6 +367,26 @@ export const api = {
   /** Pública (no hace falta sesión) e idempotente: repetir el correo no lo duplica. */
   joinWaitlist: (input: { email: string; consent: true; source: 'app' | 'web' }) =>
     request<{ status: 'joined' }>('POST', '/v1/waitlist', input),
+  conversations: (page: number) =>
+    request<{ conversations: ApiConversationSummary[]; page: number; hasMore: boolean }>(
+      'GET',
+      `/v1/conversations?page=${page}&perPage=100`,
+    ),
+  conversation: (id: string) => request<ApiConversationDetail>('GET', `/v1/conversations/${id}`),
+  /** Idempotente por id: si se repite, devuelve la que ya existe. */
+  createConversation: (input: ApiConversationInput & { id: string; updatedAt: string }) =>
+    request<ApiConversationSummary>('POST', '/v1/conversations', input),
+  updateConversation: (id: string, patch: Partial<ApiConversationInput>) =>
+    request<ApiConversationSummary>('PATCH', `/v1/conversations/${id}`, patch),
+  /** Idempotente por id de mensaje: reenviar un lote no duplica. */
+  appendConversationMessages: (id: string, messages: ApiConversationMessage[], updatedAt: string) =>
+    request<ApiConversationSummary>('POST', `/v1/conversations/${id}/messages`, {
+      messages,
+      updatedAt,
+    }),
+  deleteConversationMessages: (id: string, ids: string[]) =>
+    request<ApiConversationSummary>('POST', `/v1/conversations/${id}/messages/delete`, { ids }),
+  deleteConversation: (id: string) => request<void>('DELETE', `/v1/conversations/${id}`),
   /** 200 si la cuenta es administradora; 403 FORBIDDEN si no. */
   adminMe: () => request<ApiAdminMe>('GET', '/v1/admin/me'),
   adminStats: () => request<ApiAdminStats>('GET', '/v1/admin/stats'),

@@ -562,6 +562,10 @@ export const es = {
     search: 'Buscar en tus conversaciones…',
     today: 'HOY',
     week: 'ESTA SEMANA',
+    delete: 'Borrar conversación',
+    deleteTitle: '¿Borrar esta conversación?',
+    deleteBody: 'Se borrará de este dispositivo y de tu cuenta. No se puede deshacer.',
+    deleteConfirm: 'Borrar',
   },
   quizSetup: {
     header: 'Nuevo quiz',
@@ -955,6 +959,8 @@ export const es = {
       byStatus: 'Documentos por estado',
       storage: 'Espacio usado',
       questionsToday: 'Preguntas de hoy',
+      conversations: 'Conversaciones',
+      conversationsDetail: (messages: number) => `${messages} mensajes`,
       consents: 'Consentimiento vigente',
       consentsDetail: (n: number, total: number) => `${n} de ${total} usuarios`,
       failedAlert: (n: number) =>

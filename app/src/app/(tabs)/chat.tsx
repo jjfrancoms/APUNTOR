@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { normalize } from '@/lib/text-search';
-import { Card, Chip, Icon, Screen, Text } from '@/components/ui';
-import { useStore } from '@/store/store';
+import { Button, Card, Chip, Icon, Screen, Sheet, Text } from '@/components/ui';
+import { deleteConversation, refreshConversations, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { useLanguage } from '@/i18n/language';
 import { localeFor } from '@/lib/format';
@@ -17,6 +17,13 @@ export default function Conversations() {
   const { c } = useTheme();
   const all = useStore((st) => st.conversations);
   const [query, setQuery] = useState('');
+  const [toDelete, setToDelete] = useState<string | null>(null);
+  // Trae lo escrito en otros dispositivos al entrar al historial.
+  useFocusEffect(
+    useCallback(() => {
+      refreshConversations();
+    }, []),
+  );
   const startOfToday = new Date().setHours(0, 0, 0, 0);
   const conversations = all
     .filter((cv) => cv.messages.length > 0)
@@ -78,35 +85,65 @@ export default function Conversations() {
           {conversations
             .filter((cv) => cv.group === g.key)
             .map((cv) => (
-              <Tap
-                key={cv.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${cv.title}, ${cv.time}`}
-                onPress={() => router.push({ pathname: '/conversation', params: { id: cv.id } })}
-              >
-                <Card>
-                  <View style={styles.row}>
-                    <Text variant="bodyStrong" style={styles.flex} numberOfLines={1}>
-                      {cv.title}
+              <View key={cv.id} style={styles.item}>
+                <Tap
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cv.title}, ${cv.time}`}
+                  onPress={() => router.push({ pathname: '/conversation', params: { id: cv.id } })}
+                  style={styles.flex}
+                >
+                  <Card>
+                    <View style={styles.row}>
+                      <Text variant="bodyStrong" style={styles.flex} numberOfLines={1}>
+                        {cv.title}
+                      </Text>
+                      <Text variant="caption" color="textMuted">
+                        {cv.time}
+                      </Text>
+                    </View>
+                    <Text variant="caption" color="textMuted" numberOfLines={1}>
+                      {cv.preview}
                     </Text>
-                    <Text variant="caption" color="textMuted">
-                      {cv.time}
-                    </Text>
-                  </View>
-                  <Text variant="caption" color="textMuted" numberOfLines={1}>
-                    {cv.preview}
-                  </Text>
-                  <Chip label={cv.course || s.tabs.chat} tone="primary" />
-                </Card>
-              </Tap>
+                    <Chip label={cv.course || s.tabs.chat} tone="primary" />
+                  </Card>
+                </Tap>
+                <Tap
+                  accessibilityRole="button"
+                  accessibilityLabel={`${s.conversations.delete}: ${cv.title}`}
+                  onPress={() => setToDelete(cv.id)}
+                  style={styles.delete}
+                >
+                  <Icon name="trash-2" size={20} color="textMuted" />
+                </Tap>
+              </View>
             ))}
         </View>
       ))}
+      <Sheet
+        visible={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        title={s.conversations.deleteTitle}
+      >
+        <Text variant="small" color="textMuted">
+          {s.conversations.deleteBody}
+        </Text>
+        <Button
+          label={s.conversations.deleteConfirm}
+          variant="danger"
+          onPress={() => {
+            if (toDelete !== null) deleteConversation(toDelete);
+            setToDelete(null);
+          }}
+        />
+        <Button label={s.common.cancel} variant="secondary" onPress={() => setToDelete(null)} />
+      </Sheet>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  item: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  delete: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   head: { flexDirection: 'row', alignItems: 'center' },
   add: {
     width: layout.minTouchTarget,

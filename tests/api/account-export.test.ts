@@ -53,6 +53,34 @@ async function world(confirmed = true, overrides: Record<string, unknown> = {}) 
   const deps = {
     authenticate: (token: string) =>
       Promise.resolve(token === 'token-1' ? { userId: USER, email: 'alumno@example.com' } : null),
+    conversations: {
+      exportAll: (userId: string) =>
+        Promise.resolve(
+          userId === USER
+            ? [
+                {
+                  id: 'conv-1',
+                  title: 'Mi chat',
+                  course: 'Biología',
+                  scopeDocumentIds: null,
+                  createdAt: new Date(0),
+                  updatedAt: new Date(0),
+                  messageCount: 1,
+                  messages: [
+                    {
+                      id: 'msg-1',
+                      role: 'user',
+                      kind: 'text',
+                      text: 'Mi pregunta',
+                      payload: {},
+                      createdAt: new Date(0),
+                    },
+                  ],
+                },
+              ]
+            : [],
+        ),
+    },
     documents: {
       listCourses: (userId: string) =>
         Promise.resolve(
@@ -187,11 +215,23 @@ describe('GET /v1/account/export', () => {
       documents: { list: record, listCourses: record },
       consents: { list: record },
       accountExport: { chunks: record, topics: record, quotas: record },
+      conversations: { exportAll: record },
     });
     const response = await app.inject({ url: '/v1/account/export', headers: AUTH });
     expect(response.statusCode).toBe(200);
-    expect(seen).toHaveLength(6);
+    expect(seen).toHaveLength(7);
     expect(new Set(seen)).toEqual(new Set([USER]));
+  });
+
+  it('incluye las conversaciones con sus mensajes', async () => {
+    const { app } = await world();
+    const response = await app.inject({ url: '/v1/account/export', headers: AUTH });
+    const body = response.json<{
+      conversations: { title: string; messages: { text: string }[] }[];
+    }>();
+    expect(body.conversations).toHaveLength(1);
+    expect(body.conversations[0]?.title).toBe('Mi chat');
+    expect(body.conversations[0]?.messages[0]?.text).toBe('Mi pregunta');
   });
 
   it('sin correo confirmado no liga la cuenta con la lista de espera', async () => {

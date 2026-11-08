@@ -227,15 +227,15 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
   const identity = await deps.authUsers.get(userId);
   const [courses, documents, consents, chunks, topicRows, quotas, usage, conversations] =
     await Promise.all([
-    deps.documents.listCourses(userId),
-    deps.documents.list(userId),
-    deps.consents.list(userId),
-    deps.accountExport.chunks(userId),
-    deps.accountExport.topics(userId),
-    deps.accountExport.quotas(userId),
-    deps.quota.usage(userId),
-    deps.conversations.exportAll(userId),
-  ]);
+      deps.documents.listCourses(userId),
+      deps.documents.list(userId),
+      deps.consents.list(userId),
+      deps.accountExport.chunks(userId),
+      deps.accountExport.topics(userId),
+      deps.accountExport.quotas(userId),
+      deps.quota.usage(userId),
+      deps.conversations.exportAll(userId),
+    ]);
   const verifiedEmail = identity?.emailConfirmedAt ? identity.email : null;
   const waitlist = verifiedEmail === null ? null : await deps.waitlist.findByEmail(verifiedEmail);
   const pages = groupChunksByPage(chunks);

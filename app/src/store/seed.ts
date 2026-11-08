@@ -3,6 +3,7 @@
  * (cursos, documentos, consumo) o se generan en el uso real (conversaciones); no hay
  * datos de prueba.
  */
+import { emptyConversationSync, type ConversationSyncState } from './conversation-sync';
 import type { Course, TopicDetail } from '@/data/mock';
 import type { ErrorCode } from '@/i18n/es';
 import type { Language } from '@/i18n/language';
@@ -170,6 +171,8 @@ export interface PendingAnswer {
 }
 
 export interface AppState {
+  /** Qué tiene ya el servidor de las conversaciones (ver `conversation-sync.ts`). */
+  conversationSync: ConversationSyncState;
   version: 3;
   session: SessionUser | null;
   /** Usuario al que pertenecen las conversaciones guardadas en el dispositivo. */
@@ -243,6 +246,7 @@ export const DEFAULT_USAGE: Usage = {
 export function createInitialState(): AppState {
   return {
     version: 3,
+    conversationSync: emptyConversationSync(),
     session: null,
     ownerId: null,
     settings: DEFAULT_SETTINGS,
