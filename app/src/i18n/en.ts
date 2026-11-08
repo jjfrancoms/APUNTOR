@@ -469,6 +469,8 @@ export const en: Strings = {
     animated: 'Animated 2D mascot',
     lightModel: 'Lite model',
     checkPage: (page: number) => `See page ${page} in the original`,
+    scopeOnly: (names: string) => `Only in: ${names}`,
+    scopeWiden: 'Ask across all your notes',
     ownSource: (page: number) => `Your notes · p. ${page}`,
     externalCount: (n: number) => `External · ${n} source`,
     externalPending: 'External · pending',

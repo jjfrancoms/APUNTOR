@@ -35,6 +35,7 @@ import {
   searchOutside,
   startConversation,
   useStore,
+  widenConversationScope,
   type Message,
 } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -48,7 +49,7 @@ import { Tap } from '@/components/ui/Tap';
 export default function Conversation() {
   const s = useStrings();
   const { c } = useTheme();
-  const params = useLocalSearchParams<{ id?: string; q?: string }>();
+  const params = useLocalSearchParams<{ id?: string; q?: string; docs?: string }>();
   const [id, setId] = useState<string | null>(params.id ?? null);
   const conv = useStore((st) => st.conversations.find((cv) => cv.id === id));
   const courseCount = useStore((st) => st.courses.length);
@@ -64,8 +65,17 @@ export default function Conversation() {
   const initialSent = useRef(false);
 
   useEffect(() => {
-    if (!id) setId(startConversation());
+    if (!id) {
+      const scope = (params.docs ?? '').split(',').filter((d) => d.length > 0);
+      setId(startConversation(scope));
+    }
   }, [id]);
+  const scopeNames = useStore((st) =>
+    (st.conversations.find((cv) => cv.id === id)?.scopeDocIds ?? []).map(
+      (docId) => st.documents.find((d) => d.id === docId)?.name ?? '',
+    ),
+  );
+  const scoped = (conv?.scopeDocIds?.length ?? 0) > 0;
 
   // Reloj de los avisos de progreso: solo corre mientras hay una respuesta en camino.
   const startedAt = pending?.startedAt;
@@ -338,6 +348,20 @@ export default function Conversation() {
         </>
       }
     >
+      {scoped ? (
+        <View style={styles.row}>
+          <Chip label={s.chat.scopeOnly(scopeNames.filter(Boolean).join(', '))} icon="file-text" />
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={s.chat.scopeWiden}
+            disabled={thinking}
+            onPress={() => id && widenConversationScope(id)}
+            hitSlop={8}
+          >
+            <Icon name="x" size={16} color="textMuted" />
+          </Tap>
+        </View>
+      ) : null}
       {messages.length === 0 ? <MascotStage label={s.chat.animated} /> : null}
       {messages.map((m, i) =>
         m.role === 'user' ? (

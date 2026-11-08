@@ -469,6 +469,8 @@ export const es = {
     animated: 'Mascota 2D animada',
     lightModel: 'Modelo ligero',
     checkPage: (page: number) => `Ver la página ${page} en el original`,
+    scopeOnly: (names: string) => `Solo en: ${names}`,
+    scopeWiden: 'Preguntar en todos tus apuntes',
     ownSource: (page: number) => `Tus apuntes · p. ${page}`,
     externalCount: (n: number) => `Externo · ${n} fuente`,
     externalPending: 'Externo · pendiente',

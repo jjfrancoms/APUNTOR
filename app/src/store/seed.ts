@@ -146,6 +146,8 @@ export interface Conversation {
   course: string;
   updatedAt: number;
   messages: Message[];
+  /** Si existe, las preguntas se responden solo con estos documentos. */
+  scopeDocIds?: string[];
 }
 
 export interface ShareLink {

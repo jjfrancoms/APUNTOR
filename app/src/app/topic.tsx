@@ -60,7 +60,13 @@ export default function TopicSummaryScreen() {
   const topicTitle = summary?.topic.title ?? title ?? t.header;
   const blocks = demo === 'empty' ? [] : (summary?.blocks ?? []);
   const ask = () =>
-    router.push({ pathname: '/conversation', params: { q: s.courses.askAbout(topicTitle) } });
+    router.push({
+      pathname: '/conversation',
+      params: {
+        q: s.courses.askAbout(topicTitle),
+        ...(summary ? { docs: summary.document.id } : doc ? { docs: doc } : {}),
+      },
+    });
 
   return (
     <Screen

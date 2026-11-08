@@ -212,6 +212,11 @@ export interface RequestOptions {
   timeoutMs?: number;
 }
 
+/** Opciones de `api.ask`: `documentIds` limita la respuesta a esos documentos. */
+export interface AskOptions extends RequestOptions {
+  documentIds?: readonly string[];
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -294,8 +299,16 @@ export const api = {
       'GET',
       `/v1/documents/${documentId}/pages/${page}`,
     ),
-  ask: (question: string, options?: RequestOptions) =>
-    request<ApiAnswer>('POST', '/v1/questions', { question }, options),
+  ask: (question: string, options?: AskOptions) => {
+    // El alcance viaja en el cuerpo; el resto de opciones son de la petición.
+    const { documentIds, ...requestOptions } = options ?? {};
+    return request<ApiAnswer>(
+      'POST',
+      '/v1/questions',
+      documentIds && documentIds.length > 0 ? { question, documentIds } : { question },
+      requestOptions,
+    );
+  },
   search: (query: string, options?: RequestOptions) =>
     request<ApiSearchResults>(
       'GET',

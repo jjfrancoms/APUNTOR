@@ -76,7 +76,12 @@ export default function DocumentDetail() {
           }
         />
       }
-      footer={<Button label={s.document.ask} onPress={() => router.push('/conversation')} />}
+      footer={
+        <Button
+          label={s.document.ask}
+          onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
+        />
+      }
     >
       <View>
         <Text variant="title" accessibilityRole="header">
@@ -147,7 +152,7 @@ export default function DocumentDetail() {
             setSheet(null);
             router.push({
               pathname: '/conversation',
-              params: { q: `Resumen de ${record.name.replace(/\.[^.]+$/u, '')}` },
+              params: { q: `Resumen de ${record.name.replace(/\.[^.]+$/u, '')}`, docs: record.id },
             });
           }}
         />
