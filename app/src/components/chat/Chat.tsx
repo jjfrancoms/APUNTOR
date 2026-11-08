@@ -60,6 +60,7 @@ export function Composer({
   placeholder,
   busy = false,
   disabled = false,
+  sendBlocked = false,
   value,
   onChangeText,
   onSend,
@@ -67,13 +68,16 @@ export function Composer({
   placeholder: string;
   busy?: boolean;
   disabled?: boolean;
+  /** Impide enviar pero deja seguir escribiendo (sin conexión: el borrador no se pierde). */
+  sendBlocked?: boolean;
   value?: string;
   onChangeText?: (v: string) => void;
   onSend?: () => void;
 }) {
   const s = useStrings();
   const { c } = useTheme();
-  const canSend = !busy && !disabled && (value === undefined || value.trim().length > 0);
+  const canSend =
+    !busy && !disabled && !sendBlocked && (value === undefined || value.trim().length > 0);
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.composer}>

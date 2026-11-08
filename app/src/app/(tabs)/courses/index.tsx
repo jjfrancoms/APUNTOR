@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
+import { checkConnection, useOnline } from '@/lib/online';
 import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
 import { pendingReview, useStore } from '@/store/store';
@@ -19,6 +21,7 @@ export default function Courses() {
   const unassigned = useStore((st) => st.documents.filter((d) => d.courseId === ''));
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
+  const online = useOnline();
 
   if (demo === 'offline') {
     return (
@@ -32,6 +35,23 @@ export default function Courses() {
           body={s.empty.offlineBody}
           primary={{ label: s.empty.downloaded, onPress: () => router.replace('/courses') }}
           secondary={{ label: s.empty.retry, onPress: () => router.replace('/courses') }}
+        />
+      </Screen>
+    );
+  }
+
+  // Los cursos no se guardan en el dispositivo: sin red y sin datos no hay nada que mostrar.
+  if (!online && courses.length === 0 && unassigned.length === 0) {
+    return (
+      <Screen>
+        <Text variant="display" accessibilityRole="header">
+          {s.courses.title}
+        </Text>
+        <EmptyState
+          mood="sleepy"
+          title={s.empty.offlineTitle}
+          body={s.connection.coursesBody}
+          primary={{ label: s.empty.retry, onPress: checkConnection }}
         />
       </Screen>
     );
@@ -69,6 +89,7 @@ export default function Courses() {
       <Text variant="display" accessibilityRole="header">
         {s.courses.title}
       </Text>
+      <OfflineBanner title={s.connection.courses} />
       <Tap
         accessibilityRole="search"
         accessibilityLabel={s.courses.search}

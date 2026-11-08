@@ -12,6 +12,7 @@ import {
   TextLink,
   TopBar,
 } from '@/components/ui';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { useStrings } from '@/i18n/es';
 import { pickFiles } from '@/lib/pick-files';
 import { extLabel } from '@/lib/upload-rules';
@@ -66,6 +67,7 @@ export default function Upload() {
         </>
       }
     >
+      <OfflineBanner title={s.connection.uploads} />
       <Tap
         accessibilityRole="button"
         accessibilityLabel={`${s.upload.dropTitle}. ${s.upload.dropDetail}`}

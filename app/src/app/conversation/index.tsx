@@ -19,8 +19,11 @@ import {
   Text,
   TextLink,
 } from '@/components/ui';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { useStrings } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
+import { shouldAutoSend } from '@/lib/connectivity';
+import { useOnline } from '@/lib/online';
 import {
   answerQuestion,
   askQuestion,
@@ -53,6 +56,9 @@ export default function Conversation() {
   const [draft, setDraft] = useState('');
   const [thinking, setThinking] = useState(false);
   const mounted = useRef(true);
+  const online = useOnline();
+  const wasOnline = useRef(online);
+  const lastEditAt = useRef(0);
 
   useEffect(() => {
     if (!id) setId(startConversation());
@@ -66,6 +72,11 @@ export default function Conversation() {
 
   const send = (text: string) => {
     if (!id || thinking || text.trim().length === 0) return;
+    // Sin conexión la pregunta espera como borrador (sugerencias y reintentos incluidos).
+    if (!online) {
+      setDraft(text);
+      return;
+    }
     setDraft('');
     if (!askQuestion(id, text)) return; // límite diario: el mensaje queda con el aviso
     setThinking(true);
@@ -74,12 +85,20 @@ export default function Conversation() {
     });
   };
   const outside = () => {
-    if (!id || thinking) return;
+    if (!id || thinking || !online) return;
     setThinking(true);
     void searchOutside(id, lastQuestion).finally(() => {
       if (mounted.current) setThinking(false);
     });
   };
+
+  // Al volver la conexión se envía la pregunta que quedó esperando.
+  useEffect(() => {
+    if (online && !wasOnline.current && shouldAutoSend(draft, lastEditAt.current, Date.now())) {
+      send(draft);
+    }
+    wasOnline.current = online;
+  }, [online]);
 
   useEffect(() => {
     if (params.q && id && conv && conv.messages.length === 0) send(params.q);
@@ -133,7 +152,7 @@ export default function Conversation() {
                 <Tap
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !externalOn }}
-                  disabled={!externalOn || !id || thinking}
+                  disabled={!externalOn || !id || thinking || !online}
                   onPress={outside}
                   style={[
                     styles.pill,
@@ -219,6 +238,7 @@ export default function Conversation() {
       subtitle={s.chat.knows(courseCount)}
       composer={
         <>
+          <OfflineBanner title={s.connection.chat} />
           {messages.length === 0 ? (
             <View style={styles.suggestions}>
               {suggestions.map((sg) => (
@@ -238,8 +258,12 @@ export default function Conversation() {
           <Composer
             placeholder={thinking ? s.chat.placeholderShort : s.chat.placeholder}
             busy={thinking}
+            sendBlocked={!online}
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={(text) => {
+              lastEditAt.current = Date.now();
+              setDraft(text);
+            }}
             onSend={() => send(draft)}
           />
         </>
