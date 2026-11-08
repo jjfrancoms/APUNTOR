@@ -15,11 +15,3 @@ export function nextProbeDelay(failures: number): number {
 export function isOfflineAfter(failures: number): boolean {
   return failures >= FAILURES_TO_OFFLINE;
 }
-
-/** Sin escribir durante este tiempo se considera que la pregunta estaba terminada. */
-export const DRAFT_SETTLED_MS = 3_000;
-
-/** Al volver la conexión solo se envía un borrador terminado, nunca uno que se está escribiendo. */
-export function shouldAutoSend(draft: string, lastEditAt: number, now: number): boolean {
-  return draft.trim().length > 0 && now - lastEditAt >= DRAFT_SETTLED_MS;
-}

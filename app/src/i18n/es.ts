@@ -485,7 +485,7 @@ export const es = {
   },
   connection: {
     uploads: 'Sin conexión. Tus archivos se subirán solos cuando vuelvas.',
-    chat: 'Sin conexión: tu pregunta se enviará cuando vuelvas',
+    chat: 'Sin conexión: tu pregunta queda aquí y la envías cuando vuelvas',
     courses: 'Sin conexión. Esto es lo último que se cargó.',
     coursesBody: 'Tus cursos aparecerán cuando vuelvas a tener internet.',
   },

@@ -481,7 +481,7 @@ export const en: Strings = {
   },
   connection: {
     uploads: "You're offline. Your files will upload on their own when you're back.",
-    chat: "You're offline: your question will be sent when you're back",
+    chat: "You're offline: your question stays here and you can send it when you're back",
     courses: "You're offline. This is what was last loaded.",
     coursesBody: "Your courses will appear when you're back online.",
   },

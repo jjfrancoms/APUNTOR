@@ -25,7 +25,6 @@ import {
 import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { useStrings } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
-import { shouldAutoSend } from '@/lib/connectivity';
 import { useOnline } from '@/lib/online';
 import {
   answerQuestion,
@@ -66,8 +65,6 @@ export default function Conversation() {
   const [now, setNow] = useState(() => Date.now());
   const initialSent = useRef(false);
   const online = useOnline();
-  const wasOnline = useRef(online);
-  const lastEditAt = useRef(0);
 
   useEffect(() => {
     if (!id) {
@@ -118,14 +115,6 @@ export default function Conversation() {
     const text = editLastQuestion(id);
     if (text !== null) setDraft(text);
   };
-
-  // Al volver la conexión se envía la pregunta que quedó esperando.
-  useEffect(() => {
-    if (online && !wasOnline.current && shouldAutoSend(draft, lastEditAt.current, Date.now())) {
-      send(draft);
-    }
-    wasOnline.current = online;
-  }, [online]);
 
   useEffect(() => {
     // Solo una vez, al abrir con una pregunta inicial (?q=…).
@@ -358,10 +347,7 @@ export default function Conversation() {
             busy={thinking}
             sendBlocked={!online}
             value={draft}
-            onChangeText={(text) => {
-              lastEditAt.current = Date.now();
-              setDraft(text);
-            }}
+            onChangeText={setDraft}
             onSend={() => send(draft)}
             onStop={stop}
             hint={thinking && draft.trim().length > 0 ? s.chat.pendingDraftHint : null}
