@@ -175,11 +175,13 @@ export function createStudyRepository(db: Database): StudyRepository {
           )
           .returning({ id: studyItems.id });
         if (input.kind === 'cards') {
-          await tx
-            .insert(studyReviews)
-            .values(
-              items.map((item) => ({ userId: input.userId, itemId: item.id, dueDate: input.today })),
-            );
+          await tx.insert(studyReviews).values(
+            items.map((item) => ({
+              userId: input.userId,
+              itemId: item.id,
+              dueDate: input.today,
+            })),
+          );
         }
         return set.id;
       });

@@ -1,7 +1,17 @@
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/client';
-import { documentChunks, documents, topics, usageQuotas } from '../../db/schema';
+import {
+  documentChunks,
+  documents,
+  studyItems,
+  studyReviews,
+  studySets,
+  topics,
+  usageQuotas,
+  type StudyItemPayload,
+  type StudySetKind,
+} from '../../db/schema';
 import type { AuthUsersDirectory } from './admin';
 import type { AuthSession } from './auth';
 import type { ConsentsRepository } from './consents';
@@ -12,8 +22,9 @@ import { summaryKey } from './topic-summary';
 import type { WaitlistRepository } from './waitlist';
 
 /*
- * Derecho de acceso (ARCO): todo lo que el servidor guarda del usuario, en un JSON. Cada consulta
- * filtra por `documents.user_id` o `user_id`; aquí nunca entra `file_path` ni los embeddings.
+ * Derecho de acceso (ARCO): todo lo que el servidor guarda del usuario (también quizzes, tarjetas
+ * y repasos), en un JSON. Cada consulta filtra por `documents.user_id` o `user_id`; aquí nunca
+ * entra `file_path` ni los embeddings.
  * Los resúmenes de IA guardados en R2 se leen solo con las rutas de los documentos del usuario y
  * se copian a una lista cerrada de campos: ni claves de almacenamiento ni nombres de modelo.
  */
@@ -41,12 +52,42 @@ export interface ExportQuotaRecord {
   used: number;
 }
 
+export interface ExportStudySetRecord {
+  id: string;
+  documentId: string;
+  topicId: string | null;
+  kind: StudySetKind;
+  lastScore: number | null;
+  lastTotal: number | null;
+  lastPlayedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface ExportStudyItemRecord {
+  id: string;
+  setId: string;
+  position: number;
+  page: number;
+  payload: StudyItemPayload;
+}
+
+export interface ExportStudyReviewRecord {
+  itemId: string;
+  box: number;
+  dueDate: string;
+  lastResult: boolean | null;
+  updatedAt: Date;
+}
+
 /** Lo que solo hace falta para la exportación. Inyectado para probarlo sin base de datos. */
 export interface AccountExportRepository {
   /** Texto de los fragmentos del usuario, por documento, página y orden. Sin embeddings. */
   chunks(userId: string): Promise<ExportChunkRecord[]>;
   topics(userId: string): Promise<ExportTopicRecord[]>;
   quotas(userId: string): Promise<ExportQuotaRecord[]>;
+  studySets(userId: string): Promise<ExportStudySetRecord[]>;
+  studyItems(userId: string): Promise<ExportStudyItemRecord[]>;
+  studyReviews(userId: string): Promise<ExportStudyReviewRecord[]>;
 }
 
 export function createAccountExportRepository(db: Database): AccountExportRepository {
@@ -94,6 +135,49 @@ export function createAccountExportRepository(db: Database): AccountExportReposi
         .from(usageQuotas)
         .where(eq(usageQuotas.userId, userId))
         .orderBy(asc(usageQuotas.periodStart), asc(usageQuotas.kind));
+    },
+    studySets(userId) {
+      return db
+        .select({
+          id: studySets.id,
+          documentId: studySets.documentId,
+          topicId: studySets.topicId,
+          kind: studySets.kind,
+          lastScore: studySets.lastScore,
+          lastTotal: studySets.lastTotal,
+          lastPlayedAt: studySets.lastPlayedAt,
+          createdAt: studySets.createdAt,
+        })
+        .from(studySets)
+        .where(eq(studySets.userId, userId))
+        .orderBy(asc(studySets.createdAt));
+    },
+    studyItems(userId) {
+      return db
+        .select({
+          id: studyItems.id,
+          setId: studyItems.setId,
+          position: studyItems.position,
+          page: studyItems.page,
+          payload: studyItems.payload,
+        })
+        .from(studyItems)
+        .innerJoin(studySets, eq(studySets.id, studyItems.setId))
+        .where(eq(studySets.userId, userId))
+        .orderBy(asc(studyItems.setId), asc(studyItems.position));
+    },
+    studyReviews(userId) {
+      return db
+        .select({
+          itemId: studyReviews.itemId,
+          box: studyReviews.box,
+          dueDate: studyReviews.dueDate,
+          lastResult: studyReviews.lastResult,
+          updatedAt: studyReviews.updatedAt,
+        })
+        .from(studyReviews)
+        .where(eq(studyReviews.userId, userId))
+        .orderBy(asc(studyReviews.dueDate), asc(studyReviews.itemId));
     },
   };
 }
@@ -223,7 +307,18 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
   const { userId } = session;
   // Antes que nada: si Supabase no responde, se reintenta sin haber leído el contenido.
   const identity = await deps.authUsers.get(userId);
-  const [courses, documents, consents, chunks, topicRows, quotas, usage] = await Promise.all([
+  const [
+    courses,
+    documents,
+    consents,
+    chunks,
+    topicRows,
+    quotas,
+    usage,
+    studySetRows,
+    studyItemRows,
+    studyReviewRows,
+  ] = await Promise.all([
     deps.documents.listCourses(userId),
     deps.documents.list(userId),
     deps.consents.list(userId),
@@ -231,6 +326,9 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
     deps.accountExport.topics(userId),
     deps.accountExport.quotas(userId),
     deps.quota.usage(userId),
+    deps.accountExport.studySets(userId),
+    deps.accountExport.studyItems(userId),
+    deps.accountExport.studyReviews(userId),
   ]);
   const verifiedEmail = identity?.emailConfirmedAt ? identity.email : null;
   const waitlist = verifiedEmail === null ? null : await deps.waitlist.findByEmail(verifiedEmail);
@@ -286,6 +384,20 @@ export async function buildAccountExport(deps: AccountExportDeps, session: AuthS
       storageBytes: usage.storage_bytes,
       storageLimit: FREE_LIMITS.storage_bytes,
       periods: quotas,
+    },
+    study: {
+      sets: studySetRows.map((set) => ({
+        ...set,
+        lastPlayedAt: set.lastPlayedAt?.toISOString() ?? null,
+        createdAt: set.createdAt.toISOString(),
+        items: studyItemRows
+          .filter((item) => item.setId === set.id)
+          .map(({ setId: _setId, ...item }) => item),
+      })),
+      reviews: studyReviewRows.map((review) => ({
+        ...review,
+        updatedAt: review.updatedAt.toISOString(),
+      })),
     },
     waitlist:
       waitlist === null

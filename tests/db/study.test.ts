@@ -4,6 +4,10 @@ import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import { drizzle } from 'drizzle-orm/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  createAccountExportRepository,
+  type AccountExportRepository,
+} from '../../api/src/account-export';
 import { createDocumentsRepository, type DocumentsRepository } from '../../api/src/documents';
 import { createQuotaService, FREE_LIMITS, type QuotaService } from '../../api/src/quota';
 import type { ValidStudyItem } from '../../api/src/study/generate';
@@ -54,6 +58,7 @@ describe.skipIf(!hasTables)('estudio (SQL real)', () => {
   let pg: PGlite;
   let repo: StudyRepository;
   let documents: DocumentsRepository;
+  let accountExport: AccountExportRepository;
   let quota: QuotaService;
 
   const count = async (table: string): Promise<number> => {
@@ -71,9 +76,14 @@ describe.skipIf(!hasTables)('estudio (SQL real)', () => {
     if (existsSync(pending)) await pg.exec(readFileSync(pending, 'utf8'));
 
     const db = drizzle(pg, { schema }) as unknown as Database;
+    accountExport = createAccountExportRepository(db);
     repo = createStudyRepository(db);
     documents = createDocumentsRepository(db);
-    quota = createQuotaService(db);
+    // PGlite devuelve `{ rows }` y postgres.js un arreglo, que es lo que espera el servicio.
+    const raw = db as unknown as { execute(query: unknown): Promise<{ rows: unknown[] }> };
+    quota = createQuotaService({
+      execute: async (query: unknown) => (await raw.execute(query)).rows,
+    } as unknown as Database);
 
     await pg.exec(`
       INSERT INTO documents (id, user_id, title, file_path, status) VALUES
@@ -204,6 +214,20 @@ describe.skipIf(!hasTables)('estudio (SQL real)', () => {
     await expect(pg.exec(`DELETE FROM study_sets WHERE id = '${set.id}'`)).rejects.toThrow();
     await pg.exec('RESET ROLE');
     await repo.deleteSet(USER, set.id);
+  });
+
+  it('la exportación trae solo el estudio del propio usuario', async () => {
+    await createCards(2);
+    const sets = await accountExport.studySets(USER);
+    expect(sets.length).toBeGreaterThan(0);
+    const setIds = new Set(sets.map((set) => set.id));
+    const items = await accountExport.studyItems(USER);
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items.every((item) => setIds.has(item.setId))).toBe(true);
+    expect((await accountExport.studyReviews(USER)).length).toBeGreaterThanOrEqual(2);
+    expect(await accountExport.studySets(OTHER)).toEqual([]);
+    expect(await accountExport.studyItems(OTHER)).toEqual([]);
+    expect(await accountExport.studyReviews(OTHER)).toEqual([]);
   });
 
   it('borrar el documento y borrar la cuenta se llevan todo el estudio', async () => {
