@@ -105,12 +105,23 @@ export interface UploadJob {
   documentId?: string;
 }
 
+export interface AnswerClaim {
+  label?: string;
+  formula?: string;
+  text: string;
+  pages: { documentId: string; page: number }[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'mascot';
   text: string;
-  kind: 'text' | 'answer' | 'notFound' | 'external' | 'error' | 'limit';
+  kind: 'text' | 'answer' | 'notFound' | 'external' | 'error' | 'limit' | 'smallTalk';
+  /** Para `smallTalk`: qué cortesía responder (el texto sale de los textos de la app). */
+  smallTalk?: 'greeting' | 'thanks' | 'identity' | 'farewell';
   sources?: { page: number; klass: number; documentId: string }[];
+  /** Respuesta con estructura: cada idea con su término, notación y páginas. */
+  claims?: AnswerClaim[];
   external?: { title: string; host: string; url?: string };
 }
 

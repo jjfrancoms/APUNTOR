@@ -45,6 +45,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_USAGE,
   todayKey,
+  type AnswerClaim,
   type AppState,
   type Conversation,
   type DocRecord,
@@ -1232,23 +1233,31 @@ export async function answerQuestion(conversationId: string, question: string): 
   }
   try {
     const answer = await api.ask(question);
-    if (answer.status === 'abstained') {
+    if (answer.status === 'small_talk') {
+      appendMessages(conversationId, [
+        { id: newId('m'), role: 'mascot', kind: 'smallTalk', smallTalk: answer.kind, text: '' },
+      ]);
+    } else if (answer.status === 'abstained') {
       appendMessages(conversationId, [
         { id: newId('m'), role: 'mascot', kind: 'notFound', text: '' },
       ]);
     } else {
       const sources = new Map<string, { page: number; klass: number; documentId: string }>();
-      const lines = answer.claims.map((claim) => {
-        const pages = [...new Set(claim.citations.map((c) => c.pageNumber))];
+      const claims: AnswerClaim[] = answer.claims.map((claim) => {
+        const pages = new Map<string, { documentId: string; page: number }>();
         for (const c of claim.citations) {
-          sources.set(`${c.documentId}-${c.pageNumber}`, {
-            page: c.pageNumber,
-            klass: 0,
-            documentId: c.documentId,
-          });
+          const key = `${c.documentId}-${c.pageNumber}`;
+          pages.set(key, { documentId: c.documentId, page: c.pageNumber });
+          sources.set(key, { page: c.pageNumber, klass: 0, documentId: c.documentId });
         }
-        return `${claim.text} ${pages.map((p) => `[pág. ${p}]`).join(' ')}`;
+        return {
+          ...(claim.label ? { label: claim.label } : {}),
+          ...(claim.formula ? { formula: claim.formula } : {}),
+          text: claim.text,
+          pages: [...pages.values()].sort((a, b) => a.page - b.page),
+        };
       });
+      const lines = claims.map((c) => [c.label, c.formula, c.text].filter(Boolean).join(' · '));
       const first = [...sources.values()][0];
       appendMessages(
         conversationId,
@@ -1259,6 +1268,7 @@ export async function answerQuestion(conversationId: string, question: string): 
             kind: 'answer',
             text: lines.join('\n'),
             sources: [...sources.values()],
+            claims,
           },
         ],
         first ? { course: courseTitleOf(first.documentId) } : {},

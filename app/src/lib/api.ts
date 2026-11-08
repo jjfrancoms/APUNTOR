@@ -77,12 +77,21 @@ export interface ApiUsage {
 }
 
 export interface ApiClaim {
+  /** Término que explica (validado contra la cita). */
+  label?: string;
+  /** Notación o fórmula (validada contra la cita). */
+  formula?: string;
   text: string;
   citations: { chunkId: string; documentId: string; pageNumber: number; quote: string }[];
 }
 
+export type SmallTalkKind = 'greeting' | 'thanks' | 'identity' | 'farewell';
+
 export type ApiAnswer =
-  { status: 'answered'; claims: ApiClaim[] } | { status: 'abstained'; message: string };
+  | { status: 'answered'; claims: ApiClaim[] }
+  | { status: 'abstained'; message: string }
+  /** Saludo o cortesía: se responde con un texto de la app, sin buscar ni gastar cuota. */
+  | { status: 'small_talk'; kind: SmallTalkKind };
 
 export interface ApiExternal {
   source: 'internet';
@@ -212,6 +221,11 @@ export const api = {
   updateDocument: (id: string, patch: { title?: string; courseId?: string | null }) =>
     request<ApiDocument>('PATCH', `/v1/documents/${id}`, patch),
   deleteDocument: (id: string) => request<void>('DELETE', `/v1/documents/${id}`),
+  page: (documentId: string, page: number) =>
+    request<{ pageNumber: number; url: string; width: number; height: number }>(
+      'GET',
+      `/v1/documents/${documentId}/pages/${page}`,
+    ),
   ask: (question: string) => request<ApiAnswer>('POST', '/v1/questions', { question }),
   external: (question: string) => request<ApiExternal>('POST', '/v1/external', { question }),
   /** Registra la aceptación (idempotente: repetirla con la misma versión no duplica). */

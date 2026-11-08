@@ -458,12 +458,14 @@ export const en: Strings = {
   },
   chat: {
     title: 'Your mascot',
-    knows: (n: number) => `Knows your ${n} courses and your notes`,
-    knowsShort: (n: number) => `Knows your ${n} courses`,
+    knows: (n: number) =>
+      n === 1 ? 'Knows your course and your notes' : `Knows your ${n} courses and your notes`,
+    knowsShort: (n: number) => (n === 1 ? 'Knows your course' : `Knows your ${n} courses`),
     offlineSubtitle: 'Offline mode',
     history: 'Conversations',
     animated: 'Animated 2D mascot',
     lightModel: 'Lite model',
+    checkPage: (page: number) => `See page ${page} in the original`,
     ownSource: (page: number) => `Your notes · p. ${page}`,
     externalCount: (n: number) => `External · ${n} source`,
     externalPending: 'External · pending',
@@ -474,6 +476,21 @@ export const en: Strings = {
     send: 'Send',
     stop: 'Stop',
     mic: 'Dictate by voice',
+    smallTalk: {
+      greeting:
+        "Hi! I'm Illari. Ask me anything about your notes and I'll answer with the exact page.",
+      thanks: "You're welcome! If you have another question about your notes, I'm here.",
+      identity:
+        "I'm Illari, your study llama. I only answer with what your notes say and show you the page each answer comes from.",
+      farewell: 'See you soon! Keep up the good work.',
+    },
+    micStop: 'Stop dictation',
+    micListening: 'Listening… speak and tap the microphone to finish.',
+    micDenied: 'Allow the microphone in your browser (lock icon next to the address) to dictate.',
+    micNoSpeech: "We didn't hear you. Tap the microphone and try again.",
+    micFailed: "The microphone couldn't be used. You can type your question.",
+    micUnsupported: "This browser can't dictate. Try Chrome, Edge or Safari.",
+    micKeyboard: "Use your keyboard's microphone to dictate.",
     searching: 'Searching your notes…',
     failedTitle: "I couldn't answer",
     retry: 'Try again',

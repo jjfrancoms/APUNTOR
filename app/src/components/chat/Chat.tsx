@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState, type ReactNode } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import {
   Chip,
   Icon,
@@ -13,6 +13,8 @@ import {
 } from '@/components/ui';
 import { courses } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
+import { useLanguage } from '@/i18n/language';
+import { useDictation } from '@/lib/dictation';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
@@ -75,45 +77,104 @@ export function Composer({
   const { c } = useTheme();
   const canSend = !busy && !disabled && (value === undefined || value.trim().length > 0);
   const [focused, setFocused] = useState(false);
+  const [keyboardHint, setKeyboardHint] = useState(false);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  const language = useLanguage();
+  const dictation = useDictation({
+    language,
+    value: value ?? '',
+    onChange: (text) => onChangeText?.(text),
+  });
+  const onMic = () => {
+    if (dictation.support === 'web') {
+      if (dictation.listening) dictation.stop();
+      else dictation.start();
+      return;
+    }
+    // Teléfono: el dictado lo da el teclado del sistema.
+    setKeyboardHint(true);
+    input.current?.focus();
+  };
+  const notice = dictation.listening
+    ? s.chat.micListening
+    : dictation.error === 'denied'
+      ? s.chat.micDenied
+      : dictation.error === 'no-speech'
+        ? s.chat.micNoSpeech
+        : dictation.error === 'failed'
+          ? s.chat.micFailed
+          : dictation.support === 'none' && keyboardHint
+            ? s.chat.micUnsupported
+            : keyboardHint
+              ? s.chat.micKeyboard
+              : null;
   return (
-    <View style={styles.composer}>
-      <View
-        style={[
-          styles.input,
-          { backgroundColor: c.surface, borderColor: focused ? c.primary : c.border },
-        ]}
-      >
-        <TextInput
-          accessibilityLabel={placeholder}
-          placeholder={placeholder}
-          placeholderTextColor={c.textMuted}
-          editable={!busy && !disabled}
-          value={value}
-          onChangeText={onChangeText}
-          onSubmitEditing={() => canSend && onSend?.()}
-          returnKeyType="send"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={[styles.field, { color: c.text }]}
-        />
-        <Icon name="mic" size={18} color="textMuted" />
+    <View style={styles.composerWrap}>
+      {notice ? (
+        <Text
+          variant="caption"
+          color={dictation.error ? 'danger' : 'textMuted'}
+          accessibilityLiveRegion="polite"
+        >
+          {notice}
+        </Text>
+      ) : null}
+      <View style={styles.composer}>
+        <View
+          style={[
+            styles.input,
+            { backgroundColor: c.surface, borderColor: focused ? c.primary : c.border },
+          ]}
+        >
+          <TextInput
+            ref={input}
+            accessibilityLabel={placeholder}
+            placeholder={placeholder}
+            placeholderTextColor={c.textMuted}
+            editable={!busy && !disabled}
+            value={value}
+            onChangeText={onChangeText}
+            onSubmitEditing={() => canSend && onSend?.()}
+            returnKeyType="send"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            style={[styles.field, { color: c.text }]}
+          />
+          {dictation.support === 'none' && Platform.OS === 'web' ? null : (
+            <Tap
+              accessibilityRole="button"
+              accessibilityLabel={dictation.listening ? s.chat.micStop : s.chat.mic}
+              accessibilityState={{ selected: dictation.listening, disabled: busy || disabled }}
+              disabled={busy || disabled}
+              onPress={onMic}
+              hitSlop={8}
+              style={[styles.mic, dictation.listening && { backgroundColor: c.primarySoft }]}
+            >
+              <Icon
+                name={dictation.listening ? 'mic-off' : 'mic'}
+                size={18}
+                color={dictation.listening ? 'primary' : 'textMuted'}
+              />
+            </Tap>
+          )}
+        </View>
+        <Tap
+          accessibilityRole="button"
+          accessibilityLabel={busy ? s.chat.stop : s.chat.send}
+          accessibilityState={{ disabled: !canSend && !busy }}
+          disabled={!canSend && !busy}
+          onPress={onSend}
+          style={[
+            styles.send,
+            {
+              backgroundColor: busy ? c.textMuted : c.primary,
+              opacity: disabled || (!canSend && !busy) ? 0.5 : 1,
+            },
+          ]}
+        >
+          <Icon name={busy ? 'square' : 'send'} size={18} color="onPrimary" />
+        </Tap>
       </View>
-      <Tap
-        accessibilityRole="button"
-        accessibilityLabel={busy ? s.chat.stop : s.chat.send}
-        accessibilityState={{ disabled: !canSend && !busy }}
-        disabled={!canSend && !busy}
-        onPress={onSend}
-        style={[
-          styles.send,
-          {
-            backgroundColor: busy ? c.textMuted : c.primary,
-            opacity: disabled || (!canSend && !busy) ? 0.5 : 1,
-          },
-        ]}
-      >
-        <Icon name={busy ? 'square' : 'send'} size={18} color="onPrimary" />
-      </Tap>
     </View>
   );
 }
@@ -206,7 +267,16 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
+  composerWrap: { alignSelf: 'stretch', gap: space.xs },
   composer: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  mic: {
+    width: layout.minTouchTarget,
+    height: layout.minTouchTarget,
+    marginRight: -space.sm,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
     flex: 1,
     flexDirection: 'row',

@@ -1,3 +1,5 @@
+import { AnswerClaims } from '@/components/chat/AnswerClaims';
+import { openSourcePage } from '@/lib/source-page';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -104,24 +106,37 @@ export default function Conversation() {
             key={m.id}
             sources={
               <>
-                {(m.sources ?? []).map((src) => (
-                  <Tap
-                    key={`${src.documentId}-${src.page}`}
-                    accessibilityRole="link"
-                    onPress={() => router.push(`/documents/${src.documentId}`)}
-                  >
-                    <Chip label={s.chat.ownSource(src.page)} tone="primary" icon="file-text" />
-                  </Tap>
-                ))}
+                {m.claims
+                  ? null
+                  : (m.sources ?? []).map((src) => (
+                      <Tap
+                        key={`${src.documentId}-${src.page}`}
+                        accessibilityRole="link"
+                        accessibilityLabel={s.chat.checkPage(src.page)}
+                        onPress={() => void openSourcePage(src.documentId, src.page)}
+                      >
+                        <Chip label={s.chat.ownSource(src.page)} tone="primary" icon="file-text" />
+                      </Tap>
+                    ))}
                 {m.external ? (
                   <Chip label={s.chat.externalCount(1)} tone="external" icon="globe" />
                 ) : null}
               </>
             }
           >
-            <Text variant="small" selectable>
-              {m.text}
-            </Text>
+            {m.claims ? (
+              <AnswerClaims claims={m.claims} />
+            ) : (
+              <Text variant="small" selectable>
+                {m.text}
+              </Text>
+            )}
+          </MascotBubble>
+        );
+      case 'smallTalk':
+        return (
+          <MascotBubble key={m.id}>
+            <Text variant="small">{s.chat.smallTalk[m.smallTalk ?? 'greeting']}</Text>
           </MascotBubble>
         );
       case 'notFound':

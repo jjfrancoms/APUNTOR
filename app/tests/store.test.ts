@@ -338,7 +338,9 @@ describe('chat', () => {
       status: 'answered',
       claims: [
         {
-          text: 'El límite describe el valor al que se acerca f(x).',
+          label: 'Límite',
+          formula: 'lím f(x)',
+          text: 'Describe el valor al que se acerca f(x).',
           citations: [{ chunkId: 'k', documentId: 'd1', pageNumber: 12, quote: 'el valor' }],
         },
       ],
@@ -349,10 +351,30 @@ describe('chat', () => {
     const last = store.getState().conversations[0]?.messages.at(-1);
     expect(last).toMatchObject({
       kind: 'answer',
-      text: 'El límite describe el valor al que se acerca f(x). [pág. 12]',
+      text: 'Límite · lím f(x) · Describe el valor al que se acerca f(x).',
       sources: [{ page: 12, documentId: 'd1' }],
+      claims: [
+        {
+          label: 'Límite',
+          formula: 'lím f(x)',
+          text: 'Describe el valor al que se acerca f(x).',
+          pages: [{ documentId: 'd1', page: 12 }],
+        },
+      ],
     });
     expect(store.getState().conversations[0]?.course).toBe('Cálculo I');
+  });
+
+  it('un saludo se responde con un texto de la app', async () => {
+    await signedIn();
+    api.ask.mockResolvedValueOnce({ status: 'small_talk', kind: 'greeting' });
+    const id = store.startConversation();
+    await store.answerQuestion(id, 'Hola');
+    expect(store.getState().conversations[0]?.messages.at(-1)).toMatchObject({
+      role: 'mascot',
+      kind: 'smallTalk',
+      smallTalk: 'greeting',
+    });
   });
 
   it('si no está en los apuntes, la mascota lo dice', async () => {

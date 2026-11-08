@@ -564,6 +564,30 @@ describe('documentos', () => {
       ],
     });
 
+    const page = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/2`,
+      headers: AUTH,
+    });
+    expect(page.json()).toEqual({
+      pageNumber: 2,
+      url: `https://r2.example/get/${base}/page-2.png`,
+      width: 1240,
+      height: 1754,
+    });
+    const noImage = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/5`,
+      headers: AUTH,
+    });
+    expect(noImage.statusCode).toBe(404);
+    const theirs = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/pages/2`,
+      headers: AUTH_OTHER,
+    });
+    expect(theirs.statusCode).toBe(404);
+
     // Al borrar el documento se borran también sus páginas.
     await world.app.inject({ method: 'DELETE', url: `/v1/documents/${id}`, headers: AUTH });
     expect([...world.files.keys()].filter((k) => k.startsWith(`${base}/`))).toEqual([]);

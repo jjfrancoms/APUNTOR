@@ -10,6 +10,7 @@ const NO_QUOTA: AnswerDeps['quota'] = {
 
 function outputOf(result: QuestionResult): string {
   if (result.status === 'abstained') return result.message;
+  if (result.status === 'small_talk') return `small_talk:${result.kind}`;
   return result.claims
     .map((claim) => {
       const quotes = claim.citations.map((c) => `[pág. ${c.pageNumber}] "${c.quote}"`).join(' ');
@@ -42,12 +43,16 @@ export async function runEvaluation(
           ...(evalCase.documentIds === undefined ? {} : { documentIds: evalCase.documentIds }),
         },
       );
-      result = {
-        ...base,
-        status: answer.status,
-        output: outputOf(answer),
-        ...(answer.usage === undefined ? {} : { usage: answer.usage }),
-      };
+      // Un saludo no responde con los apuntes: para el arnés cuenta como abstención.
+      result =
+        answer.status === 'small_talk'
+          ? { ...base, status: 'abstained', output: outputOf(answer) }
+          : {
+              ...base,
+              status: answer.status,
+              output: outputOf(answer),
+              ...(answer.usage === undefined ? {} : { usage: answer.usage }),
+            };
     } catch (error) {
       // Un error nunca cuenta como acierto: ni como abstención ni como bloqueo.
       result = { ...base, status: 'error', output: String(error) };

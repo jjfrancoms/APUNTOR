@@ -99,6 +99,7 @@ export interface AppDeps {
 
 const idParams = z.object({ id: z.uuid() });
 const topicParams = z.object({ topicId: z.uuid() });
+const pageParams = z.object({ page: z.coerce.number().int().min(1).max(10_000) });
 const courseTitle = z.string().trim().min(1).max(MAX_COURSE_TITLE);
 const createDocumentBody = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -515,6 +516,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
+  // Una página del original (PDF dibujado), para comprobar una cita. Enlace temporal.
+  app.get('/v1/documents/:id/pages/:page', async (request) => {
+    const userId = await requireUser(request);
+    const document = await requireDocument(userId, request.params);
+    const { page } = parse(pageParams, request.params);
+    const manifest = await pageManifests.get(document.id, document.filePath);
+    const image = manifest?.pages.find((p) => p.pageNumber === page)?.image;
+    if (!image) throw new ApiError('DOC_NOT_FOUND', 404);
+    return {
+      pageNumber: page,
+      url: await deps.storage.createDownloadUrl(image.key),
+      width: image.width,
+      height: image.height,
+    };
+  });
+
   // Resumen del tema con su estructura (tablas, fórmulas, figuras recortadas). Se genera una
   // vez con la IA y se guarda; las figuras se ven con enlaces temporales.
   app.get('/v1/documents/:id/topics/:topicId/summary', strictLimit, async (request) => {
@@ -622,9 +639,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           ...(body.documentIds === undefined ? {} : { documentIds: body.documentIds }),
         },
       );
-      return result.status === 'answered'
-        ? { status: result.status, claims: result.claims }
-        : { status: result.status, message: result.message };
+      if (result.status === 'answered') return { status: result.status, claims: result.claims };
+      if (result.status === 'small_talk') return { status: result.status, kind: result.kind };
+      return { status: result.status, message: result.message };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       request.log.error(error);

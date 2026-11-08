@@ -455,12 +455,14 @@ export const es = {
   },
   chat: {
     title: 'Tu mascota',
-    knows: (n: number) => `Conoce tus ${n} cursos y tus apuntes`,
-    knowsShort: (n: number) => `Conoce tus ${n} cursos`,
+    knows: (n: number) =>
+      n === 1 ? 'Conoce tu curso y tus apuntes' : `Conoce tus ${n} cursos y tus apuntes`,
+    knowsShort: (n: number) => (n === 1 ? 'Conoce tu curso' : `Conoce tus ${n} cursos`),
     offlineSubtitle: 'Modo sin conexión',
     history: 'Conversaciones',
     animated: 'Mascota 2D animada',
     lightModel: 'Modelo ligero',
+    checkPage: (page: number) => `Ver la página ${page} en el original`,
     ownSource: (page: number) => `Tus apuntes · p. ${page}`,
     externalCount: (n: number) => `Externo · ${n} fuente`,
     externalPending: 'Externo · pendiente',
@@ -471,6 +473,22 @@ export const es = {
     send: 'Enviar',
     stop: 'Detener',
     mic: 'Dictar por voz',
+    smallTalk: {
+      greeting:
+        '¡Hola! Soy Illari. Pregúntame lo que quieras de tus apuntes y te respondo con la página exacta.',
+      thanks: '¡De nada! Si tienes otra duda de tus apuntes, aquí estoy.',
+      identity:
+        'Soy Illari, tu llama de estudio. Respondo solo con lo que dicen tus apuntes y te muestro la página de donde sale cada respuesta.',
+      farewell: '¡Hasta pronto! Sigue así con tus estudios.',
+    },
+    micStop: 'Terminar el dictado',
+    micListening: 'Escuchando… habla y toca el micrófono para terminar.',
+    micDenied:
+      'Permite el micrófono en tu navegador (ícono del candado junto a la dirección) para dictar.',
+    micNoSpeech: 'No te escuchamos. Toca el micrófono y vuelve a intentarlo.',
+    micFailed: 'No se pudo usar el micrófono. Puedes escribir tu pregunta.',
+    micUnsupported: 'Este navegador no permite dictar. Prueba con Chrome, Edge o Safari.',
+    micKeyboard: 'Usa el micrófono de tu teclado para dictar.',
     searching: 'Buscando en tus apuntes…',
     failedTitle: 'No pude responder',
     retry: 'Reintentar',

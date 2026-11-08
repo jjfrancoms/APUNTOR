@@ -11,6 +11,8 @@ export const ANSWER_JSON_SCHEMA = {
       items: {
         type: 'object',
         properties: {
+          label: { type: 'string' },
+          formula: { type: 'string' },
           text: { type: 'string' },
           citations: {
             type: 'array',
@@ -35,6 +37,8 @@ const modelAnswerSchema = z.object({
   answer_found: z.boolean(),
   claims: z.array(
     z.object({
+      label: z.string().optional(),
+      formula: z.string().optional(),
       text: z.string(),
       citations: z.array(z.object({ fragment_id: z.string(), quote: z.string() })),
     }),
@@ -50,6 +54,10 @@ export interface VerifiedCitation {
 }
 
 export interface VerifiedClaim {
+  /** Término que explica la afirmación ("Negación"), solo si aparece en el fragmento citado. */
+  label?: string;
+  /** Notación ("¬p"), solo si aparece tal cual (sin contar espacios) en el fragmento citado. */
+  formula?: string;
   text: string;
   citations: VerifiedCitation[];
 }
@@ -123,6 +131,34 @@ function isCoherent(claim: string, quotes: readonly string[]): boolean {
   return supported / content.length >= MIN_CLAIM_OVERLAP;
 }
 
+const MAX_LABEL_CHARS = 80;
+const MAX_FORMULA_CHARS = 120;
+const compact = (text: string): string => normalizeLiteral(text).replace(/\s+/gu, '');
+
+/**
+ * Término y notación son adornos de presentación: si no están en los fragmentos citados se
+ * descartan (no invalidan la respuesta, que ya se sostiene con su cita).
+ */
+function supportedExtras(
+  claim: { label?: string | undefined; formula?: string | undefined },
+  sources: readonly string[],
+): { label?: string; formula?: string } {
+  const extras: { label?: string; formula?: string } = {};
+  const label = claim.label === undefined ? '' : normalizeLiteral(claim.label);
+  if (label.length > 0 && label.length <= MAX_LABEL_CHARS) {
+    const wanted = wordsOf(label).join(' ');
+    if (wanted.length > 0 && sources.some((s) => wordsOf(s).join(' ').includes(wanted))) {
+      extras.label = label;
+    }
+  }
+  const formula = claim.formula === undefined ? '' : normalizeLiteral(claim.formula);
+  if (formula.length > 0 && formula.length <= MAX_FORMULA_CHARS) {
+    const wanted = compact(formula);
+    if (sources.some((s) => compact(s).includes(wanted))) extras.formula = formula;
+  }
+  return extras;
+}
+
 /**
  * Valida la respuesta contra los fragmentos recuperados: id del fragmento, cita literal
  * y coherencia con la afirmación. Basta un fallo para rechazar la respuesta entera.
@@ -173,7 +209,11 @@ export function validateAnswer(
     ) {
       return { valid: false, reason: 'incoherent_claim' };
     }
-    claims.push({ text: claim.text.trim(), citations });
+    const sources = [...new Set(citations.map((c) => c.chunkId))].flatMap((id) => {
+      const chunk = byId.get(id);
+      return chunk ? [chunk.content] : [];
+    });
+    claims.push({ ...supportedExtras(claim, sources), text: claim.text.trim(), citations });
   }
   return { valid: true, claims };
 }

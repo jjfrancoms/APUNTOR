@@ -3,12 +3,15 @@ import type { EmbeddingProvider } from '../llm/embedding-provider';
 import type { JsonGenerator, TokenUsage } from '../llm/vertex';
 import type { QuotaService } from '../quota';
 import { ANSWER_JSON_SCHEMA, validateAnswer, type VerifiedClaim } from './citations';
+import { detectSmallTalk, type SmallTalk } from './small-talk';
 import { ABSTENTION_MESSAGE, buildRagPrompt, type ChunkSearch } from './retriever';
 
 export type AbstentionReason = 'empty_question' | 'no_matches' | 'validation_failed';
 
 export type QuestionResult =
   | { status: 'answered'; claims: VerifiedClaim[]; usage: TokenUsage }
+  /** Saludo o cortesía: la app responde con su propio texto, sin buscar ni gastar cuota. */
+  | { status: 'small_talk'; kind: SmallTalk }
   | {
       status: 'abstained';
       message: string;
@@ -39,6 +42,8 @@ export async function answerQuestion(
 ): Promise<QuestionResult> {
   const question = params.question.trim();
   if (question.length === 0) return abstain('empty_question');
+  const smallTalk = detectSmallTalk(question);
+  if (smallTalk) return { status: 'small_talk', kind: smallTalk };
 
   if (!(await deps.quota.consume(params.userId, 'questions', 1))) {
     throw new ApiError('CHAT_DAILY_LIMIT', 429);
