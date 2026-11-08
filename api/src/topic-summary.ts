@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { verifySummaryBlocks } from './summary-grounding';
 import { parseSummaryMarkdown, type ParsedBlock } from './summary-markdown';
 import type { GenAiModels } from './llm/vertex';
 import type { PageManifest } from './page-manifest';
@@ -43,10 +44,10 @@ export const SUMMARY_THINKING_BUDGET = 512;
 
 export type SummaryBlock =
   | { type: 'heading'; text: string }
-  | { type: 'paragraph'; text: string; pages: number[] }
-  | { type: 'list'; items: string[]; pages: number[] }
+  | { type: 'paragraph'; text: string; pages: number[]; unverified?: boolean }
+  | { type: 'list'; items: string[]; pages: number[]; unverified?: boolean }
   | { type: 'table'; caption?: string; header: string[]; rows: string[][]; pages: number[] }
-  | { type: 'formula'; text: string; pages: number[] }
+  | { type: 'formula'; text: string; pages: number[]; unverified?: boolean }
   | { type: 'figure'; page: number; caption: string; key: string; width: number; height: number };
 
 export interface StoredSummary {
@@ -115,6 +116,23 @@ export function groundBlocks(
     if (block.type === 'figure') return allowed.has(block.page) ? [block] : [];
     return [{ ...block, pages: block.pages.filter((p) => allowed.has(p)) }];
   });
+}
+
+/** El usuario ya gastó los resúmenes nuevos de hoy. */
+export class SummaryLimitError extends Error {
+  constructor() {
+    super('Límite diario de resúmenes');
+    this.name = 'SummaryLimitError';
+  }
+}
+
+/**
+ * Cobro de un resumen, solo cuando de verdad se genera. Sin esto (el worker) no se cobra a nadie.
+ * `reserve` devuelve false si no queda cuota; `release` devuelve lo cobrado si la generación falla.
+ */
+export interface SummaryBilling {
+  reserve(): Promise<boolean>;
+  release(): Promise<void>;
 }
 
 export interface TopicSummarizerDeps {
@@ -191,7 +209,21 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
         thinkingConfig: { thinkingBudget: SUMMARY_THINKING_BUDGET },
       },
     });
-    const grounded = groundBlocks(parseSummaryMarkdown(response.text ?? ''), allowed);
+    // El texto de la página completa (el modelo la vio); sin manifiesto, el del tema.
+    const pageTexts = new Map(
+      pageNumbers.map((pageNumber) => [
+        pageNumber,
+        manifestPages.get(pageNumber)?.text ??
+          input.blocks
+            .filter((b) => b.pageNumber === pageNumber)
+            .map((b) => b.text)
+            .join('\n'),
+      ]),
+    );
+    const grounded = verifySummaryBlocks(
+      groundBlocks(parseSummaryMarkdown(response.text ?? ''), allowed),
+      pageTexts,
+    );
 
     const blocks: SummaryBlock[] = [];
     let figureIndex = 0;
@@ -224,18 +256,41 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
     return { version: SUMMARY_VERSION, topicId: input.topic.id, model: deps.model, blocks };
   }
 
+  const inFlight = new Map<string, Promise<StoredSummary>>();
+
   return {
-    async get(input: SummaryInput): Promise<StoredSummary> {
+    async get(input: SummaryInput, billing?: SummaryBilling): Promise<StoredSummary> {
       const key = summaryKey(input.filePath, input.topic.id);
       const cached = await readCached(key);
       if (cached) return cached;
-      const summary = await generate(input);
-      await deps.storage.upload(
-        key,
-        new TextEncoder().encode(JSON.stringify(summary)),
-        'application/json',
-      );
-      return summary;
+      // Misma petición en curso (doble toque, dos pestañas): se comparte el resultado y no se
+      // cobra una segunda vez. Solo vale dentro de este proceso; entre procesos cobraría de más.
+      const running = inFlight.get(key);
+      if (running) return running;
+      // El cobro va dentro del trabajo registrado, sin `await` antes de registrarlo: así dos
+      // peticiones a la vez no pueden cobrar las dos.
+      const job = (async (): Promise<StoredSummary> => {
+        if (billing && !(await billing.reserve())) throw new SummaryLimitError();
+        try {
+          const summary = await generate(input);
+          await deps.storage.upload(
+            key,
+            new TextEncoder().encode(JSON.stringify(summary)),
+            'application/json',
+          );
+          return summary;
+        } catch (error) {
+          // Devolver la cuota no debe tapar el error original.
+          await billing?.release().catch(() => undefined);
+          throw error;
+        }
+      })();
+      inFlight.set(key, job);
+      try {
+        return await job;
+      } finally {
+        inFlight.delete(key);
+      }
     },
   };
 }

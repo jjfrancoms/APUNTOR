@@ -36,13 +36,13 @@ import {
 import { ApiError } from './errors';
 import type { ExternalSearch } from './external/tavily';
 import { loggerOptions, type LogStream } from './logging';
-import type { IngestionEnqueuer } from './queue';
+import { IngestionAlreadyQueuedError, type IngestionEnqueuer } from './queue';
 import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { createManifestCache } from './page-manifest';
 import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
 import { withPageStructure } from './topic-content';
-import type { SummaryBlock, TopicSummarizer } from './topic-summary';
+import { SummaryLimitError, type SummaryBlock, type TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
@@ -336,6 +336,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       questionsLimit: FREE_LIMITS.questions,
       storageBytes: used.storage_bytes,
       storageLimit: FREE_LIMITS.storage_bytes,
+      summariesToday: used.summaries,
+      summariesLimit: FREE_LIMITS.summaries,
     };
   });
 
@@ -548,14 +550,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
     let summary;
     try {
-      summary = await deps.summaries.get({
-        filePath: document.filePath,
-        topic: content.topic,
-        path: content.path,
-        blocks,
-        manifest,
-      });
+      // Solo se cobra si hay que generarlo: abrir un resumen ya guardado es gratis.
+      summary = await deps.summaries.get(
+        {
+          filePath: document.filePath,
+          topic: content.topic,
+          path: content.path,
+          blocks,
+          manifest,
+        },
+        {
+          reserve: () => deps.quota.consume(userId, 'summaries', 1),
+          release: () => deps.quota.release(userId, 'summaries', 1),
+        },
+      );
     } catch (error) {
+      if (error instanceof SummaryLimitError) throw new ApiError('SUMMARY_DAILY_LIMIT', 429);
       if (isTransientAiError(error)) throw new ApiError('RATE_LIMITED', 429);
       request.log.error({ err: error instanceof Error ? error.message : 'error' }, 'resumen');
       throw new ApiError('CHAT_FAILED', 502);
@@ -755,6 +765,30 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       adminUserId: admin.userId,
       adminEmail: admin.email,
       action: 'document.retry',
+      target: `document:${id}`,
+    });
+    return reply.status(202).send({ id, status: 'pending' });
+  });
+
+  // Reprocesa un documento ya completado (fragmentos, temas, páginas y resúmenes): 202.
+  app.post('/v1/admin/documents/:id/reprocess', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    const result = await deps.admin.reprocessCompletedDocument(id);
+    if (result === 'not_found') throw new ApiError('DOC_NOT_FOUND', 404);
+    if (result === 'not_completed') throw new ApiError('DOC_STATE', 409);
+    try {
+      await deps.enqueue(id, { requireNew: true });
+    } catch (error) {
+      // Sus fragmentos siguen intactos: vuelve a `completed` en lugar de quedar en `pending`.
+      await deps.admin.restoreCompletedDocument(id);
+      if (error instanceof IngestionAlreadyQueuedError) throw new ApiError('DOC_STATE', 409);
+      throw error;
+    }
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'document.reprocess',
       target: `document:${id}`,
     });
     return reply.status(202).send({ id, status: 'pending' });

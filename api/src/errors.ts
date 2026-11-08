@@ -17,6 +17,8 @@ export type ApiErrorCode =
   | 'CHAT_DAILY_LIMIT'
   | 'CHAT_FAILED'
   | 'CHAT_CANCELLED'
+  /** Se acabaron los resúmenes nuevos de hoy (los ya generados se siguen viendo gratis). */
+  | 'SUMMARY_DAILY_LIMIT'
   /** Demasiadas peticiones en poco tiempo: reintentar en unos segundos (cabecera Retry-After). */
   | 'RATE_LIMITED'
   /** Con sesión, pero sin permiso: rutas /v1/admin/* para quien no está en ADMIN_EMAILS. */

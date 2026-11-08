@@ -21,6 +21,7 @@
     "db:studio": "drizzle-kit studio",
     "api": "tsx api/src/index.ts",
     "eval": "tsx eval/cli.ts",
+    "reprocess": "tsx worker/src/reprocess.ts",
     "app": "npm --prefix app start",
     "start": "tsx api/src/index.ts",
     "start:worker": "tsx worker/src/index.ts"
