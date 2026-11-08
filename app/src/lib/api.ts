@@ -102,6 +102,30 @@ export interface ApiExternal {
   results: { title: string; url: string; snippet: string }[];
 }
 
+/** Largo de la consulta que acepta `GET /v1/search`. */
+export const SEARCH_MIN_QUERY = 2;
+export const SEARCH_MAX_QUERY = 200;
+
+export interface ApiSearchResults {
+  documents: { id: string; title: string }[];
+  topics: {
+    id: string;
+    documentId: string;
+    documentTitle: string;
+    title: string;
+    pages: number[];
+  }[];
+  snippets: {
+    chunkId: string;
+    documentId: string;
+    documentTitle: string;
+    pageNumber: number;
+    snippet: string;
+    /** Posiciones de `snippet` que coinciden con la búsqueda. */
+    highlights: { start: number; length: number }[];
+  }[];
+}
+
 export interface ApiUploadTicket {
   documentId: string;
   uploadUrl: string;
@@ -272,6 +296,13 @@ export const api = {
     ),
   ask: (question: string, options?: RequestOptions) =>
     request<ApiAnswer>('POST', '/v1/questions', { question }, options),
+  search: (query: string, options?: RequestOptions) =>
+    request<ApiSearchResults>(
+      'GET',
+      `/v1/search?q=${encodeURIComponent(query)}`,
+      undefined,
+      options,
+    ),
   external: (question: string, options?: RequestOptions) =>
     request<ApiExternal>('POST', '/v1/external', { question }, options),
   /** Registra la aceptación (idempotente: repetirla con la misma versión no duplica). */

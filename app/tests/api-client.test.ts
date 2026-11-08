@@ -107,3 +107,20 @@ describe('request: tiempo máximo y cancelación', () => {
     expect(error).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
   });
 });
+
+describe('búsqueda y alcance de las preguntas', () => {
+  function jsonFetch() {
+    return vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({ documents: [], topics: [], snippets: [] }))),
+    );
+  }
+
+  it('search codifica la consulta', async () => {
+    const fetchMock = jsonFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    await api.search('límites & más');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://api/v1/search?q=${encodeURIComponent('límites & más')}`,
+    );
+  });
+});

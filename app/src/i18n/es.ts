@@ -311,12 +311,18 @@ export const es = {
   search: {
     placeholder: 'Buscar en tus temas…',
     clear: 'Borrar búsqueda',
-    tabs: (all: number, docs: number, chats: number) =>
-      [`Todo · ${all}`, `Documentos · ${docs}`, `Chats · ${chats}`] as const,
-    count: (n: number) => `${n} resultados`,
+    documents: 'Documentos',
+    topics: 'Temas',
+    inNotes: 'En tus apuntes',
+    chats: 'Chats',
     page: (n: number) => `Página ${n}`,
-    empty: (q: string) => `No encontramos nada para "${q}".`,
-    emptyHint: 'Prueba con otras palabras.',
+    hint: 'Escribe al menos 2 letras para buscar en tus apuntes.',
+    loading: 'Buscando en tus apuntes…',
+    errorTitle: 'No pudimos buscar en tus apuntes',
+    errorBody: 'Fue un problema nuestro. Inténtalo de nuevo en un momento.',
+    offlineTitle: 'Sin conexión',
+    offlineBody: 'Tus chats se buscan igual. Para buscar en tus apuntes, revisa tu conexión.',
+    retry: 'Reintentar',
   },
   help: {
     header: 'Ayuda',
