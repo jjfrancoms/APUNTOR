@@ -10,14 +10,22 @@ import { space } from '@/theme';
 
 type Load =
   | { state: 'loading' }
-  | { state: 'error'; busy: boolean }
+  | { state: 'error'; reason: 'failed' | 'busy' | 'limit' }
   | { state: 'ready'; summary: ApiTopicSummary };
+
+/** Por qué falló el resumen: saturación, cuota diaria de resúmenes nuevos u otro fallo. */
+function errorReason(error: unknown): 'failed' | 'busy' | 'limit' {
+  if (!(error instanceof ApiRequestError)) return 'failed';
+  if (error.code === 'RATE_LIMITED') return 'busy';
+  if (error.code === 'SUMMARY_DAILY_LIMIT') return 'limit';
+  return 'failed';
+}
 
 /**
  * Pantalla 63 · Resumen del tema: Illari resume el tema solo con tus apuntes y conserva su
  * estructura (tablas como tablas, fórmulas, figuras recortadas). Cada parte lleva su página, que
  * se puede abrir en el original. Desde aquí se sigue con el chat.
- * `?demo=loading|error|busy|empty` muestra cada estado.
+ * `?demo=loading|error|busy|limit|empty` muestra cada estado.
  */
 export default function TopicSummaryScreen() {
   const s = useStrings();
@@ -32,7 +40,7 @@ export default function TopicSummaryScreen() {
 
   const fetchSummary = useCallback(() => {
     if (!doc || !id) {
-      setLoad({ state: 'error', busy: false });
+      setLoad({ state: 'error', reason: 'failed' });
       return;
     }
     setLoad({ state: 'loading' });
@@ -42,15 +50,15 @@ export default function TopicSummaryScreen() {
       .catch((error: unknown) =>
         setLoad({
           state: 'error',
-          busy: error instanceof ApiRequestError && error.code === 'RATE_LIMITED',
+          reason: errorReason(error),
         }),
       );
   }, [doc, id]);
 
   useEffect(() => {
     if (demo === 'loading') return;
-    if (demo === 'error' || demo === 'busy') {
-      setLoad({ state: 'error', busy: demo === 'busy' });
+    if (demo === 'error' || demo === 'busy' || demo === 'limit') {
+      setLoad({ state: 'error', reason: demo === 'error' ? 'failed' : demo });
       return;
     }
     fetchSummary();
@@ -60,7 +68,13 @@ export default function TopicSummaryScreen() {
   const topicTitle = summary?.topic.title ?? title ?? t.header;
   const blocks = demo === 'empty' ? [] : (summary?.blocks ?? []);
   const ask = () =>
-    router.push({ pathname: '/conversation', params: { q: s.courses.askAbout(topicTitle) } });
+    router.push({
+      pathname: '/conversation',
+      params: {
+        q: s.courses.askAbout(topicTitle),
+        ...(summary ? { docs: summary.document.id } : doc ? { docs: doc } : {}),
+      },
+    });
 
   return (
     <Screen
@@ -89,12 +103,22 @@ export default function TopicSummaryScreen() {
           </Text>
         </View>
       ) : load.state === 'error' ? (
-        <EmptyState
-          mood="sleepy"
-          title={load.busy ? t.busyTitle : t.errorTitle}
-          body={load.busy ? t.busyBody : t.errorBody}
-          primary={{ label: t.retry, onPress: fetchSummary }}
-        />
+        load.reason === 'limit' ? (
+          // Sin reintento: la cuota vuelve a medianoche; los resúmenes guardados siguen abriéndose.
+          <EmptyState
+            mood="sleepy"
+            title={t.limitTitle}
+            body={t.limitBody}
+            primary={{ label: s.common.back, onPress: () => router.back() }}
+          />
+        ) : (
+          <EmptyState
+            mood="sleepy"
+            title={load.reason === 'busy' ? t.busyTitle : t.errorTitle}
+            body={load.reason === 'busy' ? t.busyBody : t.errorBody}
+            primary={{ label: t.retry, onPress: fetchSummary }}
+          />
+        )
       ) : blocks.length === 0 || !summary ? (
         <EmptyState mood="curious" title={t.emptyTitle} body={t.emptyBody} />
       ) : (

@@ -28,7 +28,7 @@ export interface AnswerDeps {
   /** Modelo rápido: el primer intento (el estudiante está esperando). */
   generator: JsonGenerator;
   /**
-   * Modelo fuerte: un solo segundo intento si la respuesta rápida no pasa el validador de citas
+   * Modelo alto: un solo segundo intento si la respuesta del modelo medio no pasa el validador de citas
    * o la llamada falla con un error no pasajero. Sin él, se abstiene directamente.
    */
   fallbackGenerator?: JsonGenerator;
@@ -56,8 +56,8 @@ function abstain(reason: AbstentionReason, extra: { detail?: string; usage?: Tok
 /**
  * pregunta → embedding → match_user_chunks → LLM en JSON → validador de citas.
  * Sin coincidencias se abstiene sin llamar al LLM y devuelve la pregunta a la cuota.
- * Primero responde el modelo rápido; si su respuesta no pasa el validador (o falla con un error
- * que no es pasajero), se intenta UNA vez con el fuerte antes de abstenerse. Sigue siendo una
+ * Primero responde el modelo medio; si su respuesta no pasa el validador (o falla con un error
+ * que no es pasajero), se intenta UNA vez con el alto antes de abstenerse. Sigue siendo una
  * sola pregunta de la cuota, y se devuelve si ningún modelo llegó a responder.
  */
 export async function answerQuestion(
@@ -104,12 +104,12 @@ export async function answerQuestion(
     };
     const fallback = deps.fallbackGenerator;
 
-    // Primer intento con el modelo rápido.
+    // Primer intento con el modelo medio.
     let first: LlmResult;
     try {
       first = await deps.generator.generateJson(request);
     } catch (error) {
-      // Detenida, límite de uso o sin modelo fuerte: se propaga y la pregunta no cuenta.
+      // Detenida, límite de uso o sin modelo alto: se propaga y la pregunta no cuenta.
       if (!fallback || params.signal?.aborted || isTransientAiError(error)) throw error;
       const second = await fallback.generateJson(request);
       llmCompleted = true;
@@ -121,7 +121,7 @@ export async function answerQuestion(
       return toResult(validation, first.usage);
     }
 
-    // La respuesta rápida no pasó el validador: un segundo intento con el modelo fuerte.
+    // La respuesta del modelo medio no pasó el validador: un segundo intento con el modelo alto.
     if (params.signal?.aborted) throw new Error('Pregunta detenida');
     let second: LlmResult;
     try {
@@ -129,7 +129,7 @@ export async function answerQuestion(
     } catch (error) {
       if (params.signal?.aborted) throw error;
       // Un fallo del segundo intento no se reintenta más.
-      // El modelo rápido sí respondió: la pregunta cuenta y se abstiene con su motivo.
+      // El modelo medio sí respondió: la pregunta cuenta y se abstiene con su motivo.
       llmCompleted = true;
       return abstain('validation_failed', { detail: validation.reason, usage: first.usage });
     }

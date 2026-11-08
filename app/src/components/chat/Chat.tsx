@@ -62,6 +62,7 @@ export function Composer({
   placeholder,
   busy = false,
   disabled = false,
+  sendBlocked = false,
   value,
   onChangeText,
   onSend,
@@ -72,6 +73,8 @@ export function Composer({
   /** Hay una respuesta en curso: el botón de enviar pasa a ser "Detener" (llama a `onStop`). */
   busy?: boolean;
   disabled?: boolean;
+  /** Impide enviar pero deja seguir escribiendo (sin conexión: el borrador no se pierde). */
+  sendBlocked?: boolean;
   value?: string;
   onChangeText?: (v: string) => void;
   onSend?: () => void;
@@ -81,7 +84,8 @@ export function Composer({
 }) {
   const s = useStrings();
   const { c } = useTheme();
-  const canSend = !busy && !disabled && (value === undefined || value.trim().length > 0);
+  const canSend =
+    !busy && !disabled && !sendBlocked && (value === undefined || value.trim().length > 0);
   const [focused, setFocused] = useState(false);
   const [keyboardHint, setKeyboardHint] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);

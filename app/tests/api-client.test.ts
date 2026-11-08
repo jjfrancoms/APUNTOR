@@ -107,3 +107,51 @@ describe('request: tiempo máximo y cancelación', () => {
     expect(error).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
   });
 });
+
+describe('búsqueda y alcance de las preguntas', () => {
+  function jsonFetch() {
+    return vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({ documents: [], topics: [], snippets: [] }))),
+    );
+  }
+
+  it('search codifica la consulta', async () => {
+    const fetchMock = jsonFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    await api.search('límites & más');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://api/v1/search?q=${encodeURIComponent('límites & más')}`,
+    );
+  });
+
+  it('ask envía documentIds en el cuerpo y no en las opciones', async () => {
+    const fetchMock = jsonFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+    await api.ask('¿Qué es un límite?', {
+      documentIds: ['d1'],
+      signal: controller.signal,
+      timeoutMs: 1000,
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      question: '¿Qué es un límite?',
+      documentIds: ['d1'],
+    });
+  });
+
+  it('ask sin alcance no manda documentIds', async () => {
+    const fetchMock = jsonFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    await api.ask('Hola');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ question: 'Hola' });
+  });
+
+  it('una búsqueda cancelada falla con CANCELLED (respuesta vieja descartable)', async () => {
+    vi.stubGlobal('fetch', hangingFetch());
+    const controller = new AbortController();
+    const result = codeOf(api.search('límite', { signal: controller.signal }));
+    await vi.advanceTimersByTimeAsync(10);
+    controller.abort();
+    expect(await result).toBe('CANCELLED');
+  });
+});

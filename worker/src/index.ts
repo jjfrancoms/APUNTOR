@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { getServerEnv } from '../../api/src/config/env';
+import { LOW_THINKING_BUDGET } from '../../api/src/llm/models';
 import { WORKER_AI_RETRY } from '../../api/src/llm/retry';
 import { VertexGenerator, VertexOcrProvider } from '../../api/src/llm/vertex';
 import { createQueueClient, ensureIngestionQueue } from '../../api/src/queue';
@@ -36,12 +37,12 @@ async function main(): Promise<void> {
     extractor: new MultiFormatExtractor(new VertexOcrProvider(models, modelChoice.ocr)),
     embedder,
     pageRenderer: new PdfPageRenderer(),
-    // Sugerencia de curso con el modelo rápido: el usuario la confirma en la pantalla 16.
+    // Sugerencia de curso con el modelo bajo: el usuario la confirma en la pantalla 16.
     classifier: createDocumentClassifier({
       repository: new DrizzleClassificationRepository(db),
-      generator: new VertexGenerator(models, modelChoice.fast),
+      generator: new VertexGenerator(models, modelChoice.low, LOW_THINKING_BUDGET),
     }),
-    // Resúmenes de tema con el modelo fuerte, tras completar la ingesta (mismo caché que la API).
+    // Resúmenes de tema con el modelo alto, tras completar la ingesta (mismo caché que la API).
     summaries: createSummaryPregenerator({
       summarizer: createTopicSummarizer({ models, model: modelChoice.summary, storage }),
       storage,

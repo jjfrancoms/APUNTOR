@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { previewOnly } from '@/components/domain/PreviewOnly';
 import { StyleSheet, View } from 'react-native';
 import {
   Button,
@@ -17,8 +18,11 @@ import { notifyMoreLanguages, removeUpload, useStore } from '@/store/store';
 import { Banner } from '@/components/ui';
 import { space } from '@/theme';
 
-/** Pantalla 41 · Idioma no compatible (código provisional UP_LANGUAGE). */
-export default function UnsupportedLanguage() {
+/**
+ * Pantalla 41 · Idioma no compatible (código provisional UP_LANGUAGE). Aún no hay detector real de
+ * idioma: solo se ve en la vista previa del diseño.
+ */
+function UnsupportedLanguage() {
   const s = useStrings();
   const notified = useStore((st) => st.notices.languages);
   // Usa el primer archivo rechazado por idioma, si lo hay; si no, el ejemplo del diseño.
@@ -31,7 +35,7 @@ export default function UnsupportedLanguage() {
       <FileRow
         tone="danger"
         ext="PDF"
-        name={job?.name ?? 'Resumen_chino.pdf'}
+        name={job?.name ?? s.language.sampleFile}
         detail={s.language.title}
         detailTone="danger"
         trailing={
@@ -46,7 +50,7 @@ export default function UnsupportedLanguage() {
         }
       >
         <Text variant="caption" color="textMuted">
-          {s.language.detected('chino')}
+          {s.language.detected(s.language.sampleLanguage)}
         </Text>
         <TextLink label={s.uploadProblems.chooseOther} onPress={() => router.replace('/upload')} />
       </FileRow>
@@ -55,8 +59,8 @@ export default function UnsupportedLanguage() {
           {s.language.supported}
         </Text>
         <View style={styles.chips}>
-          <Chip label="Español" tone="primary" icon="check" />
-          <Chip label="English" tone="primary" icon="check" />
+          <Chip label={s.language.spanish} tone="primary" icon="check" />
+          <Chip label={s.language.english} tone="primary" icon="check" />
         </View>
         <Text variant="caption" color="textMuted">
           {s.language.mixed}
@@ -77,6 +81,9 @@ export default function UnsupportedLanguage() {
     </Screen>
   );
 }
+
+// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta que exista el detector.
+export default previewOnly(UnsupportedLanguage);
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', gap: space.sm },

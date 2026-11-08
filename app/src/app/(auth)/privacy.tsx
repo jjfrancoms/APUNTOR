@@ -24,10 +24,8 @@ export default function Privacy() {
   const settings = useStore((st) => st.settings);
   const useDocs = settings.useDocs;
   const external = settings.external;
-  const analytics = settings.analytics;
   const setUseDocs = (v: boolean) => updateSettings({ useDocs: v });
   const setExternal = (v: boolean) => updateSettings({ external: v });
-  const setAnalytics = (v: boolean) => updateSettings({ analytics: v });
   // Consentimiento explícito: la casilla empieza sin marcar.
   const [accepted, setAccepted] = useState(false);
   const signedIn = useStore((st) => st.session !== null);
@@ -110,16 +108,9 @@ export default function Privacy() {
         <ListRow
           title={s.privacy.external.title}
           detail={s.privacy.external.detail}
-          trailing={
-            <Toggle value={external} onChange={setExternal} label={s.privacy.external.title} />
-          }
-        />
-        <ListRow
-          title={s.privacy.analytics.title}
-          detail={s.privacy.analytics.detail}
           divider={false}
           trailing={
-            <Toggle value={analytics} onChange={setAnalytics} label={s.privacy.analytics.title} />
+            <Toggle value={external} onChange={setExternal} label={s.privacy.external.title} />
           }
         />
       </Card>

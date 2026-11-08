@@ -3,7 +3,7 @@ import {
   assertEmbeddingDimensions,
   type EmbeddingProvider,
 } from '../../../api/src/llm/embedding-provider';
-import type { FileStorage } from '../../../api/src/storage/file-storage';
+import { derivedPrefix, type FileStorage } from '../../../api/src/storage/file-storage';
 import { EMBEDDING_DIMENSIONS } from '../../../db/schema';
 import { buildTopicTree, flattenTopicTree, type FlatTopic } from '../topics/topic-tree';
 import { buildClassificationExcerpt, type DocumentClassifier } from './classification';
@@ -146,7 +146,7 @@ export async function processDocument(
     await onProgress({ stage: 'parsing', processedChunks: 0, totalChunks: 0 });
 
     const bytes = await storage.download(document.filePath);
-    const parsed = await extractor.extractPages(bytes);
+    const parsed = await extractor.extractPages(bytes, document.filePath);
     if (parsed.totalPages <= 0) throw new PermanentIngestionError('El documento no tiene páginas');
 
     const chunks = chunkPages(parsed.pages, deps.chunking ?? DEFAULT_CHUNKING_OPTIONS);
@@ -157,6 +157,8 @@ export async function processDocument(
     }
 
     await repository.deleteChunks(documentId);
+    // Al reprocesar, los temas cambian de id: sus resúmenes ya no le sirven a nadie.
+    await storage.deletePrefix(`${derivedPrefix(document.filePath)}summaries/`);
 
     const batchSize = Math.min(
       deps.embeddingBatchSize ?? DEFAULT_EMBEDDING_BATCH_SIZE,

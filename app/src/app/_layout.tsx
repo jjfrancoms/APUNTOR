@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WebChrome } from '@/components/web/WebChrome';
 import { LanguageProvider } from '@/i18n/language';
+import { useReconnectSync } from '@/lib/use-reconnect-sync';
 import { hydrate, useStore } from '@/store/store';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -29,6 +30,7 @@ function ThemedApp() {
 
 function Root() {
   const { c, mode } = useTheme();
+  useReconnectSync();
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
