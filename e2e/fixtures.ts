@@ -22,7 +22,26 @@ export const DOCUMENT = {
   status: 'completed' as const,
   totalPages: 12,
   topicCount: 3,
+  // Sin sugerencia pendiente: el curso lo eligió la persona.
+  classificationStatus: 'confirmed' as 'none' | 'suggested' | 'confirmed' | 'dismissed',
+  suggestedCourseId: null as string | null,
+  suggestedCourseTitle: null as string | null,
+  suggestionConfidence: null as number | null,
+  suggestionReason: null as string | null,
   createdAt: '2026-10-02T10:00:00.000Z',
+};
+
+/** Documento recién subido al que la IA sugiere un curso: espera la decisión (pantalla 16). */
+export const SUGGESTED_DOCUMENT = {
+  ...DOCUMENT,
+  id: 'd2',
+  courseId: null as string | null,
+  title: 'derecho-penal.pdf',
+  classificationStatus: 'suggested' as 'none' | 'suggested' | 'confirmed' | 'dismissed',
+  suggestedCourseId: COURSE.id as string | null,
+  suggestedCourseTitle: COURSE.title as string | null,
+  suggestionConfidence: 0.9 as number | null,
+  suggestionReason: 'Habla de proposiciones y tablas de verdad.' as string | null,
 };
 
 /** Dos temas principales; "Proposiciones" tiene una sección dentro. */
@@ -37,6 +56,8 @@ export const USAGE = {
   questionsLimit: 20,
   storageBytes: 1_200_000,
   storageLimit: 500_000_000,
+  studyGenerationsToday: 2,
+  studyGenerationsLimit: 10,
 };
 
 const pageImage = (pageNumber: number) => ({
@@ -156,4 +177,54 @@ export const USER = {
   email: 'ana@e2e.test',
   fullName: 'Ana Torres',
   firstName: 'Ana',
+};
+
+const STUDY_CITATION = {
+  chunkId: 'ch1',
+  documentId: DOCUMENT.id,
+  pageNumber: 3,
+  quote: 'Una tautología es una proposición siempre verdadera.',
+};
+
+const studySet = (id: string, kind: 'quiz' | 'cards') => ({
+  id,
+  documentId: DOCUMENT.id,
+  documentTitle: DOCUMENT.title,
+  topicId: null,
+  topicTitle: null,
+  kind,
+  itemCount: 1,
+  lastScore: null,
+  lastTotal: null,
+  createdAt: '2026-11-08T10:00:00.000Z',
+});
+
+/** Quiz de una pregunta con su cita; el servidor falso lo devuelve al generar y al abrirlo. */
+export const QUIZ = {
+  set: studySet('s-quiz', 'quiz'),
+  items: [
+    {
+      id: 'i-quiz',
+      kind: 'quiz' as const,
+      citation: STUDY_CITATION,
+      question: '¿Qué es una tautología?',
+      options: ['Siempre verdadera', 'Siempre falsa', 'Depende de los valores'],
+      correctIndex: 0,
+      explanation: 'Una tautología es verdadera con cualquier valor de sus variables.',
+    },
+  ],
+};
+
+/** Juego de una tarjeta. */
+export const CARDS = {
+  set: studySet('s-cards', 'cards'),
+  items: [
+    {
+      id: 'i-card',
+      kind: 'cards' as const,
+      citation: STUDY_CITATION,
+      front: 'Contradicción',
+      back: 'Proposición siempre falsa.',
+    },
+  ],
 };

@@ -6,11 +6,15 @@ import { es } from '../app/src/i18n/es';
 import {
   ANSWER,
   ANSWER_CLAIM,
+  CARDS,
+  COURSE,
   CONSENTS_OUTDATED,
   DOCUMENT,
   EXPORT_DATA,
   PASSWORD_OK,
+  QUIZ,
   SEARCH_WORD,
+  SUGGESTED_DOCUMENT,
   SUMMARY_TEXT,
   TOPICS,
   USER,
@@ -347,5 +351,93 @@ test.describe('Cuenta', () => {
     await page.getByLabel(d.confirmLabel(d.confirmWord)).fill(d.confirmWord);
     await expect(borrar).toBeEnabled();
     expect(mock.calls('DELETE', '/v1/account')).toHaveLength(0);
+  });
+});
+
+test.describe('Clasificación y estudio', () => {
+  test('la pantalla de revisión muestra la sugerencia y aceptarla la confirma sin mover nada antes', async ({
+    page,
+    mock,
+  }) => {
+    const r = es.review;
+    let documento: typeof SUGGESTED_DOCUMENT = { ...SUGGESTED_DOCUMENT };
+    mock.on('GET', '/v1/documents', () => ({ json: { documents: [documento] } }));
+    mock.on('POST', `/v1/documents/${SUGGESTED_DOCUMENT.id}/classification`, () => {
+      documento = {
+        ...documento,
+        courseId: COURSE.id,
+        classificationStatus: 'confirmed',
+        suggestedCourseId: null,
+        suggestedCourseTitle: null,
+      };
+      return { json: documento };
+    });
+    await mock.signIn('email');
+    await page.goto('/upload/review');
+
+    await expect(page.getByText(r.suggested(COURSE.title))).toBeVisible();
+    await expect(page.getByText(r.confidence.high)).toBeVisible();
+    await expect(page.getByText(r.reason(SUGGESTED_DOCUMENT.suggestionReason ?? ''))).toBeVisible();
+    expect(
+      mock.calls('POST', `/v1/documents/${SUGGESTED_DOCUMENT.id}/classification`),
+    ).toHaveLength(0);
+
+    await page.getByRole('button', { name: r.accept }).click();
+    await expect(page.getByText(r.emptyTitle)).toBeVisible();
+    const llamadas = mock.calls('POST', `/v1/documents/${SUGGESTED_DOCUMENT.id}/classification`);
+    expect(llamadas).toHaveLength(1);
+    expect(llamadas[0]?.body).toEqual({ action: 'accept' });
+  });
+
+  test('generar un quiz, responderlo y ver su cita con la página; el resultado se guarda', async ({
+    page,
+    mock,
+  }) => {
+    const pregunta = QUIZ.items[0];
+    if (!pregunta) throw new Error('Falta la pregunta del quiz');
+    await mock.signIn('email');
+    await page.goto('/study/quiz-setup');
+    await page.getByRole('button', { name: es.study.generate }).click();
+
+    await expect(page).toHaveURL(/\/study\/quiz\?setId=s-quiz/u);
+    const generado = mock.calls('POST', '/v1/study/sets');
+    expect(generado).toHaveLength(1);
+    expect(generado[0]?.body).toMatchObject({ documentId: DOCUMENT.id, kind: 'quiz' });
+
+    await expect(page.getByText(pregunta.question)).toBeVisible();
+    await page.getByText(pregunta.options[pregunta.correctIndex] ?? '', { exact: true }).click();
+    await expect(page.getByText(pregunta.explanation)).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: es.study.openPage(pregunta.citation.pageNumber) }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: es.quiz.finish }).click();
+    await expect.poll(() => mock.calls('POST', '/v1/study/sets/s-quiz/results')).toHaveLength(1);
+    expect(mock.calls('POST', '/v1/study/sets/s-quiz/results')[0]?.body).toEqual({
+      score: 1,
+      total: 1,
+    });
+  });
+
+  test('las flashcards llaman al repaso de cada tarjeta con lo que respondió la persona', async ({
+    page,
+    mock,
+  }) => {
+    const tarjeta = CARDS.items[0];
+    if (!tarjeta) throw new Error('Falta la tarjeta');
+    await mock.signIn('email');
+    await page.goto(`/study/flashcards?setId=${CARDS.set.id}`);
+
+    await expect(page.getByText(tarjeta.front)).toBeVisible();
+    await page.getByRole('button', { name: es.flashcards.reveal }).click();
+    await expect(page.getByText(tarjeta.back)).toBeVisible();
+    await page.getByRole('button', { name: es.flashcards.know, exact: true }).click();
+
+    await expect
+      .poll(() => mock.calls('POST', `/v1/study/items/${tarjeta.id}/review`))
+      .toHaveLength(1);
+    expect(mock.calls('POST', `/v1/study/items/${tarjeta.id}/review`)[0]?.body).toEqual({
+      known: true,
+    });
   });
 });
