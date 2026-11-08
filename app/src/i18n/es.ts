@@ -294,16 +294,18 @@ export const es = {
   help: {
     header: 'Ayuda',
     search: 'Buscar en la ayuda…',
-    categories: ['Subir documentos', 'Cuenta y privacidad', 'Quiz y repaso', 'Planes y pagos'],
-    faqHeader: 'PREGUNTAS FRECUENTES',
+    categories: ['Subir documentos', 'Cuenta y privacidad', 'Respuestas y fuentes', 'Planes y pagos'],
+    faqHeader: 'Preguntas frecuentes',
     faqs: [
       '¿Qué formatos puedo subir?',
       '¿Por qué se clasificó mal mi documento?',
       '¿Cómo borro mis datos?',
       '¿Qué es el contexto externo?',
+      '¿Hay planes de pago?',
     ],
     notFoundTitle: '¿No encuentras tu respuesta?',
-    notFoundBody: 'Escríbenos, respondemos en 1 a 2 días hábiles',
+    notFoundBody: 'Escríbenos a soporte@apuntor.com',
+    supportEmail: 'soporte@apuntor.com',
   },
   contact: {
     header: 'Contactar soporte',
@@ -733,11 +735,12 @@ export const es = {
   helpView: {
     answers: [
       'Puedes subir PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC), de hasta 50 MB cada uno. Los formatos antiguos .doc y .ppt no se leen: guárdalos como .docx o .pptx.',
-      'La clasificación compara el nombre y el contenido con tus cursos. Si se equivocó, corrígela en Revisar clasificación o en el detalle del documento con "Cambiar".',
-      'En Perfil › Descargar o borrar mis datos puedes descargarlos o borrar tu cuenta de inmediato.',
+      'APUNTOR te sugiere un curso y tú lo confirmas. Si no es el correcto, cámbialo en el detalle del documento con "Cambiar".',
+      'En Perfil › Descargar o borrar mis datos puedes descargarlos o borrar tu cuenta.',
       'Es información de internet que se muestra aparte, en violeta y siempre con su fuente. Puedes apagarla en Perfil.',
+      'Todavía no. Los planes de pago llegarán pronto; por ahora usas el plan gratis, con un límite diario de preguntas y un límite de espacio.',
     ],
-    categories: [[0], [2], [], [3]] as const,
+    categories: [[0, 1], [2], [3], [4]] as const,
     allFaqs: 'Ver todas las preguntas',
     noResults: 'No encontramos esa pregunta.',
   },
