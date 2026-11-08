@@ -219,21 +219,23 @@ app/                      # app Expo/React Native (Expo Router, SDK 58), paquete
 
 ## Comandos clave
 
-| Comando               | Qué hace                                            |
-| --------------------- | --------------------------------------------------- |
-| `npm run dev`         | API con recarga automática                          |
-| `npm run api`         | Arranca la API (requiere `.env`)                    |
-| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)      |
-| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)          |
-| `npm run reprocess`   | Reprocesa: `-- <documentId>` o `-- --all-completed` |
-| `npm run lint`        | ESLint (type-checked, `any` prohibido)              |
-| `npm run typecheck`   | `tsc --noEmit`                                      |
-| `npm test`            | Vitest (unitarios)                                  |
-| `npm run format`      | Prettier                                            |
-| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`           |
-| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`      |
-| `npm run db:push`     | Sincroniza el esquema sin migración (solo local)    |
-| `npm run db:studio`   | Drizzle Studio                                      |
+| Comando               | Qué hace                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`         | API con recarga automática                                                                  |
+| `npm run api`         | Arranca la API (requiere `.env`)                                                            |
+| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)                                              |
+| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)                                                  |
+| `npm run reprocess`   | Reprocesa: `-- <documentId>` o `-- --all-completed`                                         |
+| `npm run lint`        | ESLint (type-checked, `any` prohibido)                                                      |
+| `npm run typecheck`   | `tsc --noEmit`                                                                              |
+| `npm test`            | Vitest (unitarios)                                                                          |
+| `npm run test:e2e`    | Pruebas de navegador (Playwright, servidor falso, `e2e/`)                                   |
+| `npm run verificar`   | Todo en orden: tipos, lint, vitest (raíz y app) y `test:e2e`; se detiene en el primer fallo |
+| `npm run format`      | Prettier                                                                                    |
+| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`                                                   |
+| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`                                              |
+| `npm run db:push`     | Sincroniza el esquema sin migración (solo local)                                            |
+| `npm run db:studio`   | Drizzle Studio                                                                              |
 
 App móvil (dentro de `app/`, con su propio `package.json`):
 

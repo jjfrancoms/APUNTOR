@@ -31,3 +31,8 @@ __pycache__/
 
 # Copias de trabajo de los agentes
 .claude/worktrees/
+
+# Pruebas de extremo a extremo (Playwright): capturas, trazas e informe de ejecuciones fallidas
+test-results/
+playwright-report/
+blob-report/

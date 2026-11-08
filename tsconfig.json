@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "jsx": "react-jsx",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -24,6 +25,7 @@
     "db/**/*.ts",
     "eval/**/*.ts",
     "tests/**/*.ts",
+    "e2e/**/*.ts",
     "*.ts"
   ],
   "exclude": ["node_modules", "db/migrations", "app"]
