@@ -138,6 +138,14 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   falta en el servidor se quitó en otro dispositivo. Las respuestas en camino
   (`pendingAnswers`) nunca se suben. Se borran con la cuenta (`deleteAllForUser`), van en
   `GET /v1/account/export`, y el panel solo muestra conteos.
+- **Clasificación** (`worker/src/ingestion/classification.ts`, `POST /v1/documents/:id/classification`,
+  pantalla 16): tras la ingesta el worker sugiere un curso con el modelo bajo y deja
+  `classification_status = 'suggested'`; nada se mueve hasta que la persona acepta, elige, crea o
+  descarta. Las correcciones se guardan en `classification_corrections` y viajan al borrar la cuenta.
+- **Estudio** (`api/src/study/`, rutas `/v1/study/*`): quizzes y tarjetas generados con cita
+  literal validada; generar cuesta 1 de la cuota diaria `study_generations`. Las reglas Leitner
+  son el módulo puro `app/src/lib/flashcards.ts` (sin imports: el servidor lo importa y el job
+  raíz de CI no instala `app/`; no le agregues dependencias).
 - Cabeceras de seguridad con `@fastify/helmet`.
 - **Panel de administrador** (`api/src/admin.ts`, rutas `/v1/admin/*`): es admin quien tenga en
   el JWT un `email` incluido en `ADMIN_EMAILS` (separado por comas, sin distinguir mayúsculas)
@@ -298,12 +306,13 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 
 ## Pendiente
 
-- Fase 2: clasificación automática curso → clase → sección → tema con confirmación del usuario.
-- Conversaciones en el servidor: código listo, **falta la migración**. Generar con
-  `npm run db:generate` (tablas `conversations` y `conversation_messages`) y crear otra con
-  `npx drizzle-kit generate --custom --name conversations_rls` pegando
-  `db/pending/conversations.sql` (RLS y permisos). Aplicar ambas **antes de desplegar la API**.
-- Fase 3: quizzes, flashcards y resúmenes compartidos generados desde los documentos, con cita.
+- Fases 2 y 3 hechas en código (clasificación con confirmación, conversaciones en el servidor,
+  quizzes, flashcards y repaso con cita). Migraciones `0016_common_blizzard` (tablas y columnas
+  nuevas; el CHECK de `usage_quotas` admite `study_generations`), `0017_clasificacion_rls`
+  (documentos que ya tenían curso pasan a `confirmed`; RLS de `classification_corrections`),
+  `0018_estudio_rls` y `0019_conversaciones_rls` escritas pero **sin aplicar** en Supabase.
+  Orden: 0016, 0017, 0018, 0019, y **antes de desplegar la API** (sin ellas fallan la subida, el
+  chat con conversaciones y el estudio). Va después de 0013 a 0015.
 - Fase 4: suscripciones (RevenueCat y Stripe/Culqi), notificaciones e inicio con Apple.
 - Migraciones `0009_consents` y `0010_consents_rls` (tabla `consents` con RLS) escritas pero
   **sin aplicar** en Supabase.
