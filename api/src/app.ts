@@ -18,6 +18,7 @@ import {
   type AuthUsersDirectory,
 } from './admin';
 import type { AuthSession, Authenticator } from './auth';
+import { registerConversationRoutes, type ConversationsRepository } from './conversations';
 import {
   CONSENT_DOCUMENTS,
   MAX_CONSENT_VERSION,
@@ -67,6 +68,7 @@ export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
   consents: ConsentsRepository;
+  conversations: ConversationsRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -679,6 +681,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
   });
 
+  registerConversationRoutes(app, { conversations: deps.conversations, requireUser });
+
   // --- Panel de administrador ----------------------------------------------------
   // Solo metadatos, conteos y estados: nunca fragmentos, preguntas, respuestas ni archivos.
   // Toda acción que cambia algo queda en `admin_audit`. Usa el límite global de peticiones.
@@ -718,6 +722,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           storageBytes: summary?.storageBytes ?? 0,
           questionsToday: summary?.questionsToday ?? 0,
           consentVersion: summary?.consentVersion ?? null,
+          conversations: summary?.conversations ?? 0,
+          conversationMessages: summary?.conversationMessages ?? 0,
         };
       }),
       page,

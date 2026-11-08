@@ -1,4 +1,9 @@
 import { EMBEDDING_DIMENSIONS } from '../../db/schema';
+import type {
+  ConversationMessageRecord,
+  ConversationSummary,
+  ConversationsRepository,
+} from '../../api/src/conversations';
 import type { EmbeddingProvider } from '../../api/src/llm/embedding-provider';
 import type { JsonGenerator } from '../../api/src/llm/vertex';
 import type { RetrievedChunk } from '../../api/src/rag/retriever';
@@ -61,6 +66,83 @@ export function fakeQuota(limit = 20) {
     },
     release(_userId: string, _kind: string, amount: number) {
       used = Math.max(used - amount, 0);
+      return Promise.resolve();
+    },
+  };
+}
+
+type StoredConversation = ConversationSummary & {
+  userId: string;
+  messages: ConversationMessageRecord[];
+};
+
+/** Repositorio de conversaciones en memoria (el SQL real se prueba en tests/db). */
+export function fakeConversations(): ConversationsRepository & { rows: StoredConversation[] } {
+  const rows: StoredConversation[] = [];
+  const own = (userId: string, id: string) =>
+    rows.find((row) => row.id === id && row.userId === userId) ?? null;
+  const summary = (row: StoredConversation | null): ConversationSummary | null => {
+    if (!row) return null;
+    const { userId: _userId, messages, ...rest } = row;
+    return { ...rest, messageCount: messages.length };
+  };
+  return {
+    rows,
+    list: (userId, { limit, offset }) =>
+      Promise.resolve(
+        rows
+          .filter((row) => row.userId === userId)
+          .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+          .slice(offset, offset + limit)
+          .map((row) => summary(row) as ConversationSummary),
+      ),
+    get: (userId, id) => {
+      const row = own(userId, id);
+      const found = summary(row);
+      return Promise.resolve(row && found ? { ...found, messages: row.messages } : null);
+    },
+    create: (userId, input) => {
+      const existing = rows.find((row) => row.id === input.id);
+      if (existing) return Promise.resolve(existing.userId === userId ? summary(existing) : null);
+      const date = input.updatedAt ?? new Date(rows.length * 1000);
+      const row: StoredConversation = {
+        id: input.id,
+        userId,
+        title: input.title,
+        course: input.course,
+        scopeDocumentIds: input.scopeDocumentIds,
+        createdAt: date,
+        updatedAt: date,
+        messageCount: 0,
+        messages: [],
+      };
+      rows.push(row);
+      return Promise.resolve(summary(row));
+    },
+    update: (userId, id, patch) => {
+      const row = own(userId, id);
+      if (row) Object.assign(row, patch);
+      return Promise.resolve(summary(row));
+    },
+    appendMessages: (userId, id, messages) => {
+      const row = own(userId, id);
+      if (row) {
+        for (const message of messages) {
+          if (!row.messages.some((m) => m.id === message.id)) {
+            row.messages.push({ ...message, createdAt: new Date(0) });
+          }
+        }
+      }
+      return Promise.resolve(summary(row));
+    },
+    deleteMessages: (userId, id, messageIds) => {
+      const row = own(userId, id);
+      if (row) row.messages = row.messages.filter((m) => !messageIds.includes(m.id));
+      return Promise.resolve(summary(row));
+    },
+    delete: (userId, id) => {
+      const index = rows.findIndex((row) => row.id === id && row.userId === userId);
+      if (index !== -1) rows.splice(index, 1);
       return Promise.resolve();
     },
   };
