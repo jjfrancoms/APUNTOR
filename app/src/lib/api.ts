@@ -74,7 +74,55 @@ export interface ApiUsage {
   questionsLimit: number;
   storageBytes: number;
   storageLimit: number;
+  /** Quizzes o juegos de tarjetas generados hoy y tope diario. */
+  studyGenerationsToday: number;
+  studyGenerationsLimit: number;
 }
+
+export type StudyKind = 'quiz' | 'cards';
+
+/** Un juego de preguntas o tarjetas ya generado (se puede reabrir sin volver a generarlo). */
+export interface ApiStudySet {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  topicId: string | null;
+  topicTitle: string | null;
+  kind: StudyKind;
+  itemCount: number;
+  lastScore: number | null;
+  lastTotal: number | null;
+  createdAt: string;
+}
+
+export interface ApiStudyCitation {
+  chunkId: string;
+  documentId: string;
+  pageNumber: number;
+  quote: string;
+}
+
+export type ApiStudyItem =
+  | {
+      id: string;
+      kind: 'quiz';
+      citation: ApiStudyCitation;
+      question: string;
+      options: string[];
+      correctIndex: number;
+      explanation: string;
+    }
+  | { id: string; kind: 'cards'; citation: ApiStudyCitation; front: string; back: string };
+
+/** Tarjeta que toca repasar hoy, con su curso y su caja actual. */
+export type ApiReviewItem = ApiStudyItem & {
+  setId: string;
+  documentTitle: string;
+  courseId: string | null;
+  courseTitle: string | null;
+  box: number;
+  dueDate: string;
+};
 
 export interface ApiClaim {
   /** Término que explica (validado contra la cita). */
@@ -225,6 +273,9 @@ export interface AskOptions extends RequestOptions {
   documentIds?: readonly string[];
 }
 
+/** Generar un juego puede tardar con el modelo saturado: espera hasta 2 minutos. */
+export const STUDY_GENERATE_TIMEOUT_MS = 120_000;
+
 async function request<T>(
   method: string,
   path: string,
@@ -319,6 +370,38 @@ export const api = {
       requestOptions,
     );
   },
+  /** Genera un juego con IA: puede tardar si el modelo está saturado, así que admite cancelar. */
+  createStudySet: (
+    input: { documentId: string; topicId?: string; kind: StudyKind; count?: number },
+    options: RequestOptions = {},
+  ) =>
+    request<{ set: ApiStudySet; items: ApiStudyItem[] }>('POST', '/v1/study/sets', input, {
+      timeoutMs: STUDY_GENERATE_TIMEOUT_MS,
+      ...options,
+    }),
+  studySets: (filter: { documentId?: string; kind?: StudyKind } = {}) => {
+    const params = new URLSearchParams();
+    if (filter.documentId) params.set('documentId', filter.documentId);
+    if (filter.kind) params.set('kind', filter.kind);
+    const query = params.toString();
+    return request<{ sets: ApiStudySet[] }>('GET', `/v1/study/sets${query ? `?${query}` : ''}`);
+  },
+  studySet: (id: string) =>
+    request<{ set: ApiStudySet; items: ApiStudyItem[] }>(
+      'GET',
+      `/v1/study/sets/${encodeURIComponent(id)}`,
+    ),
+  deleteStudySet: (id: string) =>
+    request<void>('DELETE', `/v1/study/sets/${encodeURIComponent(id)}`),
+  saveStudyResult: (id: string, result: { score: number; total: number }) =>
+    request<unknown>('POST', `/v1/study/sets/${encodeURIComponent(id)}/results`, result),
+  reviewStudyItem: (id: string, known: boolean) =>
+    request<{ id: string; box: number; dueDate: string }>(
+      'POST',
+      `/v1/study/items/${encodeURIComponent(id)}/review`,
+      { known },
+    ),
+  reviewToday: () => request<{ items: ApiReviewItem[] }>('GET', '/v1/study/review/today'),
   search: (query: string, options?: RequestOptions) =>
     request<ApiSearchResults>(
       'GET',

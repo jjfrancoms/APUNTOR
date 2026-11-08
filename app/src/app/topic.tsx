@@ -76,6 +76,18 @@ export default function TopicSummaryScreen() {
       },
     });
 
+  /** Abre la configuración de un quiz o de tarjetas ya apuntando a este tema. */
+  const practice = (kind: 'quiz' | 'cards') =>
+    router.push({
+      pathname: '/study/quiz-setup',
+      params: {
+        doc: summary?.document.id ?? doc ?? '',
+        ...(id ? { topic: id } : {}),
+        topicTitle,
+        kind,
+      },
+    });
+
   return (
     <Screen
       header={<TopBar title={topicTitle} subtitle={summary?.document.title} />}
@@ -83,6 +95,22 @@ export default function TopicSummaryScreen() {
         load.state === 'ready' ? (
           <>
             <Button label={t.ask} onPress={ask} />
+            <View style={styles.study}>
+              <View style={styles.flex}>
+                <Button
+                  label={s.study.practice}
+                  variant="secondary"
+                  onPress={() => practice('quiz')}
+                />
+              </View>
+              <View style={styles.flex}>
+                <Button
+                  label={s.study.cards}
+                  variant="secondary"
+                  onPress={() => practice('cards')}
+                />
+              </View>
+            </View>
             <Button
               label={t.openDocument}
               variant="secondary"
@@ -152,5 +180,7 @@ export default function TopicSummaryScreen() {
 
 const styles = StyleSheet.create({
   meta: { gap: space.sm, alignItems: 'flex-start' },
+  study: { flexDirection: 'row', gap: space.sm },
+  flex: { flex: 1 },
   loading: { alignItems: 'center', gap: space.md, paddingVertical: space.xxxl },
 });

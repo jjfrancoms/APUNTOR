@@ -1,11 +1,14 @@
-import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { CitationChip } from '@/components/domain/CitationChip';
+import { StudyError, StudyLoading } from '@/components/domain/StudyState';
 import {
+  Banner,
   Button,
   Card,
   Chip,
+  EmptyState,
   Icon,
   Mascot,
   ProgressBar,
@@ -13,51 +16,98 @@ import {
   Text,
   TopBar,
 } from '@/components/ui';
-import { quizQuestions, quizSession } from '@/data/mock';
-import { useStrings } from '@/i18n/es';
-import { buildQuiz, type QuizQuestion } from '@/lib/quiz';
-import { classOf, recordQuiz, useStore } from '@/store/store';
-import { useMemo } from 'react';
-import { layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
+import { useStrings } from '@/i18n/es';
+import { api, type ApiStudyItem } from '@/lib/api';
+import { PREVIEW } from '@/lib/config';
+import { previewSet } from '@/lib/study-preview';
+import { useStudyLoad } from '@/lib/use-study-load';
+import { layout, radius, space, useTheme } from '@/theme';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
-/** Pantalla 21 · Quiz. Cada respuesta marca la correcta y cita la página de tus apuntes. */
-function Quiz() {
+/**
+ * Pantalla 21 · Quiz del servidor (`?setId=`). Cada respuesta marca la correcta, explica y cita la
+ * página de tus apuntes (se abre al tocarla). Al terminar se envía el resultado.
+ * `?demo=loading|error|offline|empty` muestra cada estado.
+ */
+export default function Quiz() {
+  const s = useStrings();
+  const { setId, demo } = useLocalSearchParams<{ setId?: string; demo?: string }>();
+  const fetcher = useCallback(
+    () => (PREVIEW ? Promise.resolve(previewSet('quiz')) : api.studySet(setId ?? '')),
+    [setId],
+  );
+  const { load, reload } = useStudyLoad(fetcher, demo);
+  const back = <TopBar icon="x" title={s.study.quizTitle} />;
+  if (load.state === 'loading') {
+    return (
+      <Screen header={back}>
+        <StudyLoading />
+      </Screen>
+    );
+  }
+  if (load.state === 'error') {
+    return (
+      <Screen header={back}>
+        <StudyError code={load.code} onRetry={reload} />
+      </Screen>
+    );
+  }
+  const questions = demo === 'empty' ? [] : load.data.items.filter((i) => i.kind === 'quiz');
+  if (questions.length === 0) {
+    return (
+      <Screen header={back}>
+        <EmptyState
+          mood="curious"
+          title={s.study.emptySetTitle}
+          body={s.study.emptySetBody}
+          primary={{ label: s.common.back, onPress: () => router.back() }}
+        />
+      </Screen>
+    );
+  }
+  return (
+    <QuizPlay
+      setId={load.data.set.id}
+      title={load.data.set.topicTitle ?? load.data.set.documentTitle}
+      items={questions}
+    />
+  );
+}
+
+function QuizPlay({
+  setId,
+  title,
+  items,
+}: {
+  setId: string;
+  title: string;
+  items: ApiStudyItem[];
+}) {
   const s = useStrings();
   const { c } = useTheme();
-  const { n, classId = 'c3' } = useLocalSearchParams<{ n?: string; classId?: string }>();
-  const state = useStore((st) => st);
-  // La Clase 3 de Cálculo I tiene un banco curado; las demás se arman con su contenido.
-  const bank: QuizQuestion[] = useMemo(
-    () => (classId === 'c3' ? quizQuestions : buildQuiz(state.items, classId)),
-    [state.items, classId],
-  );
-  const found = classOf(state, classId);
-  const topic = found?.klass.title.split(' · ')[1] ?? quizSession.topic;
-  const location = found
-    ? `${found.course.title} · ${found.klass.title.split(' · ')[0] ?? ''}`
-    : quizSession.location;
-  const total = [5, 10, 20].includes(Number(n)) ? Number(n) : 10;
+  const total = items.length;
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
-  // Banco de ejemplo: se recorre en orden; con más preguntas que el banco, se repite.
-  const q = bank[index % Math.max(bank.length, 1)];
-  if (!q) return null;
+  const [saveFailed, setSaveFailed] = useState(false);
+  const q = items[index];
+  if (!q || q.kind !== 'quiz') return null;
   const answered = selected !== null;
   const last = index === total - 1;
 
   const choose = (i: number) => {
     setSelected(i);
-    if (i === q.answer) setScore((v) => v + 1);
+    if (i === q.correctIndex) setScore((v) => v + 1);
   };
   const next = () => {
     if (last) {
-      recordQuiz(score, total);
       setFinished(true);
+      if (!PREVIEW) {
+        api.saveStudyResult(setId, { score, total }).catch(() => setSaveFailed(true));
+      }
       return;
     }
     setIndex(index + 1);
@@ -68,14 +118,11 @@ function Quiz() {
     return (
       <Screen
         header={
-          <TopBar icon="x" title={s.quiz.header(topic)} onBack={() => router.replace('/home')} />
+          <TopBar icon="x" title={s.quiz.header(title)} onBack={() => router.replace('/home')} />
         }
         footer={
           <>
-            <Button
-              label={s.quiz.toFlashcards}
-              onPress={() => router.replace('/study/flashcards')}
-            />
+            <Button label={s.quiz.toFlashcards} onPress={() => router.replace('/study/review')} />
             <Button
               label={s.empty.backHome}
               variant="secondary"
@@ -93,6 +140,9 @@ function Quiz() {
             {s.demo.quizResult(score, total)}
           </Text>
           <ProgressBar value={score / total} label={s.demo.quizResult(score, total)} />
+          {saveFailed ? (
+            <Banner tone="warning" icon="alert-circle" title={s.study.resultNotSaved} />
+          ) : null}
         </View>
       </Screen>
     );
@@ -103,8 +153,7 @@ function Quiz() {
       header={
         <TopBar
           icon="x"
-          title={s.quiz.header(topic)}
-          subtitle={location}
+          title={s.quiz.header(title)}
           right={<Chip label={s.quiz.counter(index + 1, total)} tone="primary" />}
         />
       }
@@ -117,17 +166,12 @@ function Quiz() {
         label={s.quiz.progress(index + 1, total)}
       />
       <Text variant="heading" accessibilityRole="header">
-        {q.prompt}
+        {q.question}
       </Text>
-      {q.quote ? (
-        <Card>
-          <Text variant="body">{q.quote}</Text>
-        </Card>
-      ) : null}
       <View accessibilityRole="radiogroup" style={styles.options}>
         {q.options.map((opt, i) => {
-          const right = answered && i === q.answer;
-          const wrong = answered && i === selected && i !== q.answer;
+          const right = answered && i === q.correctIndex;
+          const wrong = answered && i === selected && i !== q.correctIndex;
           const border = right ? c.primary : wrong ? c.danger : c.border;
           const bg = right ? c.primarySoft : wrong ? c.dangerSoft : c.surface;
           const label = right ? s.quiz.correct : wrong ? s.quiz.incorrect : '';
@@ -168,7 +212,7 @@ function Quiz() {
       </View>
       {answered ? (
         <Card tone="primary">
-          <Chip label={s.quiz.source(q.klass, q.page)} tone="primary" icon="file-text" />
+          <CitationChip citation={q.citation} />
           <Text variant="small">{q.explanation}</Text>
         </Card>
       ) : null}
@@ -197,6 +241,3 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   result: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
 });
-
-// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
-export default previewOnly(Quiz);
