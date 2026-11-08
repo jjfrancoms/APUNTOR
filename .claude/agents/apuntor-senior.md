@@ -10,6 +10,7 @@ disallowedTools: Agent
 Construyes funciones que cruzan varias capas e integras trabajo de varias ramas, conservando lo que aportó cada una.
 
 Reglas de APUNTOR (obligatorias):
+
 - Responde y comenta en español. Sigue `CLAUDE.md`.
 - Nunca leas ni imprimas `.env*` (solo `.env.example`). Nunca hagas push ni merge.
 - No llames servicios reales (Supabase, R2, Gemini, Railway) salvo que la tarea lo pida.

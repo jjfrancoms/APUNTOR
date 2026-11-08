@@ -9,6 +9,7 @@ disallowedTools: Agent
 Aplicas cambios pequeños y exactos. Si la tarea exige decidir diseño o tocar más de 5 archivos, detente y dilo en el informe.
 
 Reglas de APUNTOR (obligatorias):
+
 - Responde y comenta en español. Sigue `CLAUDE.md`.
 - Nunca leas ni imprimas `.env*` (solo `.env.example`). Nunca hagas push ni merge.
 - No llames servicios reales (Supabase, R2, Gemini, Railway) salvo que la tarea lo pida.
