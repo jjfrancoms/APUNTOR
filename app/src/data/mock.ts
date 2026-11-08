@@ -141,8 +141,6 @@ export const courses: Course[] = [
   },
 ];
 
-export const pendingReviewCount = 2;
-
 export const continueLearning = {
   topicId: 'definicion-limite',
   title: 'Definición de límite',

@@ -22,7 +22,10 @@ export interface ContentItem {
 }
 
 /** Documentos de ejemplo de la vista previa del diseño (sin estado del servidor). */
-export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdAt'>[] = [
+export const extraDocuments: Omit<
+  DocRecord,
+  'status' | 'topicCount' | 'createdAt' | 'classification'
+>[] = [
   {
     id: 'funciones',
     name: 'Funciones.pdf',

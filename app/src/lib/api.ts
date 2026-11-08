@@ -35,8 +35,21 @@ export interface ApiDocument {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   totalPages: number | null;
   topicCount: number;
+  /** Sugerencia de curso de la IA: 'suggested' espera la decisión del usuario (pantalla 16). */
+  classificationStatus: 'none' | 'suggested' | 'confirmed' | 'dismissed';
+  suggestedCourseId: string | null;
+  suggestedCourseTitle: string | null;
+  suggestionConfidence: number | null;
+  suggestionReason: string | null;
   createdAt: string;
 }
+
+/** Lo que decide el usuario sobre la sugerencia de curso. */
+export type ClassificationAction =
+  | { action: 'accept' }
+  | { action: 'choose'; courseId: string }
+  | { action: 'create'; title: string }
+  | { action: 'dismiss' };
 
 export interface ApiCourse {
   id: string;
@@ -303,6 +316,8 @@ export const api = {
   completeDocument: (id: string) => request<unknown>('POST', `/v1/documents/${id}/complete`),
   updateDocument: (id: string, patch: { title?: string; courseId?: string | null }) =>
     request<ApiDocument>('PATCH', `/v1/documents/${id}`, patch),
+  classifyDocument: (id: string, decision: ClassificationAction) =>
+    request<ApiDocument>('POST', `/v1/documents/${id}/classification`, decision),
   deleteDocument: (id: string) => request<void>('DELETE', `/v1/documents/${id}`),
   page: (documentId: string, page: number) =>
     request<{ pageNumber: number; url: string; width: number; height: number }>(

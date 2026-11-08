@@ -231,7 +231,8 @@ export const es = {
   courses: {
     title: 'Mis cursos',
     search: 'Buscar en tus temas…',
-    pendingReview: (n: number) => `${n} documentos esperan tu revisión`,
+    pendingReview: (n: number) =>
+      n === 1 ? '1 documento espera tu revisión' : `${n} documentos esperan tu revisión`,
     classesTopics: (classes: number, topics: number) => `${classes} clases · ${topics} temas`,
     sections: (n: number) => `${n} secciones`,
     topicsCount: (n: number) => `${n} temas`,
@@ -419,14 +420,24 @@ export const es = {
   review: {
     header: 'Revisar clasificación',
     intro: (n: number) =>
-      `Organicé ${n} documentos con tus cursos. Confirma o corrige antes de guardarlos.`,
-    high: 'Alta confianza',
-    needs: 'Necesita tu revisión',
+      n === 1
+        ? 'Sugerí un curso para 1 documento. Tú decides: nada se mueve sin tu confirmación.'
+        : `Sugerí un curso para ${n} documentos. Tú decides: nada se mueve sin tu confirmación.`,
+    suggested: (course: string) => `Curso sugerido: ${course}`,
+    suggestedNew: (course: string) => `Curso nuevo sugerido: ${course}`,
+    confidence: { high: 'Confianza alta', medium: 'Confianza media', low: 'Confianza baja' },
+    reason: (text: string) => `Por qué: ${text}`,
+    accept: 'Aceptar',
+    chooseOther: 'Elegir otro curso',
+    newCourse: 'Crear curso',
+    notNow: 'Ahora no',
     question: '¿A qué curso pertenece?',
     choose: 'Elegir curso…',
-    newCourse: 'Crear curso nuevo',
-    save: (n: number) => `Guardar ${n} confirmados`,
-    later: 'Revisar después',
+    emptyTitle: 'Nada por revisar',
+    emptyBody: 'Cuando suba un documento nuevo, te propondré un curso aquí.',
+    emptyAction: 'Ir a mis cursos',
+    loading: 'Cargando sugerencias…',
+    error: 'No pudimos cargar las sugerencias. Inténtalo de nuevo.',
   },
   processError: {
     title: (n: number) => `No pude leer ${n} archivos`,

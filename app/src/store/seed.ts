@@ -71,6 +71,14 @@ export interface DocRecord {
   outline?: DocTopic[];
   status: DocumentStatus;
   topicCount: number;
+  /** Sugerencia de curso de la IA; solo `suggested` espera la decisión del usuario. */
+  classification: {
+    status: 'none' | 'suggested' | 'confirmed' | 'dismissed';
+    courseId: string | null;
+    courseTitle: string | null;
+    confidence: number | null;
+    reason: string | null;
+  };
   createdAt: string;
 }
 

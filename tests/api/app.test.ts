@@ -325,6 +325,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
     objects,
     files,
     enqueued,
+    corrections,
     deletedUsers,
     quota,
     audit,
@@ -529,6 +530,132 @@ describe('documentos', () => {
       payload: {},
     });
     expect(errorCode(empty)).toBe('REQ_INVALID');
+  });
+
+  describe('clasificación sugerida', () => {
+    async function suggested(world: World, course: string | null, title: string | null = null) {
+      const id = await createDocument(world);
+      const doc = world.docs.get(id);
+      if (!doc) throw new Error('documento no creado');
+      Object.assign(doc, {
+        classificationStatus: 'suggested',
+        suggestedCourseId: course,
+        suggestedCourseTitle: title,
+        suggestionConfidence: 0.8,
+        suggestionReason: 'Habla de derivadas',
+      });
+      return id;
+    }
+    const classify = (world: World, id: string, payload: unknown, headers = AUTH) =>
+      world.app.inject({
+        method: 'POST',
+        url: `/v1/documents/${id}/classification`,
+        headers,
+        payload: payload as Record<string, unknown>,
+      });
+
+    it('la respuesta del documento incluye la sugerencia', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const id = await suggested(world, course, 'Cálculo I');
+      const response = await world.app.inject({
+        method: 'GET',
+        url: `/v1/documents/${id}`,
+        headers: AUTH,
+      });
+      expect(response.json()).toMatchObject({
+        classificationStatus: 'suggested',
+        suggestedCourseId: course,
+        suggestedCourseTitle: 'Cálculo I',
+        suggestionConfidence: 0.8,
+        suggestionReason: 'Habla de derivadas',
+      });
+    });
+
+    it('aceptar mueve el documento al curso sugerido sin guardar corrección', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const id = await suggested(world, course, 'Cálculo I');
+      const response = await classify(world, id, { action: 'accept' });
+      expect(response.json()).toMatchObject({
+        classificationStatus: 'confirmed',
+        courseId: course,
+      });
+      expect(world.corrections).toEqual([]);
+    });
+
+    it('aceptar un curso nuevo lo crea una sola vez', async () => {
+      const world = await createWorld();
+      const id = await suggested(world, null, 'Física II');
+      const response = await classify(world, id, { action: 'accept' });
+      expect(response.statusCode).toBe(200);
+      const created = [...world.courses.values()].filter((c) => c.title === 'Física II');
+      expect(created).toHaveLength(1);
+      expect(world.docs.get(id)?.courseId).toBe(created[0]?.id);
+    });
+
+    it('elegir otro curso guarda la corrección', async () => {
+      const world = await createWorld();
+      const suggestedCourse = await createCourse(world);
+      const other = await createCourse(world, AUTH, 'Álgebra');
+      const id = await suggested(world, suggestedCourse, 'Cálculo I');
+      const response = await classify(world, id, { action: 'choose', courseId: other });
+      expect(response.json()).toMatchObject({ classificationStatus: 'confirmed', courseId: other });
+      expect(world.corrections).toEqual([{ id, courseId: other }]);
+    });
+
+    it('crear un curso con otro nombre guarda la corrección', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const id = await suggested(world, course, 'Cálculo I');
+      const response = await classify(world, id, { action: 'create', title: 'Estadística' });
+      expect(response.statusCode).toBe(200);
+      expect(world.corrections).toHaveLength(1);
+    });
+
+    it('ahora no descarta la sugerencia y no mueve el documento', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const id = await suggested(world, course, 'Cálculo I');
+      const response = await classify(world, id, { action: 'dismiss' });
+      expect(response.json()).toMatchObject({ classificationStatus: 'dismissed', courseId: null });
+      expect(world.corrections).toEqual([]);
+    });
+
+    it('solo el dueño decide y no puede elegir un curso ajeno', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const theirs = await createCourse(world, AUTH_OTHER, 'Ajeno');
+      const id = await suggested(world, course, 'Cálculo I');
+      const stranger = await classify(world, id, { action: 'accept' }, AUTH_OTHER);
+      expect(stranger.statusCode).toBe(404);
+      const foreign = await classify(world, id, { action: 'choose', courseId: theirs });
+      expect(errorCode(foreign)).toBe('COURSE_NOT_FOUND');
+      expect(world.docs.get(id)?.classificationStatus).toBe('suggested');
+    });
+
+    it('sin sugerencia pendiente responde 409 y una acción inválida 400', async () => {
+      const world = await createWorld();
+      const id = await createDocument(world);
+      expect(errorCode(await classify(world, id, { action: 'accept' }))).toBe('DOC_STATE');
+      expect(errorCode(await classify(world, id, { action: 'dismiss' }))).toBe('DOC_STATE');
+      expect(errorCode(await classify(world, id, { action: 'otra' }))).toBe('REQ_INVALID');
+    });
+
+    it('mover a mano con PATCH resuelve la sugerencia', async () => {
+      const world = await createWorld();
+      const course = await createCourse(world);
+      const other = await createCourse(world, AUTH, 'Álgebra');
+      const id = await suggested(world, course, 'Cálculo I');
+      await world.app.inject({
+        method: 'PATCH',
+        url: `/v1/documents/${id}`,
+        headers: AUTH,
+        payload: { courseId: other },
+      });
+      expect(world.docs.get(id)?.classificationStatus).toBe('confirmed');
+      expect(world.corrections).toHaveLength(1);
+    });
   });
 
   it('devuelve los temas detectados solo a su dueño', async () => {

@@ -12,7 +12,7 @@ import type { JsonGenerator } from '../../../api/src/llm/vertex';
 
 /**
  * Sugerencia de curso para un documento recién ingerido. Solo propone: el usuario confirma en la
- * pantalla 16 y nada se mueve sin él. Con el modelo rápido y una sola llamada por documento.
+ * pantalla 16 y nada se mueve sin él. Con el modelo bajo y una sola llamada por documento.
  *
  * "Aprende de tus correcciones": las últimas correcciones del propio usuario (documento → curso)
  * van como ejemplos en el prompt. No hay entrenamiento ni nada compartido entre cuentas.

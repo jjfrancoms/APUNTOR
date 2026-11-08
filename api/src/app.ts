@@ -397,10 +397,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   }
 
   /** El curso que propuso la IA: el existente, o uno nuevo con el título sugerido. */
-  async function suggestedCourse(
-    userId: string,
-    document: DocumentRecord,
-  ): Promise<CourseRecord> {
+  async function suggestedCourse(userId: string, document: DocumentRecord): Promise<CourseRecord> {
     if (document.classificationStatus !== 'suggested') throw new ApiError('DOC_STATE', 409);
     if (document.suggestedCourseId !== null) {
       const course = await deps.documents.getCourse(userId, document.suggestedCourseId);

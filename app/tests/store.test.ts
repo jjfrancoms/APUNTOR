@@ -71,6 +71,7 @@ const api = {
   })),
   completeDocument: vi.fn(async () => ({})),
   updateDocument: vi.fn(async () => ({})),
+  classifyDocument: vi.fn(async () => ({})),
   deleteDocument: vi.fn(async () => undefined),
   deleteAccount: vi.fn(async () => undefined),
   exportAccount: vi.fn(async (): Promise<unknown> => ({ profile: { id: 'u1' } })),
@@ -111,11 +112,30 @@ vi.mock('@/lib/api', () => ({
     error instanceof FakeApiError && error.code.startsWith('UP_') ? error.code : fallback,
 }));
 
-function doc(over: { id: string; courseId: string | null; title: string; topicCount: number }) {
+function doc(over: { id: string; courseId: string | null; title: string; topicCount: number }): {
+  id: string;
+  courseId: string | null;
+  title: string;
+  topicCount: number;
+  sizeBytes: number;
+  status: 'completed';
+  totalPages: number;
+  classificationStatus: 'none' | 'suggested' | 'confirmed' | 'dismissed';
+  suggestedCourseId: string | null;
+  suggestedCourseTitle: string | null;
+  suggestionConfidence: number | null;
+  suggestionReason: string | null;
+  createdAt: string;
+} {
   return {
     sizeBytes: 2 * 1024 * 1024,
     status: 'completed' as const,
     totalPages: 12,
+    classificationStatus: 'none',
+    suggestedCourseId: null,
+    suggestedCourseTitle: null,
+    suggestionConfidence: null,
+    suggestionReason: null,
     createdAt: new Date().toISOString(),
     ...over,
   };
@@ -320,16 +340,35 @@ describe('subida', () => {
     expect(api.deleteDocument).toHaveBeenCalledWith('srv-1');
   });
 
-  it('al confirmar guarda cada archivo en su curso', async () => {
-    vi.useFakeTimers();
+  it('solo los documentos con sugerencia pendiente cuentan como por revisar', async () => {
+    api.documents.mockResolvedValueOnce({
+      documents: [
+        {
+          ...doc({ id: 'd1', courseId: null, title: 'A.pdf', topicCount: 1 }),
+          classificationStatus: 'suggested' as const,
+          suggestedCourseId: 'c1',
+          suggestedCourseTitle: 'Cálculo I',
+          suggestionConfidence: 0.8,
+          suggestionReason: 'Habla de límites',
+        },
+        {
+          ...doc({ id: 'd2', courseId: 'c1', title: 'B.pdf', topicCount: 1 }),
+          classificationStatus: 'confirmed' as const,
+        },
+      ],
+    });
     await signedIn();
-    api.document.mockResolvedValue({ status: 'completed' });
-    const [job] = store.enqueueUploads([file('a.pdf', 1)]);
-    await vi.advanceTimersByTimeAsync(3500);
-    store.assignUploadCourse(job?.id ?? '', 'c1');
-    vi.useRealTimers();
-    expect(await store.confirmUploads()).toBe(1);
-    expect(api.updateDocument).toHaveBeenCalledWith('srv-1', { courseId: 'c1' });
+    const pending = store.pendingReview(store.getState());
+    expect(pending.map((d) => d.id)).toEqual(['d1']);
+    expect(pending[0]?.classification).toMatchObject({ courseTitle: 'Cálculo I', confidence: 0.8 });
+  });
+
+  it('decideClassification manda la decisión y recarga; si falla devuelve false', async () => {
+    await signedIn();
+    expect(await store.decideClassification('d1', { action: 'accept' })).toBe(true);
+    expect(api.classifyDocument).toHaveBeenCalledWith('d1', { action: 'accept' });
+    api.classifyDocument.mockRejectedValueOnce(new Error('sin red'));
+    expect(await store.decideClassification('d1', { action: 'dismiss' })).toBe(false);
   });
 });
 

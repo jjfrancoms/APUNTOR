@@ -60,8 +60,7 @@ export interface DocumentRecord {
 
 /** Lo que decide el usuario sobre la sugerencia de curso. */
 export type ClassificationDecision =
-  | { status: 'confirmed'; courseId: string; recordCorrection: boolean }
-  | { status: 'dismissed' };
+  { status: 'confirmed'; courseId: string; recordCorrection: boolean } | { status: 'dismissed' };
 
 export interface CourseRecord {
   id: string;
@@ -274,6 +273,10 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
     },
     async deleteAllForUser(userId) {
       await db.transaction(async (tx) => {
+        // Las correcciones a la IA son datos del usuario: se borran con la cuenta.
+        await tx
+          .delete(classificationCorrections)
+          .where(eq(classificationCorrections.userId, userId));
         await tx.delete(documents).where(eq(documents.userId, userId));
         await tx.delete(courses).where(eq(courses.userId, userId));
         await tx.execute(sql`DELETE FROM usage_quotas WHERE user_id = ${userId}::uuid`);
