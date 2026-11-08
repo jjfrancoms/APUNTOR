@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { deleteUserAccount, type AuthUserDeleter } from './account';
+import { buildAccountExport, confirmedEmail, type AccountExportRepository } from './account-export';
 import {
   authHasMore,
   countAuthUsers,
@@ -36,15 +37,22 @@ import {
 import { ApiError } from './errors';
 import type { ExternalSearch } from './external/tavily';
 import { loggerOptions, type LogStream } from './logging';
-import type { IngestionEnqueuer } from './queue';
+import { IngestionAlreadyQueuedError, type IngestionEnqueuer } from './queue';
 import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { createManifestCache } from './page-manifest';
 import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
+import { MAX_SEARCH_QUERY, MIN_SEARCH_QUERY, type SearchRepository } from './search';
 import { withPageStructure } from './topic-content';
-import type { SummaryBlock, TopicSummarizer } from './topic-summary';
+import { SummaryLimitError, type SummaryBlock, type TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
 import { registerStudyRoutes, type StudyDeps } from './study/routes';
+import {
+  MAX_WAITLIST_EMAIL,
+  WAITLIST_SOURCES,
+  type WaitlistRecord,
+  type WaitlistRepository,
+} from './waitlist';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
 export interface RateLimitRule {
@@ -57,7 +65,12 @@ export interface RateLimitConfig {
   global: RateLimitRule;
   /** Rutas caras: preguntas, contexto externo y registro de subidas. */
   strict: RateLimitRule;
+  /** Lista de espera pública (por IP); sin indicar usa `DEFAULT_WAITLIST_LIMIT`. */
+  waitlist?: RateLimitRule;
 }
+
+/** Ruta sin sesión que escribe en la base: pocas inscripciones por IP y hora. */
+export const DEFAULT_WAITLIST_LIMIT: RateLimitRule = { max: 10, timeWindowMs: 60 * 60_000 };
 
 export const DEFAULT_RATE_LIMIT: RateLimitConfig = {
   global: { max: 300, timeWindowMs: 60_000 },
@@ -68,6 +81,12 @@ export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
   consents: ConsentsRepository;
+  /** Lista de espera de menores: solo la escribe y lee el backend. */
+  waitlist: WaitlistRepository;
+  /** Consultas propias de la exportación de datos (ARCO). */
+  accountExport: AccountExportRepository;
+  /** Búsqueda en títulos, temas y contenido de los documentos del usuario. */
+  contentSearch: SearchRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -120,6 +139,9 @@ const questionBody = z.object({
   question: z.string().trim().min(1).max(2000),
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
 });
+const searchQuery = z.object({
+  q: z.string().trim().min(MIN_SEARCH_QUERY).max(MAX_SEARCH_QUERY),
+});
 const externalBody = z.object({ question: z.string().trim().min(1).max(2000) });
 const pageQuery = {
   page: z.coerce.number().int().min(1).max(100_000).default(1),
@@ -138,6 +160,12 @@ const consentBody = z.object({
     .trim()
     .max(MAX_CONSENT_VERSION)
     .regex(/^\d{4}-\d{2}-\d{2}$/u),
+});
+const waitlistBody = z.object({
+  email: z.string().trim().max(MAX_WAITLIST_EMAIL).toLowerCase().pipe(z.email()),
+  // Sin consentimiento expreso no se guarda nada.
+  consent: z.literal(true),
+  source: z.enum(WAITLIST_SOURCES).default('app'),
 });
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -193,6 +221,16 @@ function toAdminAudit(entry: AdminAuditRecord) {
     adminEmail: entry.adminEmail,
     action: entry.action,
     target: entry.target,
+    createdAt: entry.createdAt.toISOString(),
+  };
+}
+
+function toAdminWaitlist(entry: WaitlistRecord) {
+  return {
+    id: entry.id,
+    email: entry.email,
+    consent: entry.consent,
+    source: entry.source,
     createdAt: entry.createdAt.toISOString(),
   };
 }
@@ -313,6 +351,20 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       : {
           config: { rateLimit: { max: limits.strict.max, timeWindow: limits.strict.timeWindowMs } },
         };
+  /** Solo por IP: esta ruta es pública y no debe depender de ningún token. */
+  const waitlistRule = limits === false ? null : (limits.waitlist ?? DEFAULT_WAITLIST_LIMIT);
+  const waitlistLimit =
+    waitlistRule === null
+      ? {}
+      : {
+          config: {
+            rateLimit: {
+              max: waitlistRule.max,
+              timeWindow: waitlistRule.timeWindowMs,
+              keyGenerator: (request: FastifyRequest) => `ip:${request.ip}`,
+            },
+          },
+        };
 
   async function requireDocument(userId: string, params: unknown): Promise<DocumentRecord> {
     const { id } = parse(idParams, params);
@@ -339,13 +391,36 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       questionsLimit: FREE_LIMITS.questions,
       storageBytes: used.storage_bytes,
       storageLimit: FREE_LIMITS.storage_bytes,
+      summariesToday: used.summaries,
+      summariesLimit: FREE_LIMITS.summaries,
+      studyGenerationsToday: used.study_generations,
+      studyGenerationsLimit: FREE_LIMITS.study_generations,
     };
+  });
+
+  /** Si esa cuenta dejó su correo confirmado en la lista de espera, también se borra. */
+  async function forgetWaitlistEntry(userId: string): Promise<void> {
+    const email = await confirmedEmail(deps.authUsers, userId);
+    if (email !== null) await deps.waitlist.removeByEmail(email);
+  }
+
+  // Derecho de acceso (ARCO): todo lo del usuario en un JSON que se descarga. Es una consulta
+  // cara (todo el texto de sus documentos): usa el límite estricto.
+  app.get('/v1/account/export', strictLimit, async (request, reply) => {
+    const session = await sessionUser(request);
+    if (session === null) throw new ApiError('AUTH_REQUIRED', 401);
+    const data = await buildAccountExport(deps, session);
+    return reply
+      .header('Content-Disposition', 'attachment; filename="apuntor-mis-datos.json"')
+      .header('Cache-Control', 'no-store')
+      .send(data);
   });
 
   // Borra archivos, datos y el usuario de Supabase Auth, en ese orden: si algo falla, se
   // puede reintentar porque la sesión sigue siendo válida.
   app.delete('/v1/account', async (request, reply) => {
     const userId = await requireUser(request);
+    await forgetWaitlistEntry(userId);
     await deleteUserAccount(deps, userId);
     return reply.status(204).send();
   });
@@ -363,6 +438,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/v1/consents', async (request) => {
     const userId = await requireUser(request);
     return { consents: (await deps.consents.list(userId)).map(toPublicConsent) };
+  });
+
+  // --- Lista de espera de menores (44) --------------------------------------------
+
+  // Pública, sin sesión. Responde igual si el correo ya estaba: no revela quién está inscrito.
+  app.post('/v1/waitlist', waitlistLimit, async (request, reply) => {
+    const { email, consent, source } = parse(waitlistBody, request.body);
+    await deps.waitlist.join({ email, consent, source });
+    return reply.status(201).send({ status: 'joined' });
   });
 
   // --- Cursos ----------------------------------------------------------------------
@@ -551,14 +635,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     );
     let summary;
     try {
-      summary = await deps.summaries.get({
-        filePath: document.filePath,
-        topic: content.topic,
-        path: content.path,
-        blocks,
-        manifest,
-      });
+      // Solo se cobra si hay que generarlo: abrir un resumen ya guardado es gratis.
+      summary = await deps.summaries.get(
+        {
+          filePath: document.filePath,
+          topic: content.topic,
+          path: content.path,
+          blocks,
+          manifest,
+        },
+        {
+          reserve: () => deps.quota.consume(userId, 'summaries', 1),
+          release: () => deps.quota.release(userId, 'summaries', 1),
+        },
+      );
     } catch (error) {
+      if (error instanceof SummaryLimitError) throw new ApiError('SUMMARY_DAILY_LIMIT', 429);
       if (isTransientAiError(error)) throw new ApiError('RATE_LIMITED', 429);
       request.log.error({ err: error instanceof Error ? error.message : 'error' }, 'resumen');
       throw new ApiError('CHAT_FAILED', 502);
@@ -626,6 +718,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await deps.documents.delete(userId, document.id);
     await deps.quota.release(userId, 'storage_bytes', document.sizeBytes);
     return reply.status(204).send();
+  });
+
+  // --- Búsqueda en los apuntes -----------------------------------------------------
+
+  app.get('/v1/search', async (request) => {
+    const userId = await requireUser(request);
+    const { q } = parse(searchQuery, request.query);
+    return deps.contentSearch.search(userId, q);
   });
 
   // --- Preguntas -------------------------------------------------------------------
@@ -774,11 +874,36 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.status(202).send({ id, status: 'pending' });
   });
 
+  // Reprocesa un documento ya completado (fragmentos, temas, páginas y resúmenes): 202.
+  app.post('/v1/admin/documents/:id/reprocess', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    const result = await deps.admin.reprocessCompletedDocument(id);
+    if (result === 'not_found') throw new ApiError('DOC_NOT_FOUND', 404);
+    if (result === 'not_completed') throw new ApiError('DOC_STATE', 409);
+    try {
+      await deps.enqueue(id, { requireNew: true });
+    } catch (error) {
+      // Sus fragmentos siguen intactos: vuelve a `completed` en lugar de quedar en `pending`.
+      await deps.admin.restoreCompletedDocument(id);
+      if (error instanceof IngestionAlreadyQueuedError) throw new ApiError('DOC_STATE', 409);
+      throw error;
+    }
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'document.reprocess',
+      target: `document:${id}`,
+    });
+    return reply.status(202).send({ id, status: 'pending' });
+  });
+
   // Misma lógica que DELETE /v1/account. Un administrador no se borra a sí mismo por aquí.
   app.delete('/v1/admin/users/:id', async (request, reply) => {
     const admin = await requireAdmin(request);
     const { id } = parse(idParams, request.params);
     if (id === admin.userId) throw new ApiError('ADMIN_TARGET_IS_SELF', 409);
+    await forgetWaitlistEntry(id);
     await deleteUserAccount(deps, id);
     adminGate.forget(id);
     await deps.admin.recordAudit({
@@ -786,6 +911,29 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       adminEmail: admin.email,
       action: 'user.delete',
       target: `user:${id}`,
+    });
+    return reply.status(204).send();
+  });
+
+  // El correo de la lista es un metadato: el panel lo muestra y lo borra si lo piden.
+  app.get('/v1/admin/waitlist', async (request) => {
+    await requireAdmin(request);
+    const { page, perPage } = parse(adminPageQuery, request.query);
+    const rows = await deps.waitlist.list({ limit: perPage + 1, offset: (page - 1) * perPage });
+    const { items, hasMore } = paginate(rows, perPage);
+    return { entries: items.map(toAdminWaitlist), page, hasMore };
+  });
+
+  // La auditoría guarda solo el id: borrar el correo lo borra de verdad.
+  app.delete('/v1/admin/waitlist/:id', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = parse(idParams, request.params);
+    if (!(await deps.waitlist.remove(id))) throw new ApiError('WAITLIST_NOT_FOUND', 404);
+    await deps.admin.recordAudit({
+      adminUserId: admin.userId,
+      adminEmail: admin.email,
+      action: 'waitlist.delete',
+      target: `waitlist:${id}`,
     });
     return reply.status(204).send();
   });

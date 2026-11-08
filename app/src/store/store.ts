@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
 import { useRef, useSyncExternalStore } from 'react';
 import type { TopicDetail } from '@/data/mock';
-import type { ErrorCode } from '@/i18n/es';
+import { stringsFor, type ErrorCode } from '@/i18n/es';
+import { formatDate } from '@/lib/format';
 import { LEGAL_VERSION } from '@/i18n/legal';
 import { withDepth } from '@/lib/outline';
 import {
@@ -18,6 +19,7 @@ import {
   type ApiAdminDocument,
   type ApiAdminStats,
   type ApiAdminUser,
+  type ApiAdminWaitlistEntry,
   type ApiConsent,
   type ApiDocument,
   type ApiDocumentStatus,
@@ -177,11 +179,6 @@ function stripExtension(name: string): string {
   return name.replace(/\.[^.]+$/u, '');
 }
 
-function uploadedLabel(iso: string): string {
-  const date = new Date(iso);
-  return todayKey(date) === todayKey() ? 'hoy' : date.toLocaleDateString('es-PE');
-}
-
 /** Documentos del servidor con la forma que usan las pantallas. */
 export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): DocRecord {
   return {
@@ -192,7 +189,6 @@ export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): 
     courseId: doc.courseId ?? '',
     path: courseTitle ? [courseTitle, stripExtension(doc.title)] : [],
     topics: [],
-    uploadedLabel: uploadedLabel(doc.createdAt),
     status: doc.status,
     topicCount: doc.topicCount,
     createdAt: doc.createdAt,
@@ -320,6 +316,19 @@ function isLevel(value: unknown): value is Level {
   return value === 'school' || value === 'university' || value === 'other';
 }
 
+/**
+ * `app_metadata.providers` lista las formas de entrar (`provider`, la primera). Sin ese dato se
+ * pide la contraseña: ante la duda, el camino más seguro.
+ */
+function hasPasswordLogin(appMetadata: unknown): boolean {
+  if (typeof appMetadata !== 'object' || appMetadata === null) return true;
+  const { provider, providers } = appMetadata as { provider?: unknown; providers?: unknown };
+  const names = [...(Array.isArray(providers) ? (providers as unknown[]) : []), provider].filter(
+    (name) => typeof name === 'string',
+  );
+  return names.length === 0 || names.includes('email');
+}
+
 function toSessionUser(user: User): SessionUser {
   const meta: Record<string, unknown> = user.user_metadata;
   const email = user.email ?? '';
@@ -334,6 +343,7 @@ function toSessionUser(user: User): SessionUser {
     email,
     level: isLevel(meta.level) ? meta.level : 'university',
     adultConfirmed: meta.adult_confirmed === true,
+    hasPassword: hasPasswordLogin(user.app_metadata),
   };
 }
 
@@ -698,8 +708,53 @@ export async function deleteAccount(): Promise<boolean> {
   return true;
 }
 
-export function joinWaitlist(email: string): void {
-  setState((s) => ({ ...s, waitlist: [...new Set([...s.waitlist, email.trim()])] }));
+export type DeleteAccountResult = 'deleted' | 'wrong_password' | 'failed';
+
+/**
+ * Borrado pedido desde Perfil (40). Si la cuenta tiene contraseña, Supabase la comprueba antes
+ * de llamar a `DELETE /v1/account`: con una contraseña incorrecta no se borra nada.
+ */
+export async function deleteAccountConfirmed(password: string): Promise<DeleteAccountResult> {
+  const session = state.session;
+  if (!session) return 'failed';
+  if (session.hasPassword) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: session.email,
+        password,
+      });
+      if (error) {
+        return error.status === 400 || error.code === 'invalid_credentials'
+          ? 'wrong_password'
+          : 'failed';
+      }
+    } catch {
+      return 'failed';
+    }
+  }
+  return (await deleteAccount()) ? 'deleted' : 'failed';
+}
+
+export type WaitlistResult = 'ok' | 'invalid' | 'limited' | 'failed';
+
+/**
+ * Inscribe un correo en la lista de espera (44). Se guarda solo en el servidor: nada de esto
+ * queda en el dispositivo. Sin consentimiento expreso no se envía.
+ */
+export async function joinWaitlist(
+  email: string,
+  consent: boolean,
+  source: 'app' | 'web',
+): Promise<WaitlistResult> {
+  if (!consent || !isValidEmail(email)) return 'invalid';
+  try {
+    await api.joinWaitlist({ email: email.trim(), consent: true, source });
+    return 'ok';
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.code === 'REQ_INVALID') return 'invalid';
+    if (error instanceof ApiRequestError && error.code === 'RATE_LIMITED') return 'limited';
+    return 'failed';
+  }
 }
 
 // --- Panel de administración -------------------------------------------------------
@@ -729,7 +784,13 @@ export async function refreshAdmin(): Promise<boolean> {
 
 /** Errores del panel. Los tres primeros son de conexión o permiso; el resto, códigos de la API. */
 export type AdminError =
-  'offline' | 'forbidden' | 'failed' | 'DOC_STATE' | 'DOC_NOT_FOUND' | 'ADMIN_TARGET_IS_SELF';
+  | 'offline'
+  | 'forbidden'
+  | 'failed'
+  | 'DOC_STATE'
+  | 'DOC_NOT_FOUND'
+  | 'ADMIN_TARGET_IS_SELF'
+  | 'WAITLIST_NOT_FOUND';
 
 export type AdminResult<T> = { ok: true; data: T } | { ok: false; error: AdminError };
 
@@ -740,7 +801,12 @@ export interface AdminPage<T> {
   hasMore: boolean;
 }
 
-const ADMIN_CODES: readonly AdminError[] = ['DOC_STATE', 'DOC_NOT_FOUND', 'ADMIN_TARGET_IS_SELF'];
+const ADMIN_CODES: readonly AdminError[] = [
+  'DOC_STATE',
+  'DOC_NOT_FOUND',
+  'ADMIN_TARGET_IS_SELF',
+  'WAITLIST_NOT_FOUND',
+];
 
 /** Traduce el error de la API a uno del panel. Un 403 quita el acceso al panel al instante. */
 export function toAdminError(error: unknown): AdminError {
@@ -806,6 +872,23 @@ export function loadAdminAudit(page = 1): Promise<AdminResult<AdminPage<ApiAdmin
   return adminCall(async () => {
     const r = await api.adminAudit(page);
     return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+export function loadAdminWaitlist(
+  page = 1,
+): Promise<AdminResult<AdminPage<ApiAdminWaitlistEntry>>> {
+  return adminCall(async () => {
+    const r = await api.adminWaitlist(page);
+    return { items: r.entries, page: r.page, hasMore: r.hasMore };
+  });
+}
+
+/** Borra una inscripción de la lista de espera, cuando la persona lo pide. */
+export function adminDeleteWaitlistEntry(id: string): Promise<AdminResult<null>> {
+  return adminCall(async () => {
+    await api.adminDeleteWaitlistEntry(id);
+    return null;
   });
 }
 
@@ -1107,6 +1190,20 @@ export function retryUpload(id: string): void {
   void runUpload(id);
 }
 
+/** Subidas cortadas por la red que aún se pueden reintentar. */
+export function networkFailedUploads(s: AppState): UploadJob[] {
+  return s.uploads.filter(
+    (u) => u.status === 'failed' && u.error === 'UP_NETWORK' && pickedFiles.has(u.id),
+  );
+}
+
+/** Al volver la conexión, reanuda las subidas que se cortaron. Devuelve cuántas reanudó. */
+export function retryNetworkUploads(): number {
+  const jobs = networkFailedUploads(state);
+  for (const job of jobs) retryUpload(job.id);
+  return jobs.length;
+}
+
 /** Quita el archivo de la lista; si ya estaba en el servidor sin confirmar, lo borra. */
 export function removeUpload(id: string): void {
   const job = state.uploads.find((u) => u.id === id);
@@ -1169,12 +1266,19 @@ export function uploadSummary(s: AppState): {
 
 // --- Chat --------------------------------------------------------------------------
 
-export function startConversation(): string {
+export function startConversation(scopeDocIds: readonly string[] = []): string {
   const id = newId('conv');
   setState((s) => ({
     ...s,
     conversations: [
-      { id, title: '', course: '', updatedAt: Date.now(), messages: [] },
+      {
+        id,
+        title: '',
+        course: '',
+        updatedAt: Date.now(),
+        messages: [],
+        ...(scopeDocIds.length > 0 ? { scopeDocIds: [...scopeDocIds] } : {}),
+      },
       ...s.conversations,
     ],
   }));
@@ -1311,7 +1415,14 @@ function looksUnclear(question: string): boolean {
  * Pregunta al servidor: responde solo con fragmentos propios y cada afirmación lleva su
  * página, verificada por el validador. Si no hay respaldo, la mascota lo dice.
  */
-export async function answerQuestion(conversationId: string, question: string): Promise<void> {
+export async function answerQuestion(
+  conversationId: string,
+  question: string,
+  scope?: readonly string[],
+): Promise<void> {
+  // Sin alcance explícito se usa el guardado en la conversación (así reintentar lo conserva).
+  const documentIds =
+    scope ?? state.conversations.find((c) => c.id === conversationId)?.scopeDocIds ?? [];
   if (isAnswerPending(state, conversationId)) return;
   if (!state.settings.useDocs) {
     appendMessages(conversationId, [
@@ -1320,7 +1431,11 @@ export async function answerQuestion(conversationId: string, question: string): 
     return;
   }
   await runPending(conversationId, question, 'notes', async (signal) => {
-    const answer = await api.ask(question, { signal, timeoutMs: CHAT_TIMEOUT_MS });
+    const answer = await api.ask(question, {
+      signal,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      ...(documentIds.length > 0 ? { documentIds } : {}),
+    });
     if (answerControllers.get(conversationId)?.signal !== signal) return;
     if (answer.status === 'small_talk') {
       appendMessages(conversationId, [
@@ -1399,6 +1514,18 @@ export async function searchOutside(conversationId: string, question: string): P
           }));
     appendMessages(conversationId, messages);
   });
+}
+
+/** Quita el alcance de la conversación: las siguientes preguntas usan todos los apuntes. */
+export function widenConversationScope(conversationId: string): void {
+  setState((s) => ({
+    ...s,
+    conversations: s.conversations.map((c) => {
+      if (c.id !== conversationId || !c.scopeDocIds) return c;
+      const { scopeDocIds: _quitado, ...rest } = c;
+      return rest;
+    }),
+  }));
 }
 
 function lastUserIndex(conv: Conversation): number {
@@ -1527,6 +1654,7 @@ function matches(query: string, text: string): boolean {
 
 export function searchAll(query: string, s: AppState = state): SearchHit[] {
   if (query.trim().length === 0) return [];
+  const labels = stringsFor(s.settings.language).search;
   const hits: SearchHit[] = [];
   for (const doc of s.documents) {
     const course = s.courses.find((c) => c.id === doc.courseId)?.title ?? '';
@@ -1536,7 +1664,7 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         kind: 'document',
         targetId: doc.id,
         title: doc.name,
-        location: doc.pages > 0 ? `${doc.pages} páginas` : '',
+        location: doc.pages > 0 ? labels.pagesCount(doc.pages) : '',
         snippet: doc.topics.join(' · '),
         tag: course,
       });
@@ -1549,10 +1677,10 @@ export function searchAll(query: string, s: AppState = state): SearchHit[] {
         id: conv.id,
         kind: 'chat',
         targetId: conv.id,
-        title: `Chat · ${conv.title}`,
-        location: new Date(conv.updatedAt).toLocaleDateString('es-PE'),
+        title: labels.chatTitle(conv.title),
+        location: formatDate(new Date(conv.updatedAt).toISOString(), s.settings.language),
         snippet: snippetAround(msg?.text ?? conv.title, query),
-        tag: conv.course || 'Chat',
+        tag: conv.course || labels.chatTag,
       });
     }
   }
@@ -1634,10 +1762,27 @@ export function exportUserData(s: AppState = state): string {
         titulo: c.title,
         mensajes: c.messages.map((m) => ({ de: m.role, texto: m.text })),
       })),
+      progresoDeEstudio: s.study,
     },
     null,
     2,
   );
+}
+
+/**
+ * Exportación completa (derecho de acceso): lo que guarda el servidor (`GET /v1/account/export`)
+ * y lo que solo está en este dispositivo. Si el servidor falla no se entrega un archivo a medias.
+ */
+export async function exportAccountData(): Promise<
+  { ok: true; json: string } | { ok: false; error: ErrorCode }
+> {
+  try {
+    const servidor = await api.exportAccount();
+    const dispositivo: unknown = JSON.parse(exportUserData());
+    return { ok: true, json: JSON.stringify({ servidor, dispositivo }, null, 2) };
+  } catch (error) {
+    return { ok: false, error: toErrorCode(error, 'NET_UNAVAILABLE') };
+  }
 }
 
 // --- Contenido por clase y temas (fase 2) --------------------------------------------

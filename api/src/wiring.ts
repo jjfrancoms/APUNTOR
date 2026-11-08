@@ -7,7 +7,7 @@ import {
   VertexEmbeddingProvider,
   VertexGenerator,
 } from './llm/vertex';
-import { resolveModels } from './llm/models';
+import { HIGH_THINKING_BUDGET, MEDIUM_THINKING_BUDGET, resolveModels } from './llm/models';
 import { REQUEST_AI_RETRY, withRetries, type RetryPolicy } from './llm/retry';
 import { createChunkSearch } from './rag/retriever';
 import { R2FileStorage } from './storage/file-storage';
@@ -31,15 +31,15 @@ export function createInfrastructure(
     models,
     modelChoice,
     embedder: new VertexEmbeddingProvider(models, EMBEDDING_DIMENSIONS),
-    /** Chat con el modelo rápido. */
-    generator: new VertexGenerator(models, modelChoice.chat),
-    /** Segundo intento del chat con el modelo fuerte (solo si es otro modelo). */
+    /** Chat con el modelo medio. */
+    generator: new VertexGenerator(models, modelChoice.chat, MEDIUM_THINKING_BUDGET),
+    /** Segundo intento del chat con el modelo alto (solo si es otro modelo). */
     fallbackGenerator:
-      modelChoice.strong === modelChoice.chat
+      modelChoice.high === modelChoice.chat
         ? undefined
-        : new VertexGenerator(models, modelChoice.strong),
-    /** Generación de quizzes y tarjetas: se hace una vez y se guarda. */
-    strongGenerator: new VertexGenerator(models, modelChoice.strong),
+        : new VertexGenerator(models, modelChoice.high, HIGH_THINKING_BUDGET),
+    /** Generación de quizzes y tarjetas con el modelo alto: se hace una vez y se guarda. */
+    strongGenerator: new VertexGenerator(models, modelChoice.high, HIGH_THINKING_BUDGET),
     search: createChunkSearch(db),
     storage: new R2FileStorage(
       env.R2_ACCOUNT_ID,

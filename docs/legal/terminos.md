@@ -1,6 +1,6 @@
 # Términos y condiciones y Términos de suscripción
 
-> **Borrador pendiente de revisión legal.** Versión `2026-11-07` · actualizado el 7 de noviembre de 2026.
+> **Borrador pendiente de revisión legal.** Versión `2026-11-08` · actualizado el 8 de noviembre de 2026.
 > Fuente única del texto que ve el usuario: `app/src/i18n/legal.ts` (este archivo lo reproduce;
 > si cambias uno, cambia el otro y sube `LEGAL_VERSION`). Los datos entre corchetes deben
 > completarse antes de publicar. Pendientes y fuentes en [cumplimiento.md](./cumplimiento.md).
@@ -21,7 +21,7 @@ Para cualquier consulta sobre estos términos puedes escribirnos a soporte@apunt
 
 Al crear tu cuenta aceptas estos Términos y condiciones y declaras haber leído la Política de privacidad. Guardamos un registro de tu aceptación con el nombre del documento, su versión y la fecha.
 
-Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.
+Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.
 
 ### 3. Edad mínima
 
@@ -117,7 +117,7 @@ Nunca te pasaremos a un plan de pago sin tu aceptación expresa.
 
 ### 3. Contacto
 
-Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-07, actualizada el 7 de noviembre de 2026.
+Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026.
 
 ## Terms and Conditions (English)
 
@@ -131,7 +131,7 @@ For any question about these terms, write to us at soporte@apuntor.com.
 
 By creating your account you accept these Terms and Conditions and confirm you have read the Privacy Policy. We keep a record of your acceptance with the document name, its version and the date.
 
-This is version 2026-11-07, last updated on November 7, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.
+This is version 2026-11-08, last updated on November 8, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.
 
 ### 3. Minimum age
 
@@ -227,4 +227,4 @@ We will never move you to a paid plan without your express acceptance.
 
 ### 3. Contact
 
-If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-07, last updated on November 7, 2026.
+If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-08, last updated on November 8, 2026.

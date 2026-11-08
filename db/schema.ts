@@ -156,7 +156,7 @@ export const usageQuotas = pgTable(
     check('usage_quotas_used_non_negative', sql`${t.used} >= 0`),
     check(
       'usage_quotas_kind_valid',
-      sql`${t.kind} IN ('questions', 'storage_bytes', 'study_generations')`,
+      sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries', 'study_generations')`,
     ),
   ],
 );
@@ -288,6 +288,33 @@ export const studyReviews = pgTable(
   ],
 );
 
+/** Por dónde llegó la inscripción a la lista de espera. */
+export const WAITLIST_SOURCES = ['app', 'web'] as const;
+export type WaitlistSource = (typeof WAITLIST_SOURCES)[number];
+
+/**
+ * Lista de espera de menores (pantalla 44): un correo para avisar cuando el servicio esté
+ * disponible, con su consentimiento. No está ligada a ninguna cuenta.
+ * Solo la escribe y lee el backend: RLS habilitada y sin políticas para authenticated ni anon.
+ * El correo se guarda en minúsculas: es la clave que hace idempotente la inscripción.
+ */
+export const waitlist = pgTable(
+  'waitlist',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    consent: boolean('consent').notNull(),
+    source: text('source').$type<WaitlistSource>().notNull().default('app'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('waitlist_email_idx').on(t.email),
+    index('waitlist_created_at_idx').on(t.createdAt),
+    check('waitlist_email_lowercase', sql`${t.email} = lower(${t.email})`),
+    check('waitlist_source_valid', sql`${t.source} IN ('app', 'web')`),
+  ],
+);
+
 export type Course = typeof courses.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
@@ -297,3 +324,4 @@ export type Topic = typeof topics.$inferSelect;
 export type Consent = typeof consents.$inferSelect;
 export type NewTopic = typeof topics.$inferInsert;
 export type AdminAuditEntry = typeof adminAudit.$inferSelect;
+export type WaitlistEntry = typeof waitlist.$inferSelect;

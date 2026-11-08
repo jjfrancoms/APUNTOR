@@ -2,11 +2,12 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/client';
 
-export type QuotaKind = 'questions' | 'storage_bytes' | 'study_generations';
+export type QuotaKind = 'questions' | 'storage_bytes' | 'summaries' | 'study_generations';
 
 /** Plan gratis de docs/producto/mvp-ux.md, marcadas allí como cifras de ejemplo. */
 export const FREE_LIMITS: Record<QuotaKind, number> = {
   questions: 20,
+  summaries: 30,
   storage_bytes: 500 * 1024 * 1024,
   study_generations: 10,
 };
@@ -15,7 +16,7 @@ export const FREE_LIMITS: Record<QuotaKind, number> = {
 const ACCUMULATED_PERIOD = '1970-01-01';
 const QUOTA_TIME_ZONE = 'America/Lima';
 
-/** Lo diario (preguntas y generaciones de estudio) se reinicia a medianoche en Perú; `en-CA` da el formato AAAA-MM-DD. */
+/** Lo diario (preguntas, resúmenes y generaciones de estudio) se reinicia a medianoche en Perú; `en-CA` da el formato AAAA-MM-DD. */
 export function periodFor(kind: QuotaKind, now: Date = new Date()): string {
   if (kind === 'storage_bytes') return ACCUMULATED_PERIOD;
   return now.toLocaleDateString('en-CA', { timeZone: QUOTA_TIME_ZONE });
@@ -31,7 +32,7 @@ export interface QuotaService {
 
 const okRowSchema = z.object({ ok: z.boolean() });
 const usedRowSchema = z.object({
-  kind: z.enum(['questions', 'storage_bytes', 'study_generations']),
+  kind: z.enum(['questions', 'storage_bytes', 'summaries', 'study_generations']),
   used: z.coerce.number(),
 });
 
@@ -56,6 +57,7 @@ export function createQuotaService(db: Database): QuotaService {
         SELECT kind, used FROM usage_quotas
         WHERE user_id = ${userId}::uuid
           AND ((kind = 'questions' AND period_start = ${periodFor('questions')}::date)
+            OR (kind = 'summaries' AND period_start = ${periodFor('summaries')}::date)
             OR (kind = 'study_generations'
               AND period_start = ${periodFor('study_generations')}::date)
             OR (kind = 'storage_bytes' AND period_start = ${periodFor('storage_bytes')}::date))
@@ -63,6 +65,7 @@ export function createQuotaService(db: Database): QuotaService {
       const result: Record<QuotaKind, number> = {
         questions: 0,
         storage_bytes: 0,
+        summaries: 0,
         study_generations: 0,
       };
       for (const row of rows) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   chooseGenAiBackend,
   formatEmbeddingInput,
+  thinkingConfigFor,
   VertexEmbeddingProvider,
   VertexGenerator,
   type GenAiModels,
@@ -73,6 +74,36 @@ describe('VertexGenerator', () => {
     expect(seen?.config.responseMimeType).toBe('application/json');
     expect(seen?.config.temperature).toBe(0);
     expect(result.usage).toEqual({ promptTokens: 11, outputTokens: 7, thoughtsTokens: 3 });
+  });
+});
+
+describe('presupuesto de razonamiento del generador', () => {
+  async function configSent(thinkingBudget?: number) {
+    let seen: GenerateParams | undefined;
+    const models = fakeModels({
+      generateContent: (params) => {
+        seen = params;
+        return Promise.resolve({ text: '{}' });
+      },
+    });
+    const generator = new VertexGenerator(models, 'm', thinkingBudget);
+    await generator.generateJson({ system: 's', user: 'u', schema: {} });
+    return seen?.config;
+  }
+
+  it('envía el presupuesto indicado', async () => {
+    expect((await configSent(1024))?.thinkingConfig).toEqual({ thinkingBudget: 1024 });
+  });
+
+  it('sin presupuesto no envía thinkingConfig', async () => {
+    expect(await configSent()).not.toHaveProperty('thinkingConfig');
+  });
+
+  it('nunca envía un presupuesto de 0 (el modelo lite responde 400)', async () => {
+    expect(await configSent(0)).not.toHaveProperty('thinkingConfig');
+    expect(thinkingConfigFor(0)).toEqual({});
+    expect(thinkingConfigFor(undefined)).toEqual({});
+    expect(thinkingConfigFor(512)).toEqual({ thinkingConfig: { thinkingBudget: 512 } });
   });
 });
 

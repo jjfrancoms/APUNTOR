@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
+import { Banner, Card, ListRow, Screen, Segmented, Text, TextLink, Toggle } from '@/components/ui';
+import { useDataDownload } from '@/lib/use-data-download';
 import { signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { LANGUAGES } from '@/i18n/language';
+import { PREVIEW } from '@/lib/config';
 import { space, useTheme } from '@/theme';
 
 /** Pantalla 7 · Perfil y ajustes */
@@ -14,23 +16,15 @@ export default function Profile() {
   const st = useStore((x) => x.settings);
   // Solo para cuentas que el servidor reconoce como administradoras (nunca se guarda).
   const isAdmin = useStore((x) => x.isAdmin);
+  const download = useDataDownload();
   const user = {
     fullName: session?.fullName ?? '',
     email: session?.email ?? '',
     level: s.onboarding.levels[session?.level ?? 'university'].title,
   };
-  const [useDocs, external, progress, light, voice] = [
-    st.useDocs,
-    st.external,
-    st.saveProgress,
-    st.lightMode,
-    st.voice,
-  ];
+  const [useDocs, external] = [st.useDocs, st.external];
   const setUseDocs = (v: boolean) => updateSettings({ useDocs: v });
   const setExternal = (v: boolean) => updateSettings({ external: v });
-  const setProgress = (v: boolean) => updateSettings({ saveProgress: v });
-  const setLight = (v: boolean) => updateSettings({ lightMode: v });
-  const setVoice = (v: boolean) => updateSettings({ voice: v });
   const toggle = (title: string, value: boolean, set: (v: boolean) => void) => (
     <Toggle value={value} onChange={set} label={title} />
   );
@@ -53,7 +47,7 @@ export default function Profile() {
         </View>
         <TextLink label={s.profile.edit} onPress={() => router.push('/profile/edit')} />
       </Card>
-      <Text variant="overline" color="textMuted">
+      <Text variant="smallStrong" accessibilityRole="header">
         {s.profile.privacyHeader}
       </Text>
       <Card style={styles.list}>
@@ -65,15 +59,11 @@ export default function Profile() {
         <ListRow
           title={s.profile.external.title}
           detail={s.profile.external.detail}
+          divider={false}
           trailing={toggle(s.profile.external.title, external, setExternal)}
         />
-        <ListRow
-          title={s.profile.progress.title}
-          divider={false}
-          trailing={toggle(s.profile.progress.title, progress, setProgress)}
-        />
       </Card>
-      <Text variant="overline" color="textMuted">
+      <Text variant="smallStrong" accessibilityRole="header">
         {s.profile.appearance.header}
       </Text>
       <Card>
@@ -90,7 +80,7 @@ export default function Profile() {
           {s.profile.appearance.detail}
         </Text>
       </Card>
-      <Text variant="overline" color="textMuted">
+      <Text variant="smallStrong" accessibilityRole="header">
         {s.profile.language.header}
       </Text>
       <Card>
@@ -103,32 +93,20 @@ export default function Profile() {
           {s.profile.language.detail}
         </Text>
       </Card>
-      <Text variant="overline" color="textMuted">
-        {s.profile.mascotHeader}
-      </Text>
-      <Card style={styles.list}>
-        <ListRow
-          title={s.profile.lightMode.title}
-          detail={s.profile.lightMode.detail}
-          trailing={toggle(s.profile.lightMode.title, light, setLight)}
-        />
-        <ListRow
-          title={s.profile.voice.title}
-          divider={false}
-          trailing={toggle(s.profile.voice.title, voice, setVoice)}
-        />
-      </Card>
       <Card style={styles.list}>
         <ListRow
           icon="bell"
           title={s.profile.notifications}
           onPress={() => router.push('/profile/notifications')}
         />
-        <ListRow
-          icon="credit-card"
-          title={s.profile.subscription}
-          onPress={() => router.push('/profile/subscription')}
-        />
+        {/* Sin pagos todavía: la suscripción (32) solo existe en la vista previa. */}
+        {PREVIEW ? (
+          <ListRow
+            icon="credit-card"
+            title={s.profile.subscription}
+            onPress={() => router.push('/profile/subscription')}
+          />
+        ) : null}
         <ListRow
           icon="help-circle"
           title={s.profile.help}
@@ -136,11 +114,18 @@ export default function Profile() {
         />
         <ListRow
           icon="download"
+          title={download.busy ? s.dataExport.preparing : s.dataExport.title}
+          onPress={() => void download.run()}
+        />
+        <ListRow
+          icon="trash-2"
           title={s.profile.data}
           divider={false}
           onPress={() => router.push('/profile/delete-account')}
         />
       </Card>
+      {download.done ? <Banner tone="info" icon="check" title={s.dataExport.done} /> : null}
+      {download.error ? <Banner tone="danger" title={download.error} /> : null}
       {isAdmin ? (
         <Card style={styles.list}>
           <ListRow

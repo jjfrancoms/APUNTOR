@@ -11,6 +11,7 @@ import {
   Text,
   TopBar,
 } from '@/components/ui';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { pickFiles } from '@/lib/pick-files';
@@ -59,6 +60,7 @@ export default function Uploading() {
         </>
       }
     >
+      <OfflineBanner title={s.connection.uploads} />
       <View style={styles.head}>
         <Text variant="heading" style={styles.flex}>
           {s.uploading.count(ready.length, jobs.length - failed.length)}

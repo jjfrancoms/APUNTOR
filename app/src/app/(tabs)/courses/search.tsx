@@ -1,54 +1,106 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { Card, Chip, EmptyState, Icon, IconButton, Screen, Text } from '@/components/ui';
-import { searchAll, useStore, type SearchHit } from '@/store/store';
-import { useStrings } from '@/i18n/es';
-import { splitMatch } from '@/lib/text';
-import { fonts, layout, radius, space, useTheme } from '@/theme';
+import {
+  Banner,
+  Card,
+  Chip,
+  EmptyState,
+  Icon,
+  IconButton,
+  Screen,
+  Text,
+  TextLink,
+  type IconName,
+} from '@/components/ui';
 import { Tap } from '@/components/ui/Tap';
+import { useStrings } from '@/i18n/es';
+import {
+  api,
+  ApiRequestError,
+  SEARCH_MAX_QUERY,
+  SEARCH_MIN_QUERY,
+  type ApiSearchResults,
+} from '@/lib/api';
+import { formatPageRanges } from '@/lib/outline';
+import { openSourcePage } from '@/lib/source-page';
+import { highlightParts, splitMatch, type TextPart } from '@/lib/text';
+import { searchAll, useStore, type SearchHit } from '@/store/store';
+import { fonts, layout, radius, space, useTheme } from '@/theme';
 
-type Filter = 'all' | 'document' | 'chat';
+const DEBOUNCE_MS = 300;
+const SEARCH_TIMEOUT_MS = 15_000;
+const NO_RESULTS: ApiSearchResults = { documents: [], topics: [], snippets: [] };
 
-/** Pantalla 39 · Resultados de búsqueda (títulos y contenido). */
+type Remote = {
+  status: 'idle' | 'loading' | 'ready' | 'error' | 'offline';
+  results: ApiSearchResults;
+};
+
+const DEMO_STATUS: Record<string, Remote['status']> = {
+  loading: 'loading',
+  error: 'error',
+  offline: 'offline',
+};
+
+/** Busca en el servidor cuando se deja de escribir; descarta las respuestas viejas. */
+function useContentSearch(query: string, enabled: boolean): Remote & { retry: () => void } {
+  const [remote, setRemote] = useState<Remote>({ status: 'idle', results: NO_RESULTS });
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (!enabled || query.length < SEARCH_MIN_QUERY) {
+      setRemote({ status: 'idle', results: NO_RESULTS });
+      return;
+    }
+    // Lo anterior sigue visible mientras llega lo nuevo: la lista no parpadea al escribir.
+    setRemote((previous) => ({ status: 'loading', results: previous.results }));
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api
+        .search(query, { signal: controller.signal, timeoutMs: SEARCH_TIMEOUT_MS })
+        .then((results) => {
+          if (!controller.signal.aborted) setRemote({ status: 'ready', results });
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          const offline =
+            error instanceof ApiRequestError &&
+            (error.code === 'NETWORK' || error.code === 'NOT_CONFIGURED');
+          setRemote({ status: offline ? 'offline' : 'error', results: NO_RESULTS });
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, enabled, attempt]);
+  return { ...remote, retry: () => setAttempt((n) => n + 1) };
+}
+
+/**
+ * Pantalla 39 · Resultados de búsqueda: documentos, temas y fragmentos de tus apuntes con su
+ * página, más los chats del dispositivo. Incluye la 45 (sin resultados).
+ * `?demo=loading|error|offline|empty` muestra cada estado.
+ */
 export default function Search() {
   const s = useStrings();
   const { c } = useTheme();
   const { demo, q } = useLocalSearchParams<{ demo?: string; q?: string }>();
   const [query, setQuery] = useState(q ?? '');
-  const [cleared, setCleared] = useState(false);
-  const [filter, setFilter] = useState<Filter>('all');
+  const trimmed = query.trim();
   const state = useStore((st) => st);
-  const matches = useMemo(() => searchAll(query, state), [query, state]);
-  const docs = matches.filter((r) => r.kind === 'document').length;
-  const chats = matches.length - docs;
-  const visible = filter === 'all' ? matches : matches.filter((r) => r.kind === filter);
-  const labels = s.search.tabs(matches.length, docs, chats);
-  const filters: Filter[] = ['all', 'document', 'chat'];
+  const chats = useMemo(
+    () => searchAll(trimmed, state).filter((hit) => hit.kind === 'chat'),
+    [trimmed, state],
+  );
+  const demoStatus = demo === undefined ? undefined : DEMO_STATUS[demo];
+  const remote = useContentSearch(trimmed, demo === undefined);
+  const status = demoStatus ?? remote.status;
+  const { documents, topics, snippets } = remote.results;
+  const hasRemote = documents.length + topics.length + snippets.length > 0;
+  const showEmpty = demo === 'empty' || (status === 'ready' && !hasRemote && chats.length === 0);
+  const tooShort = trimmed.length < SEARCH_MIN_QUERY && chats.length === 0 && demo === undefined;
 
-  // Pantalla 45 · Búsqueda sin resultados (`?demo=empty` la fuerza con la consulta del diseño).
-  if ((demo === 'empty' && !cleared) || (query.trim().length > 0 && matches.length === 0)) {
-    return (
-      <Screen>
-        <Text variant="display" accessibilityRole="header">
-          {s.empty.searchTitle}
-        </Text>
-        <EmptyState
-          mood="curious"
-          title={s.empty.search(query.trim())}
-          body={s.empty.searchBody}
-          primary={{
-            label: s.empty.clearSearch,
-            onPress: () => {
-              setCleared(true);
-              setQuery('');
-            },
-          }}
-          secondary={{ label: s.empty.uploadOne, onPress: () => router.push('/upload') }}
-        />
-      </Screen>
-    );
-  }
   return (
     <Screen>
       <View style={[styles.field, { borderColor: c.primary, backgroundColor: c.surface }]}>
@@ -59,6 +111,7 @@ export default function Search() {
           placeholderTextColor={c.textMuted}
           value={query}
           onChangeText={setQuery}
+          maxLength={SEARCH_MAX_QUERY}
           autoFocus
           style={[styles.input, { color: c.text }]}
         />
@@ -66,84 +119,172 @@ export default function Search() {
           <IconButton plain icon="x" label={s.search.clear} onPress={() => setQuery('')} />
         ) : null}
       </View>
-      <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: c.surfaceAlt }]}>
-        {filters.map((f, i) => (
-          <Tap
-            key={f}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: filter === f }}
-            onPress={() => setFilter(f)}
-            style={[styles.segmentItem, filter === f && { backgroundColor: c.surface }]}
-          >
-            <Text variant="smallStrong" color={filter === f ? 'text' : 'textMuted'}>
-              {labels[i] ?? ''}
-            </Text>
-          </Tap>
-        ))}
-      </View>
-      {visible.length === 0 && query.trim().length > 0 ? (
-        <View style={styles.empty}>
-          <Text variant="bodyStrong" align="center">
-            {s.search.empty(query.trim())}
-          </Text>
-          <Text variant="small" color="textMuted" align="center">
-            {s.search.emptyHint}
+
+      {tooShort ? (
+        <Text variant="small" color="textMuted" align="center">
+          {s.search.hint}
+        </Text>
+      ) : null}
+      {status === 'loading' ? (
+        <View style={styles.row} accessibilityLiveRegion="polite">
+          <Icon name="refresh-cw" size={14} color="primary" />
+          <Text variant="caption" color="textMuted">
+            {s.search.loading}
           </Text>
         </View>
+      ) : null}
+      {status === 'error' || status === 'offline' ? (
+        <Banner
+          tone={status === 'error' ? 'danger' : 'warning'}
+          title={status === 'error' ? s.search.errorTitle : s.search.offlineTitle}
+          body={status === 'error' ? s.search.errorBody : s.search.offlineBody}
+        >
+          <TextLink label={s.search.retry} onPress={remote.retry} />
+        </Banner>
+      ) : null}
+
+      {showEmpty ? (
+        <EmptyState
+          mood="curious"
+          title={s.empty.search(trimmed)}
+          body={s.empty.searchBody}
+          primary={{ label: s.empty.clearSearch, onPress: () => setQuery('') }}
+          secondary={{ label: s.empty.uploadOne, onPress: () => router.push('/upload') }}
+        />
       ) : (
         <>
-          <Text variant="caption" color="textMuted">
-            {s.search.count(visible.length)}
-          </Text>
-          {visible.map((r) => (
-            <ResultCard key={r.id} result={r} query={query.trim()} />
-          ))}
+          <Section title={s.search.documents} visible={documents.length > 0}>
+            {documents.map((doc) => (
+              <Tap
+                key={doc.id}
+                accessibilityRole="button"
+                accessibilityLabel={doc.title}
+                onPress={() => router.push(`/documents/${doc.id}`)}
+              >
+                <Card>
+                  <TitleRow icon="file-text" title={doc.title} />
+                </Card>
+              </Tap>
+            ))}
+          </Section>
+          <Section title={s.search.topics} visible={topics.length > 0}>
+            {topics.map((topic) => (
+              <Tap
+                key={topic.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${topic.title}, ${topic.documentTitle}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/topic',
+                    params: { doc: topic.documentId, id: topic.id, title: topic.title },
+                  })
+                }
+              >
+                <Card>
+                  <TitleRow icon="book-open" title={topic.title} />
+                  <Text variant="caption" color="textMuted" numberOfLines={1}>
+                    {topic.documentTitle}
+                  </Text>
+                  {topic.pages.length > 0 ? (
+                    <Chip
+                      label={s.document.pages(topic.pages.length, formatPageRanges(topic.pages))}
+                      tone="primary"
+                      icon="file-text"
+                    />
+                  ) : null}
+                </Card>
+              </Tap>
+            ))}
+          </Section>
+          <Section title={s.search.inNotes} visible={snippets.length > 0}>
+            {snippets.map((hit) => (
+              <Tap
+                key={hit.chunkId}
+                accessibilityRole="link"
+                accessibilityLabel={`${hit.documentTitle}, ${s.search.page(hit.pageNumber)}`}
+                onPress={() => void openSourcePage(hit.documentId, hit.pageNumber)}
+              >
+                <Card>
+                  <Text variant="caption" color="textMuted" numberOfLines={1}>
+                    {hit.documentTitle}
+                  </Text>
+                  <Highlighted parts={highlightParts(hit.snippet, hit.highlights)} />
+                  <Chip label={s.search.page(hit.pageNumber)} tone="primary" icon="file-text" />
+                </Card>
+              </Tap>
+            ))}
+          </Section>
+          <Section title={s.search.chats} visible={chats.length > 0}>
+            {chats.map((hit) => (
+              <ChatResult key={hit.id} result={hit} query={trimmed} />
+            ))}
+          </Section>
         </>
       )}
     </Screen>
   );
 }
 
-function ResultCard({ result, query }: { result: SearchHit; query: string }) {
-  const parts = splitMatch(result.snippet, query);
+function Section({
+  title,
+  visible,
+  children,
+}: {
+  title: string;
+  visible: boolean;
+  children: ReactNode;
+}) {
+  if (!visible) return null;
+  return (
+    <View style={styles.section}>
+      <Text variant="subheading" accessibilityRole="header">
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+function TitleRow({ icon, title }: { icon: IconName; title: string }) {
+  return (
+    <View style={styles.row}>
+      <Icon name={icon} size={16} color="primary" />
+      <Text variant="smallStrong" style={styles.flex}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function Highlighted({ parts }: { parts: TextPart[] }) {
+  return (
+    <Text variant="small">
+      {parts.map((part, i) =>
+        part.hit ? (
+          <Text key={i} variant="smallStrong" color="primary">
+            {part.text}
+          </Text>
+        ) : (
+          part.text
+        ),
+      )}
+    </Text>
+  );
+}
+
+function ChatResult({ result, query }: { result: SearchHit; query: string }) {
   return (
     <Tap
       accessibilityRole="button"
       accessibilityLabel={`${result.title}, ${result.location}`}
-      onPress={() =>
-        router.push(
-          result.kind === 'document'
-            ? `/documents/${result.targetId}`
-            : { pathname: '/conversation', params: { id: result.targetId } },
-        )
-      }
+      onPress={() => router.push({ pathname: '/conversation', params: { id: result.targetId } })}
     >
       <Card>
-        <View style={styles.row}>
-          <Icon
-            name={result.kind === 'document' ? 'file-text' : 'message-circle'}
-            size={16}
-            color="primary"
-          />
-          <Text variant="smallStrong" style={styles.flex}>
-            {result.title}
-          </Text>
-        </View>
+        <TitleRow icon="message-circle" title={result.title} />
         <Text variant="caption" color="textMuted">
           {result.location}
         </Text>
-        <Text variant="small">
-          {parts.map((p, i) =>
-            p.hit ? (
-              <Text key={i} variant="smallStrong" color="primary">
-                {p.text}
-              </Text>
-            ) : (
-              p.text
-            ),
-          )}
-        </Text>
-        <Chip label={result.tag} tone="primary" />
+        <Highlighted parts={splitMatch(result.snippet, query)} />
       </Card>
     </Tap>
   );
@@ -167,15 +308,7 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
     outlineColor: 'transparent',
   },
-  segment: { flexDirection: 'row', borderRadius: radius.md, padding: 4 },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-    minHeight: layout.minTouchTarget,
-  },
+  section: { gap: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
-  empty: { alignItems: 'center', gap: space.xs, paddingVertical: space.xxxl },
 });

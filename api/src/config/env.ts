@@ -23,15 +23,20 @@ const serverEnvSchema = z
     /** Modelo de respuestas y OCR; por defecto el de la especificación (gemini-2.5-flash). */
     GENERATION_MODEL: z.string().min(1).optional(),
     /**
-     * Modelo rápido: lo que el estudiante espera (chat). Por defecto CHAT_MODEL o el de
-     * generación. Ver `resolveModels()` en `api/src/llm/models.ts`.
+     * Tres niveles de modelo (ver `resolveModels()` en `api/src/llm/models.ts`). Bajo: tareas
+     * pequeñas. Medio: lo que el estudiante espera (chat). Alto: OCR, resúmenes y segundo
+     * intento del chat.
      */
+    MODEL_LOW: z.string().min(1).optional(),
+    MODEL_MEDIUM: z.string().min(1).optional(),
+    MODEL_HIGH: z.string().min(1).optional(),
+    /** Nombre antiguo de MODEL_MEDIUM. */
     MODEL_FAST: z.string().min(1).optional(),
-    /** Modelo fuerte: trabajo que se hace una vez y se guarda (OCR, resúmenes). */
+    /** Nombre antiguo de MODEL_HIGH. */
     MODEL_STRONG: z.string().min(1).optional(),
-    /** Modelo del chat (por defecto, el rápido). */
+    /** Modelo del chat (por defecto, el medio). */
     CHAT_MODEL: z.string().min(1).optional(),
-    /** Modelo de los resúmenes de tema (por defecto, el fuerte). */
+    /** Modelo de los resúmenes de tema (por defecto, el alto). */
     SUMMARY_MODEL: z.string().min(1).optional(),
     GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
     /** Sin valor por defecto: la disponibilidad por región sigue sin verificarse. */

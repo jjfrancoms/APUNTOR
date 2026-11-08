@@ -113,11 +113,21 @@ function stem(word: string): string {
   return word.slice(0, 5);
 }
 
+/**
+ * Parte de las palabras con contenido de `text` que aparecen (por raíz) en `sources`; null si
+ * `text` no tiene ninguna palabra con contenido.
+ */
+export function contentOverlap(text: string, sources: readonly string[]): number | null {
+  const sourceStems = new Set(sources.flatMap(wordsOf).map(stem));
+  const content = wordsOf(text).filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  if (content.length === 0) return null;
+  return content.filter((w) => sourceStems.has(stem(w))).length / content.length;
+}
+
 export function isCoherent(claim: string, quotes: readonly string[]): boolean {
   const claimWords = wordsOf(claim);
   const quoteWords = quotes.flatMap(wordsOf);
   const quoteSet = new Set(quoteWords);
-  const quoteStems = new Set(quoteWords.map(stem));
 
   // Una cifra de la afirmación tiene que estar en la cita, tal cual.
   if (claimWords.some((w) => /\d/u.test(w) && !quoteSet.has(w))) return false;
@@ -125,15 +135,14 @@ export function isCoherent(claim: string, quotes: readonly string[]): boolean {
   const negated = (words: readonly string[]): boolean => words.some((w) => NEGATIONS.has(w));
   if (negated(claimWords) !== negated(quoteWords)) return false;
 
-  const content = claimWords.filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  if (content.length === 0) return false;
-  const supported = content.filter((w) => quoteStems.has(stem(w))).length;
-  return supported / content.length >= MIN_CLAIM_OVERLAP;
+  const overlap = contentOverlap(claim, quotes);
+  return overlap !== null && overlap >= MIN_CLAIM_OVERLAP;
 }
 
 const MAX_LABEL_CHARS = 80;
 const MAX_FORMULA_CHARS = 120;
-const compact = (text: string): string => normalizeLiteral(text).replace(/\s+/gu, '');
+/** Texto sin espacios: una fórmula se compara así con la página. */
+export const compact = (text: string): string => normalizeLiteral(text).replace(/\s+/gu, '');
 
 /**
  * Término y notación son adornos de presentación: si no están en los fragmentos citados se

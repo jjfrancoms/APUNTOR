@@ -47,10 +47,10 @@ export interface ApiCourse {
 /** Bloque del resumen de un tema (la estructura del original: tablas, fórmulas, figuras). */
 export type ApiSummaryBlock =
   | { type: 'heading'; text: string }
-  | { type: 'paragraph'; text: string; pages: number[] }
-  | { type: 'list'; items: string[]; pages: number[] }
+  | { type: 'paragraph'; text: string; pages: number[]; unverified?: boolean }
+  | { type: 'list'; items: string[]; pages: number[]; unverified?: boolean }
   | { type: 'table'; header: string[]; rows: string[][]; pages: number[] }
-  | { type: 'formula'; text: string; pages: number[] }
+  | { type: 'formula'; text: string; pages: number[]; unverified?: boolean }
   | { type: 'figure'; page: number; caption: string; url: string; width: number; height: number };
 
 export interface ApiTopicSummary {
@@ -100,6 +100,30 @@ export type ApiAnswer =
 export interface ApiExternal {
   source: 'internet';
   results: { title: string; url: string; snippet: string }[];
+}
+
+/** Largo de la consulta que acepta `GET /v1/search`. */
+export const SEARCH_MIN_QUERY = 2;
+export const SEARCH_MAX_QUERY = 200;
+
+export interface ApiSearchResults {
+  documents: { id: string; title: string }[];
+  topics: {
+    id: string;
+    documentId: string;
+    documentTitle: string;
+    title: string;
+    pages: number[];
+  }[];
+  snippets: {
+    chunkId: string;
+    documentId: string;
+    documentTitle: string;
+    pageNumber: number;
+    snippet: string;
+    /** Posiciones de `snippet` que coinciden con la búsqueda. */
+    highlights: { start: number; length: number }[];
+  }[];
 }
 
 export interface ApiUploadTicket {
@@ -168,6 +192,14 @@ export interface ApiAdminAuditEntry {
   createdAt: string;
 }
 
+export interface ApiAdminWaitlistEntry {
+  id: string;
+  email: string;
+  consent: boolean;
+  source: string;
+  createdAt: string;
+}
+
 /** Tamaño de página de las listas del panel. */
 export const ADMIN_PER_PAGE = 50;
 
@@ -186,6 +218,11 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Tiempo máximo en ms; al vencer, la petición falla con `TIMEOUT`. */
   timeoutMs?: number;
+}
+
+/** Opciones de `api.ask`: `documentIds` limita la respuesta a esos documentos. */
+export interface AskOptions extends RequestOptions {
+  documentIds?: readonly string[];
 }
 
 async function request<T>(
@@ -252,6 +289,8 @@ async function request<T>(
 export const api = {
   usage: () => request<ApiUsage>('GET', '/v1/me/usage'),
   deleteAccount: () => request<void>('DELETE', '/v1/account'),
+  /** Todo lo que el servidor guarda de esta cuenta (derecho de acceso). */
+  exportAccount: () => request<unknown>('GET', '/v1/account/export'),
   courses: () => request<{ courses: ApiCourse[] }>('GET', '/v1/courses'),
   createCourse: (title: string) => request<ApiCourse>('POST', '/v1/courses', { title }),
   documents: () => request<{ documents: ApiDocument[] }>('GET', '/v1/documents'),
@@ -270,14 +309,32 @@ export const api = {
       'GET',
       `/v1/documents/${documentId}/pages/${page}`,
     ),
-  ask: (question: string, options?: RequestOptions) =>
-    request<ApiAnswer>('POST', '/v1/questions', { question }, options),
+  ask: (question: string, options?: AskOptions) => {
+    // El alcance viaja en el cuerpo; el resto de opciones son de la petición.
+    const { documentIds, ...requestOptions } = options ?? {};
+    return request<ApiAnswer>(
+      'POST',
+      '/v1/questions',
+      documentIds && documentIds.length > 0 ? { question, documentIds } : { question },
+      requestOptions,
+    );
+  },
+  search: (query: string, options?: RequestOptions) =>
+    request<ApiSearchResults>(
+      'GET',
+      `/v1/search?q=${encodeURIComponent(query)}`,
+      undefined,
+      options,
+    ),
   external: (question: string, options?: RequestOptions) =>
     request<ApiExternal>('POST', '/v1/external', { question }, options),
   /** Registra la aceptación (idempotente: repetirla con la misma versión no duplica). */
   acceptConsent: (document: LegalDocument, version: string) =>
     request<ApiConsent>('POST', '/v1/consents', { document, version }),
   consents: () => request<{ consents: ApiConsent[] }>('GET', '/v1/consents'),
+  /** Pública (no hace falta sesión) e idempotente: repetir el correo no lo duplica. */
+  joinWaitlist: (input: { email: string; consent: true; source: 'app' | 'web' }) =>
+    request<{ status: 'joined' }>('POST', '/v1/waitlist', input),
   /** 200 si la cuenta es administradora; 403 FORBIDDEN si no. */
   adminMe: () => request<ApiAdminMe>('GET', '/v1/admin/me'),
   adminStats: () => request<ApiAdminStats>('GET', '/v1/admin/stats'),
@@ -300,6 +357,14 @@ export const api = {
   /** 204: borra la cuenta completa de ese usuario (irreversible). */
   adminDeleteUser: (id: string) =>
     request<void>('DELETE', `/v1/admin/users/${encodeURIComponent(id)}`),
+  adminWaitlist: (page: number) =>
+    request<{ entries: ApiAdminWaitlistEntry[]; page: number; hasMore: boolean }>(
+      'GET',
+      `/v1/admin/waitlist${pageQuery(page)}`,
+    ),
+  /** 204: borra esa inscripción de la lista de espera. */
+  adminDeleteWaitlistEntry: (id: string) =>
+    request<void>('DELETE', `/v1/admin/waitlist/${encodeURIComponent(id)}`),
   adminAudit: (page: number) =>
     request<{ entries: ApiAdminAuditEntry[]; page: number; hasMore: boolean }>(
       'GET',

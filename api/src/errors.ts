@@ -17,6 +17,8 @@ export type ApiErrorCode =
   | 'CHAT_DAILY_LIMIT'
   | 'CHAT_FAILED'
   | 'CHAT_CANCELLED'
+  /** Se acabaron los resúmenes nuevos de hoy (los ya generados se siguen viendo gratis). */
+  | 'SUMMARY_DAILY_LIMIT'
   /** Demasiadas peticiones en poco tiempo: reintentar en unos segundos (cabecera Retry-After). */
   | 'RATE_LIMITED'
   /** Con sesión, pero sin permiso: rutas /v1/admin/* para quien no está en ADMIN_EMAILS. */
@@ -32,6 +34,8 @@ export type ApiErrorCode =
   /** La IA no produjo al menos 3 elementos con cita válida. */
   | 'STUDY_TOO_FEW_ITEMS'
   | 'STUDY_FAILED'
+  /** La inscripción de la lista de espera ya no existe (panel de administrador). */
+  | 'WAITLIST_NOT_FOUND'
   | 'INTERNAL';
 
 export class ApiError extends Error {

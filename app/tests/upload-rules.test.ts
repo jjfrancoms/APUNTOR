@@ -18,6 +18,17 @@ describe('upload-rules', () => {
     expect(validateUpload({ name: 'x.pdf', sizeMb: 30 }, 480, 500)).toBe('UP_QUOTA');
     expect(validateUpload({ name: 'x.pdf', sizeMb: 30 }, 0, 500)).toBeNull();
   });
+  it('acepta solo los formatos que lee el servidor', () => {
+    for (const name of ['a.txt', 'b.md', 'c.docx', 'd.pptx', 'e.HEIC', 'f.jpeg']) {
+      expect(validateUpload({ name, sizeMb: 1 }, 0, 500)).toBeNull();
+    }
+    // Los formatos antiguos de Office no se leen: se piden como .docx/.pptx.
+    expect(validateUpload({ name: 'viejo.doc', sizeMb: 1 }, 0, 500)).toBe('UP_FORMAT');
+    expect(validateUpload({ name: 'viejo.ppt', sizeMb: 1 }, 0, 500)).toBe('UP_FORMAT');
+  });
+  it('no inventa el idioma por el nombre del archivo', () => {
+    expect(validateUpload({ name: 'Resumen_chino.pdf', sizeMb: 1 }, 0, 500)).toBeNull();
+  });
   it('sugiere curso por palabras clave sin importar tildes', () => {
     const courses = [{ id: 'c', title: 'Cálculo I', keywords: ['limite'] }];
     expect(suggestCourse('LÍMITES clase 3.pdf', courses)?.id).toBe('c');

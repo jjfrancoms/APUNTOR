@@ -38,6 +38,14 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
     );
   };
 
+  // Aviso discreto: el texto no se pudo comprobar contra las páginas, así que no enlaza ninguna.
+  const unverifiedNote = (block: ApiSummaryBlock) =>
+    'unverified' in block && block.unverified === true ? (
+      <Text variant="caption" color="textMuted">
+        {t.unverified}
+      </Text>
+    ) : null;
+
   const render = (block: ApiSummaryBlock, i: number) => {
     switch (block.type) {
       case 'heading':
@@ -52,7 +60,8 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
             <Text variant="body" selectable>
               {block.text}
             </Text>
-            {pageChip(block.pages)}
+            {unverifiedNote(block)}
+            {pageChip(block.unverified === true ? [] : block.pages)}
           </View>
         );
       case 'list':
@@ -66,7 +75,8 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
                 </Text>
               </View>
             ))}
-            {pageChip(block.pages)}
+            {unverifiedNote(block)}
+            {pageChip(block.unverified === true ? [] : block.pages)}
           </View>
         );
       case 'table':
@@ -112,7 +122,8 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
                 {block.text}
               </Text>
             </Card>
-            {pageChip(block.pages)}
+            {unverifiedNote(block)}
+            {pageChip(block.unverified === true ? [] : block.pages)}
           </View>
         );
       case 'figure':

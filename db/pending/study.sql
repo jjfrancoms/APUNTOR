@@ -4,7 +4,7 @@
 -- Cuota diaria de generaciones. Idempotente: drizzle-kit también genera el cambio del CHECK.
 ALTER TABLE "usage_quotas" DROP CONSTRAINT IF EXISTS "usage_quotas_kind_valid";--> statement-breakpoint
 ALTER TABLE "usage_quotas" ADD CONSTRAINT "usage_quotas_kind_valid"
-  CHECK ("kind" IN ('questions', 'storage_bytes', 'study_generations'));--> statement-breakpoint
+  CHECK ("kind" IN ('questions', 'storage_bytes', 'summaries', 'study_generations'));--> statement-breakpoint
 
 -- El usuario autenticado solo lee lo suyo; las escrituras las hace el backend.
 ALTER TABLE "study_sets" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint

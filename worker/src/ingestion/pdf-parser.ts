@@ -23,6 +23,8 @@ export interface PageText {
   text: string;
   /** Líneas con su formato (tamaño, negrita, color), si el formato lo informa. */
   lines?: StyledLine[];
+  /** Líneas que nunca son títulos aunque lo parezcan (código en un Markdown). */
+  notHeadings?: readonly string[];
 }
 
 export interface ParsedDocument {
@@ -32,7 +34,8 @@ export interface ParsedDocument {
 
 /** Convierte un archivo en texto por página, sea cual sea su formato. */
 export interface DocumentExtractor {
-  extractPages(data: Uint8Array): Promise<ParsedDocument>;
+  /** `fileName` solo decide en formatos sin firma propia (texto plano). */
+  extractPages(data: Uint8Array, fileName?: string): Promise<ParsedDocument>;
 }
 
 export interface TextChunk {
@@ -176,7 +179,8 @@ function buildHeadingLookup(
       const onPage = styled.get(pageNumber);
       return (line) => onPage?.get(headingKey(line)) ?? null;
     }
-    return (line) => asHeading(line, textDetector(line));
+    const excluded = new Set((page?.notHeadings ?? []).map(headingKey));
+    return (line) => (excluded.has(headingKey(line)) ? null : asHeading(line, textDetector(line)));
   };
 }
 
