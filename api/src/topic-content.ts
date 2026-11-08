@@ -16,6 +16,9 @@ export interface ChunkRow {
   chunkIndex: number;
   content: string;
   sectionPath: readonly string[];
+  /** Offsets del fragmento en el texto normalizado de la página. */
+  charStart: number;
+  charEnd: number;
 }
 
 export interface TopicBlock {
@@ -23,6 +26,9 @@ export interface TopicBlock {
   /** Ruta del título bajo el que está el texto (para mostrar subtítulos). */
   sectionPath: string[];
   text: string;
+  /** Tramo del texto de la página que cubre el bloque (para recuperar su estructura). */
+  charStart: number;
+  charEnd: number;
 }
 
 export interface TopicContent {
@@ -104,12 +110,16 @@ export function buildTopicContent(
     if (samePlace) {
       const before = last.text.length;
       last.text = joinWithoutOverlap(last.text, chunk.content);
+      last.charStart = Math.min(last.charStart, chunk.charStart);
+      last.charEnd = Math.max(last.charEnd, chunk.charEnd);
       total += last.text.length - before;
     } else {
       blocks.push({
         pageNumber: chunk.pageNumber,
         sectionPath: [...chunk.sectionPath],
         text: chunk.content,
+        charStart: chunk.charStart,
+        charEnd: chunk.charEnd,
       });
       total += chunk.content.length;
     }
@@ -120,4 +130,22 @@ export function buildTopicContent(
     }
   }
   return { topic, path, blocks, truncated };
+}
+
+/**
+ * Devuelve a cada bloque los saltos de línea, listas y tablas del documento: el texto sale del
+ * tramo de la página que cubren sus fragmentos (no de los fragmentos, que van en una línea).
+ */
+export function withPageStructure(
+  blocks: readonly TopicBlock[],
+  pageTexts: ReadonlyMap<number, string>,
+): TopicBlock[] {
+  return blocks.map((block) => {
+    const page = pageTexts.get(block.pageNumber);
+    if (page === undefined || block.charEnd > page.length || block.charStart >= block.charEnd) {
+      return block;
+    }
+    const text = page.slice(block.charStart, block.charEnd).trim();
+    return text.length > 0 ? { ...block, text } : block;
+  });
 }

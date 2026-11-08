@@ -7,6 +7,7 @@ import { createInfrastructure } from '../../api/src/wiring';
 import { startIngestionConsumer } from './ingestion/consumer';
 import { DrizzleIngestionRepository } from './ingestion/document-repository';
 import { MultiFormatExtractor } from './ingestion/extractors';
+import { PdfPageRenderer } from './ingestion/page-artifacts';
 
 /** Proceso independiente de la API: consume la cola de ingesta. */
 async function main(): Promise<void> {
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
     storage,
     extractor: new MultiFormatExtractor(new VertexOcrProvider(models, env.GENERATION_MODEL)),
     embedder,
+    pageRenderer: new PdfPageRenderer(),
   });
 
   const shutdown = async (): Promise<void> => {

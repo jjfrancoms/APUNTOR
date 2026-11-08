@@ -39,7 +39,9 @@ import { loggerOptions, type LogStream } from './logging';
 import type { IngestionEnqueuer } from './queue';
 import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
-import { UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
+import { createManifestCache } from './page-manifest';
+import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
+import { withPageStructure } from './topic-content';
 
 /** Peticiones permitidas por ventana de tiempo, por usuario (o por IP sin sesión). */
 export interface RateLimitRule {
@@ -198,6 +200,7 @@ function bearerToken(request: FastifyRequest): string | null {
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
+  const pageManifests = createManifestCache(deps.storage);
   const logger =
     deps.logger === undefined || deps.logger === false
       ? false
@@ -472,10 +475,37 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const content = await deps.documents.topicContent(userId, document.id, topicId);
     // Un tema de otro documento (o ajeno) responde igual que un documento inexistente.
     if (!content) throw new ApiError('DOC_NOT_FOUND', 404);
+    const manifest = await pageManifests.get(document.id, document.filePath);
+    const pages = new Map((manifest?.pages ?? []).map((p) => [p.pageNumber, p]));
+    const blocks = withPageStructure(
+      content.blocks,
+      new Map([...pages].map(([n, p]) => [n, p.text])),
+    );
+    const pageNumbers = [...new Set(blocks.map((b) => b.pageNumber))];
+    const pageImages = await Promise.all(
+      pageNumbers.flatMap((pageNumber) => {
+        const image = pages.get(pageNumber)?.image;
+        return image
+          ? [
+              deps.storage.createDownloadUrl(image.key).then((url) => ({
+                pageNumber,
+                url,
+                width: image.width,
+                height: image.height,
+              })),
+            ]
+          : [];
+      }),
+    );
     return {
       topic: content.topic,
       path: content.path,
-      blocks: content.blocks,
+      blocks: blocks.map(({ pageNumber, sectionPath, text }) => ({
+        pageNumber,
+        sectionPath,
+        text,
+      })),
+      pageImages,
       truncated: content.truncated,
       document: { id: document.id, title: document.title },
     };
@@ -502,6 +532,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const document = await requireDocument(userId, request.params);
     // Primero el archivo: si R2 falla, la fila sigue ahí y se puede reintentar.
     await deps.storage.delete(document.filePath);
+    await deps.storage.deletePrefix(derivedPrefix(document.filePath));
+    pageManifests.forget(document.id);
     await deps.documents.delete(userId, document.id);
     await deps.quota.release(userId, 'storage_bytes', document.sizeBytes);
     return reply.status(204).send();

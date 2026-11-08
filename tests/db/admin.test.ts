@@ -115,6 +115,12 @@ beforeAll(async () => {
         return Promise.resolve();
       },
       createUploadUrl: (key) => Promise.resolve(`https://r2.example/${key}`),
+      upload: () => Promise.resolve(),
+      createDownloadUrl: (key) => Promise.resolve(`https://r2.example/get/${key}`),
+      deletePrefix(prefix) {
+        for (const key of objects.keys()) if (key.startsWith(prefix)) objects.delete(key);
+        return Promise.resolve();
+      },
     },
     enqueue(id) {
       enqueued.push(id);

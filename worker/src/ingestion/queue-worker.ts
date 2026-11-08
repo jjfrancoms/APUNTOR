@@ -7,6 +7,7 @@ import type { FileStorage } from '../../../api/src/storage/file-storage';
 import { EMBEDDING_DIMENSIONS } from '../../../db/schema';
 import { buildTopicTree, flattenTopicTree } from '../topics/topic-tree';
 import type { EmbeddedChunk, IngestionRepository } from './document-repository';
+import { storePageArtifacts, type PageRenderer } from './page-artifacts';
 import {
   chunkPages,
   DEFAULT_CHUNKING_OPTIONS,
@@ -37,6 +38,8 @@ export interface IngestionDeps {
   chunking?: ChunkingOptions;
   /** Chunks por llamada de embeddings (se limita a `embedder.maxBatchSize`). */
   embeddingBatchSize?: number;
+  /** Dibuja las páginas (PDF) para mostrarlas tal cual en el contenido de un tema. */
+  pageRenderer?: PageRenderer;
 }
 
 export class DocumentNotFoundError extends Error {
@@ -166,6 +169,8 @@ export async function processDocument(
         totalChunks: chunks.length,
       });
     }
+
+    await storePageArtifacts(storage, document.filePath, bytes, parsed, deps.pageRenderer);
 
     await onProgress({ stage: 'topics', processedChunks: processed, totalChunks: chunks.length });
     const topicRows = flattenTopicTree(buildTopicTree(chunks));

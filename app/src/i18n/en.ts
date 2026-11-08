@@ -18,6 +18,10 @@ export const en: Strings = {
     errorBody: 'Check your connection and try again.',
     retry: 'Try again',
     loading: 'Loading the content…',
+    viewPages: 'Original page',
+    viewText: 'Text',
+    pageImage: (n: number) => `Page ${n} of the document, as it looks in the original`,
+    openImage: 'Tap the page to see it full size.',
   },
   common: {
     back: 'Back',

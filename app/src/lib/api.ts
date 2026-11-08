@@ -49,6 +49,8 @@ export interface ApiTopicContent {
   topic: ApiTopic;
   path: string[];
   blocks: { pageNumber: number; sectionPath: string[]; text: string }[];
+  /** Páginas como se ven en el documento (PDF): enlaces temporales. */
+  pageImages: { pageNumber: number; url: string; width: number; height: number }[];
   truncated: boolean;
   document: { id: string; title: string };
 }

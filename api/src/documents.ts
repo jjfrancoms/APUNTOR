@@ -176,6 +176,8 @@ export function createDocumentsRepository(db: Database): DocumentsRepository {
           chunkIndex: c.chunkIndex,
           content: c.content,
           sectionPath: c.metadata.sectionPath,
+          charStart: c.metadata.charStart,
+          charEnd: c.metadata.charEnd,
         })),
         topicId,
       );

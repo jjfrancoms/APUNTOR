@@ -4,6 +4,7 @@ import {
   joinWithoutOverlap,
   MAX_TOPIC_CHARS,
   topicPath,
+  withPageStructure,
   type ChunkRow,
   type TopicRow,
 } from '../../api/src/topic-content';
@@ -18,6 +19,8 @@ const chunk = (i: number, page: number, path: string[], content: string): ChunkR
   pageNumber: page,
   sectionPath: path,
   content,
+  charStart: 0,
+  charEnd: content.length,
 });
 
 describe('contenido de un tema', () => {
@@ -54,5 +57,32 @@ describe('contenido de un tema', () => {
     const content = buildTopicContent(topics, chunks, 'cap');
     expect(content?.truncated).toBe(true);
     expect(content?.blocks.length).toBeLessThan(3);
+  });
+});
+
+describe('estructura del texto', () => {
+  it('recupera saltos de línea y tablas del texto de la página', () => {
+    const page = 'Encabezado\n1.2 Tablas\np q p∧q\n1 1 1\n1 0 0\nOtro';
+    const start = page.indexOf('1.2');
+    const end = page.indexOf('\nOtro');
+    const [block] = withPageStructure(
+      [
+        {
+          pageNumber: 3,
+          sectionPath: ['1.2 Tablas'],
+          text: 'plano',
+          charStart: start,
+          charEnd: end,
+        },
+      ],
+      new Map([[3, page]]),
+    );
+    expect(block?.text).toBe('1.2 Tablas\np q p∧q\n1 1 1\n1 0 0');
+  });
+
+  it('sin texto de página (o con offsets fuera de rango) deja el texto de los fragmentos', () => {
+    const block = { pageNumber: 1, sectionPath: [], text: 'plano', charStart: 0, charEnd: 99 };
+    expect(withPageStructure([block], new Map())[0]?.text).toBe('plano');
+    expect(withPageStructure([block], new Map([[1, 'corto']]))[0]?.text).toBe('plano');
   });
 });

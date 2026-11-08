@@ -30,6 +30,8 @@ interface World {
   consents: StoredConsent[];
   topics: Map<string, TopicRecord[]>;
   objects: Map<string, number>;
+  /** Contenido de los objetos que sube el servidor (manifiestos, imágenes de página). */
+  files: Map<string, Uint8Array>;
   enqueued: string[];
   deletedUsers: string[];
   quota: ReturnType<typeof fakeQuota>;
@@ -47,6 +49,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
   const consents: World['consents'] = [];
   const topics: World['topics'] = new Map();
   const objects: World['objects'] = new Map();
+  const files: World['files'] = new Map();
   const enqueued: string[] = [];
   const deletedUsers: string[] = [];
   const quota = fakeQuota(1000);
@@ -105,7 +108,15 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
             ? {
                 topic,
                 path: [topic.title],
-                blocks: [{ pageNumber: 2, sectionPath: [topic.title], text: 'Texto del tema' }],
+                blocks: [
+                  {
+                    pageNumber: 2,
+                    sectionPath: [topic.title],
+                    text: 'Texto del tema',
+                    charStart: 0,
+                    charEnd: 14,
+                  },
+                ],
                 truncated: false,
               }
             : null,
@@ -152,13 +163,31 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       list: (userId) => Promise.resolve(consents.filter((c) => c.userId === userId)),
     },
     storage: {
-      download: () => Promise.resolve(new Uint8Array()),
+      download(key) {
+        const file = files.get(key);
+        return file ? Promise.resolve(file) : Promise.reject(new Error('NoSuchKey'));
+      },
       sizeOf: (key) => Promise.resolve(objects.get(key) ?? null),
       delete(key) {
         objects.delete(key);
         return Promise.resolve();
       },
       createUploadUrl: (key) => Promise.resolve(`https://r2.example/${key}`),
+      upload(key, data) {
+        files.set(key, data);
+        objects.set(key, data.length);
+        return Promise.resolve();
+      },
+      createDownloadUrl: (key) => Promise.resolve(`https://r2.example/get/${key}`),
+      deletePrefix(prefix) {
+        for (const key of [...objects.keys(), ...files.keys()]) {
+          if (key.startsWith(prefix)) {
+            objects.delete(key);
+            files.delete(key);
+          }
+        }
+        return Promise.resolve();
+      },
     },
     enqueue(id) {
       enqueued.push(id);
@@ -241,6 +270,7 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
     consents,
     topics,
     objects,
+    files,
     enqueued,
     deletedUsers,
     quota,
@@ -481,6 +511,7 @@ describe('documentos', () => {
       blocks: [{ pageNumber: 2, text: 'Texto del tema' }],
       document: { id },
     });
+    expect(mine.json()).toMatchObject({ pageImages: [] });
     const theirs = await world.app.inject({ method: 'GET', url, headers: AUTH_OTHER });
     expect(theirs.statusCode).toBe(404);
     const missing = await world.app.inject({
@@ -495,6 +526,47 @@ describe('documentos', () => {
       headers: AUTH,
     });
     expect(errorCode(invalid)).toBe('REQ_INVALID');
+  });
+
+  it('el contenido de un tema trae la estructura y la imagen de la página', async () => {
+    const world = await createWorld();
+    const id = await createDocument(world);
+    const doc = world.docs.get(id);
+    if (!doc) throw new Error('sin documento');
+    const topicId = '7b0e8a3c-1d2f-4a5b-9c6d-0e1f2a3b4c5d';
+    world.topics.set(id, [{ id: topicId, parentId: null, title: '1. Límites', sourcePages: [2] }]);
+    const base = doc.filePath.replace(/\.[^./]+$/u, '');
+    const manifest = {
+      version: 1,
+      pages: [
+        {
+          pageNumber: 2,
+          text: 'Texto\ndel tema',
+          image: { key: `${base}/page-2.png`, width: 1240, height: 1754 },
+        },
+      ],
+    };
+    world.files.set(`${base}/pages.json`, new TextEncoder().encode(JSON.stringify(manifest)));
+    const res = await world.app.inject({
+      method: 'GET',
+      url: `/v1/documents/${id}/topics/${topicId}`,
+      headers: AUTH,
+    });
+    expect(res.json()).toMatchObject({
+      blocks: [{ pageNumber: 2, text: 'Texto\ndel tema' }],
+      pageImages: [
+        {
+          pageNumber: 2,
+          url: `https://r2.example/get/${base}/page-2.png`,
+          width: 1240,
+          height: 1754,
+        },
+      ],
+    });
+
+    // Al borrar el documento se borran también sus páginas.
+    await world.app.inject({ method: 'DELETE', url: `/v1/documents/${id}`, headers: AUTH });
+    expect([...world.files.keys()].filter((k) => k.startsWith(`${base}/`))).toEqual([]);
   });
 
   it('otro usuario no ve, completa, cambia ni borra el documento', async () => {

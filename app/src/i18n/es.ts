@@ -20,6 +20,10 @@ export const es = {
     errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
     retry: 'Reintentar',
     loading: 'Cargando el contenido…',
+    viewPages: 'Página original',
+    viewText: 'Texto',
+    pageImage: (n: number) => `Página ${n} del documento, tal como se ve en el original`,
+    openImage: 'Toca la página para verla en grande.',
   },
   common: {
     back: 'Volver',

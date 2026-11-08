@@ -62,6 +62,17 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   embeddings. `source_pages` solo contiene páginas donde realmente aparece el tema o sus subtemas.
   `summary` queda en `null` hasta que exista el cliente de generación.
 - `match_user_chunks` usa `hnsw.iterative_scan = relaxed_order`: requiere pgvector ≥ 0.8.
+- **Títulos y temas** (`worker/src/ingestion/headings.ts`): primero por formato visual (tamaño
+  de letra en PDF; tamaño, negrita, color y estilos en Word; título de diapositiva en PowerPoint),
+  comparado con la letra "normal" del documento; si no hay formato, por texto, sin filas de
+  tablas, fórmulas ni encabezados repetidos en cada página. Sin IA.
+- **Archivos derivados** en R2, dentro de la carpeta del usuario (`derivedPrefix()`:
+  `usuario/doc.pdf` → `usuario/doc/`): `pages.json` (texto normalizado por página, el mismo de
+  los offsets `charStart/charEnd`) y `page-N.png` (página de PDF dibujada con
+  `@napi-rs/canvas`). Los genera el worker sin bloquear la ingesta si fallan; se borran con el
+  documento y con la cuenta (`deletePrefix`). Se ven solo con enlaces temporales.
+- **Contenido de un tema** (`GET /v1/documents/:id/topics/:topicId`, pantalla 63): texto del
+  documento bajo el tema, por página, con su estructura, más las imágenes de página. Sin LLM.
 - `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
   (`formatEmbeddingInput()`).
 - **Consentimientos con versión**: la tabla `consents` guarda documento (`terms`/`privacy`),
