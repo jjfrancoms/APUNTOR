@@ -226,7 +226,10 @@ export const en: Strings = {
   courses: {
     title: 'My courses',
     search: 'Search your topics…',
-    pendingReview: (n: number) => `${n} documents are waiting for your review`,
+    pendingReview: (n: number) =>
+      n === 1
+        ? '1 document is waiting for your review'
+        : `${n} documents are waiting for your review`,
     classesTopics: (classes: number, topics: number) => `${classes} classes · ${topics} topics`,
     sections: (n: number) => `${n} sections`,
     topicsCount: (n: number) => `${n} topics`,
@@ -415,14 +418,24 @@ export const en: Strings = {
   review: {
     header: 'Review filing',
     intro: (n: number) =>
-      `I matched ${n} documents to your courses. Confirm or fix them before saving.`,
-    high: 'High confidence',
-    needs: 'Needs your review',
+      n === 1
+        ? 'I suggested a course for 1 document. You decide: nothing moves without your confirmation.'
+        : `I suggested a course for ${n} documents. You decide: nothing moves without your confirmation.`,
+    suggested: (course: string) => `Suggested course: ${course}`,
+    suggestedNew: (course: string) => `Suggested new course: ${course}`,
+    confidence: { high: 'High confidence', medium: 'Medium confidence', low: 'Low confidence' },
+    reason: (text: string) => `Why: ${text}`,
+    accept: 'Accept',
+    chooseOther: 'Choose another course',
+    newCourse: 'Create course',
+    notNow: 'Not now',
     question: 'Which course does it belong to?',
     choose: 'Choose a course…',
-    newCourse: 'Create new course',
-    save: (n: number) => `Save ${n} confirmed`,
-    later: 'Review later',
+    emptyTitle: 'Nothing to review',
+    emptyBody: "When you upload a new document, I'll suggest a course here.",
+    emptyAction: 'Go to my courses',
+    loading: 'Loading suggestions…',
+    error: "We couldn't load the suggestions. Try again.",
   },
   processError: {
     title: (n: number) => `I couldn't read ${n} files`,

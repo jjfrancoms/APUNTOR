@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import {
+  Banner,
   Button,
   Chip,
+  EmptyState,
   FileRow,
-  Icon,
   Screen,
   SelectField,
   Text,
@@ -14,152 +15,197 @@ import {
   TopBar,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
+import { confidenceLevel } from '@/lib/classification';
 import { extLabel } from '@/lib/upload-rules';
-import { assignUploadCourse, confirmUploads, createCourse, useStore } from '@/store/store';
-import { space } from '@/theme';
-import { Tap } from '@/components/ui/Tap';
+import type { ClassificationAction } from '@/lib/api';
+import type { DocRecord } from '@/store/seed';
+import { decideClassification, pendingReview, refreshAll, useStore } from '@/store/store';
+import { space, useTheme } from '@/theme';
 
-/** Pantalla 16 · Revisar clasificación: propone y, si duda, pregunta. Guarda solo lo confirmado. */
+type Mode = 'idle' | 'choose' | 'create';
+
+/**
+ * Pantalla 16 · Revisar clasificación: la IA sugiere un curso por documento y la persona decide
+ * (aceptar, elegir otro, crear uno o dejarlo para después). Nada se mueve sin confirmar.
+ */
 export default function ReviewClassification() {
   const s = useStrings();
-  const uploads = useStore((st) => st.uploads);
+  const { c } = useTheme();
+  const items = useStore(pendingReview);
   const courses = useStore((st) => st.courses);
-  const items = uploads.filter((u) => u.status === 'review');
-  const confirmed = items.filter((r) => r.courseId).length;
-  // Fila cuyo curso se está cambiando (las de alta confianza muestran el selector al tocar "Cambiar").
-  const [editing, setEditing] = useState<string | null>(null);
-  // Fila donde se está creando un curso nuevo, con el nombre que escribe la persona.
-  const [creating, setCreating] = useState<string | null>(null);
-  const [courseName, setCourseName] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const create = async (uploadId: string) => {
-    setBusy(true);
-    const id = await createCourse(courseName);
-    setBusy(false);
-    setFailed(id === null);
-    if (id) {
-      assignUploadCourse(uploadId, id);
-      setCreating(null);
-      setCourseName('');
-    }
-  };
-  const options = courses.map((c) => ({
-    value: c.id,
-    label: c.title,
-    detail: s.courses.classesTopics(c.classes.length, c.topicCount),
+  const sync = useStore((st) => st.sync);
+
+  if (sync.loading && items.length === 0) {
+    return (
+      <Screen header={<TopBar title={s.review.header} />}>
+        <View
+          accessibilityLabel={s.review.loading}
+          accessibilityRole="progressbar"
+          style={styles.center}
+        >
+          <ActivityIndicator color={c.primary} />
+          <Text variant="small" color="textMuted">
+            {s.review.loading}
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+  if (sync.error && items.length === 0) {
+    return (
+      <Screen header={<TopBar title={s.review.header} />}>
+        <Banner tone="danger" title={s.review.error}>
+          <TextLink label={s.live.retry} color="danger" onPress={() => void refreshAll()} />
+        </Banner>
+      </Screen>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <Screen header={<TopBar title={s.review.header} />}>
+        <EmptyState
+          title={s.review.emptyTitle}
+          body={s.review.emptyBody}
+          primary={{ label: s.review.emptyAction, onPress: () => router.replace('/courses') }}
+        />
+      </Screen>
+    );
+  }
+  const options = courses.map((course) => ({
+    value: course.id,
+    label: course.title,
+    detail: s.courses.classesTopics(course.classes.length, course.topicCount),
   }));
   return (
-    <Screen
-      header={<TopBar title={s.review.header} />}
-      footer={
-        <>
-          <Button
-            label={s.review.save(confirmed)}
-            disabled={confirmed === 0}
-            loading={busy}
-            onPress={() => {
-              setBusy(true);
-              void confirmUploads().then((saved) => {
-                setBusy(false);
-                if (saved > 0) router.replace('/courses');
-                else setFailed(true);
-              });
-            }}
-          />
-          <Button
-            label={s.review.later}
-            variant="secondary"
-            onPress={() => router.replace('/home')}
-          />
-        </>
-      }
-    >
+    <Screen header={<TopBar title={s.review.header} />}>
       <Text variant="small" color="textMuted">
         {s.review.intro(items.length)}
       </Text>
+      {items.map((doc) => (
+        <ReviewRow key={doc.id} doc={doc} options={options} />
+      ))}
+    </Screen>
+  );
+}
+
+function ReviewRow({
+  doc,
+  options,
+}: {
+  doc: DocRecord;
+  options: { value: string; label: string; detail: string }[];
+}) {
+  const s = useStrings();
+  const [mode, setMode] = useState<Mode>('idle');
+  const [courseName, setCourseName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const { courseId, courseTitle, confidence, reason } = doc.classification;
+  const level = confidenceLevel(confidence);
+
+  const decide = async (decision: ClassificationAction) => {
+    setBusy(true);
+    setFailed(false);
+    const saved = await decideClassification(doc.id, decision);
+    // Si se guardó, el documento sale de la lista y esta fila desaparece.
+    if (!saved) {
+      setBusy(false);
+      setFailed(true);
+    }
+  };
+
+  return (
+    <FileRow
+      tone={level === 'low' ? 'warning' : 'default'}
+      ext={extLabel(doc.name)}
+      name={doc.name}
+      detail=""
+    >
+      <Chip
+        label={s.review.confidence[level]}
+        tone={level === 'high' ? 'primary' : level === 'medium' ? 'neutral' : 'warning'}
+        icon={level === 'low' ? 'alert-triangle' : 'check'}
+      />
+      {courseTitle ? (
+        <Text variant="smallStrong">
+          {courseId ? s.review.suggested(courseTitle) : s.review.suggestedNew(courseTitle)}
+        </Text>
+      ) : null}
+      {reason ? (
+        <Text variant="caption" color="textMuted">
+          {s.review.reason(reason)}
+        </Text>
+      ) : null}
       {failed ? (
         <Text variant="small" color="danger">
           {s.live.actionFailed}
         </Text>
       ) : null}
-      {items.map((r) =>
-        r.courseId && editing !== r.id ? (
-          <FileRow key={r.id} ext={extLabel(r.name)} name={r.name} detail="">
-            <Chip label={s.review.high} tone="primary" icon="check" />
-            <View style={styles.row}>
-              <Text variant="caption" color="textMuted" style={styles.flex}>
-                {r.path.slice(0, -1).join(' › ')} ›{' '}
-                <Text variant="caption" color="primary">
-                  {r.path.at(-1) ?? ''}
-                </Text>
-              </Text>
-              <TextLink label={s.common.change} onPress={() => setEditing(r.id)} />
-            </View>
-          </FileRow>
-        ) : (
-          <FileRow
-            key={r.id}
-            tone={r.courseId ? 'default' : 'warning'}
-            ext={extLabel(r.name)}
-            name={r.name}
-            detail=""
-          >
-            {r.courseId ? null : (
-              <Chip label={s.review.needs} tone="warning" icon="alert-triangle" />
-            )}
-            <SelectField
-              label={s.review.question}
-              placeholder={s.review.choose}
-              options={options}
-              selected={r.courseId}
-              defaultOpen={editing === r.id}
-              onSelect={(courseId) => {
-                assignUploadCourse(r.id, courseId);
-                setEditing(null);
-              }}
-            />
-            {creating === r.id ? (
-              <>
-                <TextField
-                  label={s.live.newCourseLabel}
-                  placeholder={s.live.newCoursePlaceholder}
-                  value={courseName}
-                  onChangeText={setCourseName}
-                  autoFocus
-                />
-                <Button
-                  label={s.live.createCourse}
-                  compact
-                  loading={busy}
-                  disabled={courseName.trim().length === 0}
-                  onPress={() => void create(r.id)}
-                />
-              </>
-            ) : (
-              <Tap
-                accessibilityRole="button"
-                hitSlop={13}
-                style={styles.row}
-                onPress={() => {
-                  setCreating(r.id);
-                  setCourseName('');
-                }}
-              >
-                <Icon name="plus" size={14} color="primary" />
-                <Text variant="smallStrong" color="primary">
-                  {s.review.newCourse}
-                </Text>
-              </Tap>
-            )}
-          </FileRow>
-        ),
-      )}
-    </Screen>
+      {mode === 'choose' ? (
+        <SelectField
+          label={s.review.question}
+          placeholder={s.review.choose}
+          options={options}
+          defaultOpen
+          onSelect={(chosen) => void decide({ action: 'choose', courseId: chosen })}
+        />
+      ) : null}
+      {mode === 'create' ? (
+        <>
+          <TextField
+            label={s.live.newCourseLabel}
+            placeholder={s.live.newCoursePlaceholder}
+            value={courseName}
+            onChangeText={setCourseName}
+            autoFocus
+          />
+          <Button
+            label={s.review.newCourse}
+            compact
+            loading={busy}
+            disabled={courseName.trim().length === 0}
+            onPress={() => void decide({ action: 'create', title: courseName.trim() })}
+          />
+        </>
+      ) : null}
+      <View style={styles.actions}>
+        <Button
+          label={s.review.accept}
+          compact
+          loading={busy && mode === 'idle'}
+          disabled={busy}
+          onPress={() => void decide({ action: 'accept' })}
+        />
+        <Button
+          label={s.review.chooseOther}
+          compact
+          variant="secondary"
+          disabled={busy}
+          onPress={() => setMode(mode === 'choose' ? 'idle' : 'choose')}
+        />
+        <Button
+          label={s.review.newCourse}
+          compact
+          variant="secondary"
+          disabled={busy}
+          onPress={() => {
+            setMode(mode === 'create' ? 'idle' : 'create');
+            setCourseName('');
+          }}
+        />
+        <Button
+          label={s.review.notNow}
+          compact
+          variant="secondary"
+          disabled={busy}
+          onPress={() => void decide({ action: 'dismiss' })}
+        />
+      </View>
+    </FileRow>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  flex: { flex: 1 },
+  center: { alignItems: 'center', gap: space.sm, paddingVertical: space.xl },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
 });

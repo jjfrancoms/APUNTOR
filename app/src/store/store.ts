@@ -23,6 +23,7 @@ import {
   type ApiConsent,
   type ApiDocument,
   type ApiDocumentStatus,
+  type ClassificationAction,
   type ApiUsage,
   type LegalDocument,
 } from '@/lib/api';
@@ -169,8 +170,9 @@ export function limitReached(s: AppState): boolean {
   return s.plan === 'free' && questionsToday(s) >= s.usage.questionsLimit;
 }
 
-export function pendingReview(s: AppState): UploadJob[] {
-  return s.uploads.filter((u) => u.status === 'review');
+/** Documentos con un curso sugerido por la IA que esperan la decisión del usuario. */
+export function pendingReview(s: AppState): DocRecord[] {
+  return s.documents.filter((d) => d.classification.status === 'suggested');
 }
 
 // --- Carga desde el servidor -----------------------------------------------------
@@ -191,6 +193,13 @@ export function toDocRecord(doc: ApiDocument, courseTitle: string | undefined): 
     topics: [],
     status: doc.status,
     topicCount: doc.topicCount,
+    classification: {
+      status: doc.classificationStatus,
+      courseId: doc.suggestedCourseId,
+      courseTitle: doc.suggestedCourseTitle,
+      confidence: doc.suggestionConfidence,
+      reason: doc.suggestionReason,
+    },
     createdAt: doc.createdAt,
   };
 }
@@ -1217,34 +1226,21 @@ export function removeUpload(id: string): void {
   setState((s) => ({ ...s, uploads: s.uploads.filter((u) => u.id !== id) }));
 }
 
-export function assignUploadCourse(id: string, courseId: string): void {
-  const course = state.courses.find((c) => c.id === courseId);
-  if (!course) return;
-  setState((s) => ({
-    ...s,
-    uploads: s.uploads.map((u) =>
-      u.id === id
-        ? { ...u, courseId, path: [course.title, stripExtension(u.name)], confident: true }
-        : u,
-    ),
-  }));
-}
-
-/** Guarda en su curso los archivos confirmados. Devuelve cuántos se guardaron. */
-export async function confirmUploads(): Promise<number> {
-  const ready = state.uploads.filter((u) => u.status === 'review' && u.courseId && u.documentId);
-  let saved = 0;
-  for (const job of ready) {
-    try {
-      await api.updateDocument(job.documentId ?? '', { courseId: job.courseId ?? null });
-      patchUpload(job.id, { status: 'done' });
-      saved += 1;
-    } catch {
-      // Queda en revisión para intentarlo otra vez.
-    }
+/**
+ * Decide la sugerencia de curso de un documento (aceptar, elegir otro, crear uno o dejarla).
+ * Devuelve `false` si el servidor no pudo guardarlo; la sugerencia sigue pendiente.
+ */
+export async function decideClassification(
+  documentId: string,
+  decision: ClassificationAction,
+): Promise<boolean> {
+  try {
+    await api.classifyDocument(documentId, decision);
+  } catch {
+    return false;
   }
   await refreshAll();
-  return saved;
+  return true;
 }
 
 export function uploadSummary(s: AppState): {
