@@ -1,112 +1,143 @@
-import { previewOnly } from '@/components/domain/PreviewOnly';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { TextInput } from 'react-native';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
   Card,
   Chip,
-  ProgressBar,
+  EmptyState,
+  Icon,
   Screen,
   Text,
   TextLink,
   TopBar,
 } from '@/components/ui';
-import { scanReading } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
-import { formatPercent } from '@/lib/format';
-import { fonts, radius, space, useTheme } from '@/theme';
-import { Tap } from '@/components/ui/Tap';
+import { isUnclear, MAX_SCAN_PAGES, scanUploadAssets, type ScanPage } from '@/lib/scan';
+import { takePhoto } from '@/lib/scan-picker';
+import {
+  clearScan,
+  removeScanPage,
+  replaceScanPage,
+  setCameraDenied,
+  useScanSession,
+} from '@/lib/scan-session';
+import { enqueueUploads, fileFromPicker } from '@/store/store';
+import { radius, space, useTheme } from '@/theme';
 
-/** Pantalla 29 · Lectura poco clara */
-function ScanReview() {
+/** Página de ejemplo para ver el aviso con `?demo=unclear` (sin foto real). */
+const DEMO_PAGE: ScanPage = {
+  id: 'demo',
+  uri: '',
+  width: 640,
+  height: 480,
+  sizeBytes: 1,
+  extension: 'jpg',
+  capturedAt: 0,
+};
+
+/**
+ * Pantalla 29 · Revisar fotos antes de subirlas. Avisa "lectura poco clara" solo si la foto
+ * tiene poca resolución; lo que de verdad se leyó se conoce después, al procesarla.
+ */
+export default function ScanReview() {
   const s = useStrings();
   const { c } = useTheme();
   const r = s.scanReview;
-  const [editing, setEditing] = useState(false);
-  const [fixed, setFixed] = useState(scanReading.doubtful);
-  const corrected = fixed !== scanReading.doubtful;
-  const doubts = corrected ? scanReading.doubts - 1 : scanReading.doubts;
-  // Solo vista previa del diseño: el escáner real llega en otra fase.
-  const save = () => router.push('/upload/progress');
+  const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const session = useScanSession();
+  const [failed, setFailed] = useState(false);
+  const pages = demo === 'unclear' ? [DEMO_PAGE] : session.pages;
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/upload/scan'));
+
+  const retake = (page: ScanPage) =>
+    void takePhoto().then((result) => {
+      setFailed(result.status === 'failed');
+      if (result.status === 'denied') {
+        setCameraDenied(true);
+        back();
+        return;
+      }
+      if (result.status !== 'ok') return;
+      const [next] = result.pages;
+      if (next) replaceScanPage(page.id, next);
+    });
+
+  const upload = () => {
+    enqueueUploads(scanUploadAssets(pages, s.scanner.fileBase).map(fileFromPicker));
+    clearScan();
+    router.replace('/upload/progress');
+  };
+
+  if (pages.length === 0) {
+    return (
+      <Screen header={<TopBar title={r.header} />}>
+        <EmptyState
+          title={r.emptyTitle}
+          body={r.emptyBody}
+          primary={{ label: r.scan, onPress: back }}
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen
       header={<TopBar title={r.header} />}
       footer={
         <>
-          <Button label={r.fix} onPress={save} />
-          <Button label={r.rescan} variant="secondary" onPress={() => router.back()} />
-          <View style={styles.center}>
-            <TextLink label={r.useAnyway} onPress={save} />
-          </View>
+          <Button label={r.upload(pages.length)} onPress={upload} />
+          {pages.length < MAX_SCAN_PAGES ? (
+            <Button label={r.addMore} variant="secondary" icon="camera" onPress={back} />
+          ) : null}
         </>
       }
     >
-      <Banner tone="warning" title={r.warnTitle} body={r.warnBody} />
-      <View style={styles.row}>
-        <Text variant="smallStrong" style={styles.flex}>
-          {r.quality}
-        </Text>
-        <Text variant="smallStrong">{formatPercent(scanReading.quality)}</Text>
-      </View>
-      <ProgressBar value={scanReading.quality} tone="accent" label={r.quality} />
-      <Card>
-        <Text variant="smallStrong" accessibilityRole="header">
-          {r.read}
-        </Text>
-        <Text variant="small">{scanReading.text}</Text>
-        {editing ? (
-          <TextInput
-            accessibilityLabel={r.tapHint}
-            value={fixed}
-            onChangeText={setFixed}
-            onBlur={() => setEditing(false)}
-            autoFocus
-            multiline
-            style={[
-              styles.doubt,
-              styles.input,
-              { color: c.text, backgroundColor: c.surface, borderColor: c.primary },
-            ]}
-          />
-        ) : (
-          <Tap
-            accessibilityRole="button"
-            accessibilityHint={r.tapHint}
-            onPress={() => setEditing(true)}
-            style={[
-              styles.doubt,
-              {
-                backgroundColor: corrected ? c.primarySoft : c.accentSoft,
-                borderColor: corrected ? c.primary : c.accent,
-              },
-            ]}
-          >
-            <Text variant="small">{fixed}</Text>
-          </Tap>
-        )}
-        <Text variant="caption" color="textMuted">
-          {r.tapHint}
-        </Text>
-      </Card>
-      <View style={styles.chips}>
-        <Chip label={r.doubts(doubts)} tone="warning" icon="alert-triangle" />
-        <Chip label={r.pageOf(scanReading.page, scanReading.pages)} />
-      </View>
+      {failed ? <Banner tone="danger" title={s.scanner.failed} /> : null}
+      {pages.some(isUnclear) ? (
+        <Banner tone="warning" title={r.unclearTitle} body={r.unclearBody} />
+      ) : null}
+      {pages.map((page, i) => (
+        <Card key={page.id}>
+          <View style={styles.row}>
+            {page.uri ? (
+              <Image
+                source={{ uri: page.uri }}
+                accessibilityLabel={r.thumb(i + 1)}
+                resizeMode="cover"
+                style={[styles.thumb, { backgroundColor: c.surfaceAlt }]}
+              />
+            ) : (
+              <View style={[styles.thumb, styles.empty, { backgroundColor: c.surfaceAlt }]}>
+                <Icon name="image" size={20} color="textMuted" />
+              </View>
+            )}
+            <View style={styles.body}>
+              <Text variant="smallStrong">{r.page(i + 1)}</Text>
+              {isUnclear(page) ? (
+                <View style={styles.chip}>
+                  <Chip label={r.unclearChip} tone="warning" icon="alert-triangle" />
+                </View>
+              ) : null}
+              <View style={styles.actions}>
+                <TextLink label={r.retake} onPress={() => retake(page)} />
+                <TextLink label={r.remove} color="danger" onPress={() => removeScanPage(page.id)} />
+              </View>
+            </View>
+          </View>
+        </Card>
+      ))}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center' },
-  flex: { flex: 1 },
-  doubt: { borderWidth: 1, borderRadius: radius.sm, padding: space.sm },
-  input: { fontFamily: fonts.regular, fontSize: 13, outlineWidth: 0, outlineColor: 'transparent' },
-  chips: { flexDirection: 'row', gap: space.sm },
-  center: { alignItems: 'center' },
+  row: { flexDirection: 'row', gap: space.md },
+  thumb: { width: 72, height: 96, borderRadius: radius.sm },
+  empty: { alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1, gap: space.xs },
+  chip: { flexDirection: 'row' },
+  actions: { flexDirection: 'row', gap: space.lg },
 });
-
-// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
-export default previewOnly(ScanReview);

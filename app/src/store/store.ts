@@ -1190,6 +1190,20 @@ export function retryUpload(id: string): void {
   void runUpload(id);
 }
 
+/** Subidas cortadas por la red que aún se pueden reintentar. */
+export function networkFailedUploads(s: AppState): UploadJob[] {
+  return s.uploads.filter(
+    (u) => u.status === 'failed' && u.error === 'UP_NETWORK' && pickedFiles.has(u.id),
+  );
+}
+
+/** Al volver la conexión, reanuda las subidas que se cortaron. Devuelve cuántas reanudó. */
+export function retryNetworkUploads(): number {
+  const jobs = networkFailedUploads(state);
+  for (const job of jobs) retryUpload(job.id);
+  return jobs.length;
+}
+
 /** Quita el archivo de la lista; si ya estaba en el servidor sin confirmar, lo borra. */
 export function removeUpload(id: string): void {
   const job = state.uploads.find((u) => u.id === id);

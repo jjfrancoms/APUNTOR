@@ -345,15 +345,6 @@ export const processResults = [
 
 // --- OCR (28, 29) -------------------------------------------------------------
 
-export const scanReading = {
-  quality: 0.72,
-  text: 'El límite de una función en un punto describe el valor al que se acerca f(x) cuando x se acerca a a.',
-  doubtful: 'Si f es cont?nua en a entonces lim f(x) = f(a)',
-  doubts: 2,
-  page: 1,
-  pages: 2,
-};
-
 // --- Chat (5, 23, 24, 25, 10, 30) ----------------------------------------------
 
 export const chatSample = {
