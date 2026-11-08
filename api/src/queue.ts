@@ -6,7 +6,22 @@ export interface IngestionJobData {
   documentId: string;
 }
 
-export type IngestionEnqueuer = (documentId: string) => Promise<void>;
+/** `requireNew`: falla si la cola descarta el envío porque ya hay un trabajo de ese documento. */
+export type IngestionEnqueuer = (
+  documentId: string,
+  options?: { requireNew?: boolean },
+) => Promise<void>;
+
+/**
+ * El documento ya tiene un trabajo en cola o activo (p. ej. aún generando sus resúmenes tras
+ * `completed`): pg-boss descarta el envío y, sin avisar, el documento quedaría en `pending`.
+ */
+export class IngestionAlreadyQueuedError extends Error {
+  constructor(documentId: string) {
+    super(`El documento ${documentId} ya tiene un trabajo en la cola`);
+    this.name = 'IngestionAlreadyQueuedError';
+  }
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -29,9 +44,12 @@ export async function ensureIngestionQueue(boss: PgBoss): Promise<void> {
 
 /** Encola y retorna de inmediato: la petición HTTP nunca espera a la ingesta. */
 export function createIngestionEnqueuer(boss: PgBoss): IngestionEnqueuer {
-  return async (documentId) => {
+  return async (documentId, options = {}) => {
     if (!UUID_RE.test(documentId)) throw new Error('documentId debe ser un UUID');
     const data: IngestionJobData = { documentId };
-    await boss.send(INGESTION_QUEUE_NAME, data, { singletonKey: documentId });
+    const jobId = await boss.send(INGESTION_QUEUE_NAME, data, { singletonKey: documentId });
+    if (jobId === null && options.requireNew === true) {
+      throw new IngestionAlreadyQueuedError(documentId);
+    }
   };
 }

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { isValidEmail } from '@/lib/validation';
-import { joinWaitlist } from '@/store/store';
+import { joinWaitlist, type WaitlistResult } from '@/store/store';
 import { space } from '@/theme';
 
 /** Pantalla 44 · Lista de espera para menores de 18 (bloqueante legal). */
@@ -22,8 +22,11 @@ export default function Waitlist() {
   const s = useStrings();
   const w = s.waitlist;
   const [email, setEmail] = useState('');
-  const [consent, setConsent] = useState(true);
-  const [joined, setJoined] = useState(false);
+  // Sin marcar: el consentimiento tiene que ser un acto expreso.
+  const [consent, setConsent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<WaitlistResult | null>(null);
+  const joined = result === 'ok';
   return (
     <Screen
       narrow
@@ -32,10 +35,17 @@ export default function Waitlist() {
         <>
           <Button
             label={w.join}
+            loading={sending}
             disabled={joined || !consent || !isValidEmail(email)}
             onPress={() => {
-              joinWaitlist(email);
-              setJoined(true);
+              setSending(true);
+              setResult(null);
+              void joinWaitlist(email, consent, Platform.OS === 'web' ? 'web' : 'app').then((r) => {
+                setSending(false);
+                setResult(r);
+                // El correo ya está en el servidor: no se queda en la pantalla.
+                if (r === 'ok') setEmail('');
+              });
             }}
           />
           <View style={styles.inline}>
@@ -71,6 +81,7 @@ export default function Waitlist() {
         </Text>
       </Checkbox>
       {joined ? <Banner tone="info" icon="check" title={w.joined} /> : null}
+      {result !== null && result !== 'ok' ? <Banner tone="danger" title={w[result]} /> : null}
     </Screen>
   );
 }

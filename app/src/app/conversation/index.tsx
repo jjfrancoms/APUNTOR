@@ -22,8 +22,10 @@ import {
   Text,
   TextLink,
 } from '@/components/ui';
+import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { useStrings } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
+import { useOnline } from '@/lib/online';
 import {
   answerQuestion,
   askQuestion,
@@ -35,6 +37,7 @@ import {
   searchOutside,
   startConversation,
   useStore,
+  widenConversationScope,
   type Message,
 } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -48,24 +51,33 @@ import { Tap } from '@/components/ui/Tap';
 export default function Conversation() {
   const s = useStrings();
   const { c } = useTheme();
-  const params = useLocalSearchParams<{ id?: string; q?: string }>();
+  const params = useLocalSearchParams<{ id?: string; q?: string; docs?: string }>();
   const [id, setId] = useState<string | null>(params.id ?? null);
   const conv = useStore((st) => st.conversations.find((cv) => cv.id === id));
   const courseCount = useStore((st) => st.courses.length);
   const externalOn = useStore((st) => st.settings.external);
   const asked = useStore(questionsToday);
   const limit = useStore(dailyQuestionLimit);
-  const plan = useStore((st) => st.plan);
   // La respuesta en camino vive en el store: sigue visible al salir y volver al chat.
   const pending = useStore((st) => (id ? st.pendingAnswers[id] : undefined));
   const thinking = pending !== undefined;
   const [draft, setDraft] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const initialSent = useRef(false);
+  const online = useOnline();
 
   useEffect(() => {
-    if (!id) setId(startConversation());
+    if (!id) {
+      const scope = (params.docs ?? '').split(',').filter((d) => d.length > 0);
+      setId(startConversation(scope));
+    }
   }, [id]);
+  const scopeNames = useStore((st) =>
+    (st.conversations.find((cv) => cv.id === id)?.scopeDocIds ?? []).map(
+      (docId) => st.documents.find((d) => d.id === docId)?.name ?? '',
+    ),
+  );
+  const scoped = (conv?.scopeDocIds?.length ?? 0) > 0;
 
   // Reloj de los avisos de progreso: solo corre mientras hay una respuesta en camino.
   const startedAt = pending?.startedAt;
@@ -79,12 +91,17 @@ export default function Conversation() {
   const send = (text: string) => {
     // Con una respuesta en camino no se envía: el borrador se conserva.
     if (!id || thinking || text.trim().length === 0) return;
+    // Sin conexión la pregunta espera como borrador (sugerencias y reintentos incluidos).
+    if (!online) {
+      setDraft(text);
+      return;
+    }
     setDraft('');
     if (!askQuestion(id, text)) return; // límite diario: el mensaje queda con el aviso
     void answerQuestion(id, text);
   };
   const outside = () => {
-    if (!id || thinking) return;
+    if (!id || thinking || !online) return;
     void searchOutside(id, lastQuestion);
   };
   const stop = () => {
@@ -205,7 +222,7 @@ export default function Conversation() {
                 <Tap
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !externalOn }}
-                  disabled={!externalOn || !id || thinking}
+                  disabled={!externalOn || !id || thinking || !online}
                   onPress={outside}
                   style={[
                     styles.pill,
@@ -264,11 +281,9 @@ export default function Conversation() {
       case 'limit':
         return (
           <Banner key={m.id} tone="warning" icon="clock" title={s.errors.CHAT_DAILY_LIMIT}>
-            <Text variant="caption">{s.chat.limitBody(asked, limit, 'la medianoche')}</Text>
+            <Text variant="caption">{s.chat.limitUsed(asked, limit)}</Text>
             <ProgressBar value={1} tone="accent" label={s.errors.CHAT_DAILY_LIMIT} />
-            {plan === 'free' ? (
-              <Button label={s.chat.seePlans} onPress={() => router.push('/plans')} />
-            ) : null}
+            <Text variant="caption">{s.chat.plansSoon}</Text>
           </Banner>
         );
       case 'error':
@@ -310,6 +325,7 @@ export default function Conversation() {
       subtitle={s.chat.knows(courseCount)}
       composer={
         <>
+          <OfflineBanner title={s.connection.chat} />
           {messages.length === 0 ? (
             <View style={styles.suggestions}>
               {suggestions.map((sg) => (
@@ -329,6 +345,7 @@ export default function Conversation() {
           <Composer
             placeholder={thinking ? s.chat.placeholderShort : s.chat.placeholder}
             busy={thinking}
+            sendBlocked={!online}
             value={draft}
             onChangeText={setDraft}
             onSend={() => send(draft)}
@@ -338,6 +355,20 @@ export default function Conversation() {
         </>
       }
     >
+      {scoped ? (
+        <View style={styles.row}>
+          <Chip label={s.chat.scopeOnly(scopeNames.filter(Boolean).join(', '))} icon="file-text" />
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={s.chat.scopeWiden}
+            disabled={thinking}
+            onPress={() => id && widenConversationScope(id)}
+            hitSlop={8}
+          >
+            <Icon name="x" size={16} color="textMuted" />
+          </Tap>
+        </View>
+      ) : null}
       {messages.length === 0 ? <MascotStage label={s.chat.animated} /> : null}
       {messages.map((m, i) =>
         m.role === 'user' ? (

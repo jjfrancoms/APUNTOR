@@ -138,10 +138,24 @@ export class VertexEmbeddingProvider implements EmbeddingProvider {
   }
 }
 
+/**
+ * Configuración de razonamiento para una llamada. Sin presupuesto (o con uno que no es positivo)
+ * no se envía nada: el modelo decide. Nunca se manda 0: el modelo lite lo rechaza con HTTP 400.
+ */
+export function thinkingConfigFor(
+  thinkingBudget: number | undefined,
+): { thinkingConfig: { thinkingBudget: number } } | Record<string, never> {
+  return thinkingBudget !== undefined && thinkingBudget > 0
+    ? { thinkingConfig: { thinkingBudget } }
+    : {};
+}
+
 export class VertexGenerator implements JsonGenerator {
   constructor(
     private readonly models: GenAiModels,
     private readonly model: string = GENERATION_MODEL,
+    /** Tokens de razonamiento previo; sin indicar, el modelo decide. */
+    private readonly thinkingBudget?: number,
   ) {}
 
   async generateJson(request: {
@@ -158,6 +172,7 @@ export class VertexGenerator implements JsonGenerator {
         temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: request.schema,
+        ...thinkingConfigFor(this.thinkingBudget),
         ...(request.signal ? { abortSignal: request.signal } : {}),
       },
     });

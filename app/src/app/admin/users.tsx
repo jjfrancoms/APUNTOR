@@ -19,12 +19,14 @@ import {
   Button,
   Chip,
   EmptyState,
+  FilterChips,
   Screen,
   Sheet,
   Text,
   TextField,
   TopBar,
 } from '@/components/ui';
+import { WaitlistPanel } from '@/components/admin/WaitlistPanel';
 import { useStrings } from '@/i18n/es';
 import { useLanguage } from '@/i18n/language';
 import type { ApiAdminUser } from '@/lib/api';
@@ -55,6 +57,7 @@ type UserColumn =
 /**
  * Pantalla 60 · Panel de administración · Usuarios. Lista paginada con metadatos y consumo de
  * cada cuenta; "Borrar cuenta" pide escribir el correo y nunca aplica a la cuenta propia.
+ * La sección "Lista de espera" muestra los correos de la pantalla 44 y permite borrarlos.
  * Estados con `?demo=loading|empty|error|offline`.
  */
 export default function AdminUsers() {
@@ -71,6 +74,7 @@ export default function AdminUsers() {
   const session = useStore((st) => st.session);
   const [target, setTarget] = useState<ApiAdminUser | null>(null);
   const [deleted, setDeleted] = useState<string | null>(null);
+  const [view, setView] = useState<'accounts' | 'waitlist'>('accounts');
 
   const own = (user: ApiAdminUser) => (session ? isOwnAccount(user) : false);
   const provider = (p: string) => labelFor(u.providers, p);
@@ -178,26 +182,43 @@ export default function AdminUsers() {
       <AdminHeader
         section="users"
         right={
-          <Button
-            label={a.refresh}
-            icon="refresh-cw"
-            variant="secondary"
-            compact
-            onPress={() => void reload()}
-          />
+          view === 'accounts' ? (
+            <Button
+              label={a.refresh}
+              icon="refresh-cw"
+              variant="secondary"
+              compact
+              onPress={() => void reload()}
+            />
+          ) : undefined
         }
       />
-      {deleted ? <Banner tone="info" icon="check" title={u.deleted(deleted)} /> : null}
-      {body}
-      <DeleteUserSheet
-        user={target}
-        onClose={() => setTarget(null)}
-        onDeleted={(user) => {
-          setTarget(null);
-          setDeleted(deleteConfirmationText(user));
-          setList((current) => (current ? withoutUser(current, user.id) : current));
-        }}
+      <FilterChips
+        wrap
+        options={[
+          { value: 'accounts' as const, label: a.waitlist.accounts },
+          { value: 'waitlist' as const, label: a.waitlist.list },
+        ]}
+        value={view}
+        onChange={setView}
       />
+      {view === 'waitlist' ? (
+        <WaitlistPanel demo={demo} />
+      ) : (
+        <>
+          {deleted ? <Banner tone="info" icon="check" title={u.deleted(deleted)} /> : null}
+          {body}
+          <DeleteUserSheet
+            user={target}
+            onClose={() => setTarget(null)}
+            onDeleted={(user) => {
+              setTarget(null);
+              setDeleted(deleteConfirmationText(user));
+              setList((current) => (current ? withoutUser(current, user.id) : current));
+            }}
+          />
+        </>
+      )}
     </Screen>
   );
 }

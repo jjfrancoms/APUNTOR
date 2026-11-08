@@ -19,12 +19,16 @@ export type ApiErrorCode =
   | 'CHAT_CANCELLED'
   /** Conversación inexistente o de otro usuario. */
   | 'CONV_NOT_FOUND'
+  /** Se acabaron los resúmenes nuevos de hoy (los ya generados se siguen viendo gratis). */
+  | 'SUMMARY_DAILY_LIMIT'
   /** Demasiadas peticiones en poco tiempo: reintentar en unos segundos (cabecera Retry-After). */
   | 'RATE_LIMITED'
   /** Con sesión, pero sin permiso: rutas /v1/admin/* para quien no está en ADMIN_EMAILS. */
   | 'FORBIDDEN'
   /** Un administrador intentó borrarse a sí mismo desde el panel (usa DELETE /v1/account). */
   | 'ADMIN_TARGET_IS_SELF'
+  /** La inscripción de la lista de espera ya no existe (panel de administrador). */
+  | 'WAITLIST_NOT_FOUND'
   | 'INTERNAL';
 
 export class ApiError extends Error {

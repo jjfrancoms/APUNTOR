@@ -36,6 +36,7 @@ INSERT INTO conversations (id, user_id, title) VALUES
 INSERT INTO conversation_messages (id, conversation_id, role, kind, text) VALUES
   ('aaaaaaaa-0000-4000-8000-0000000000d1', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'user', 'text', 'Hola A'),
   ('bbbbbbbb-0000-4000-8000-0000000000d2', 'bbbbbbbb-0000-4000-8000-0000000000c2', 'user', 'text', 'Hola B');
+INSERT INTO waitlist (email, consent, source) VALUES ('tutor@example.com', true, 'app');
 
 -- Usuario 1 autenticado
 SET LOCAL ROLE authenticated;
@@ -55,6 +56,13 @@ BEGIN
   BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
       RAISE EXCEPTION 'RLS admin_audit: authenticated ve la auditoría';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  -- La lista de espera es solo del backend: ningún usuario lee los correos.
+  BEGIN
+    IF (SELECT count(*) FROM waitlist) <> 0 THEN
+      RAISE EXCEPTION 'RLS waitlist: authenticated ve la lista de espera';
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
@@ -108,6 +116,11 @@ BEGIN
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en admin_audit';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    INSERT INTO waitlist (email, consent) VALUES ('x@example.com', true);
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en waitlist';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 -- anon no ve nada
@@ -145,6 +158,17 @@ BEGIN
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    IF (SELECT count(*) FROM waitlist) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer waitlist';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO waitlist (email, consent) VALUES ('anon@example.com', true);
+    RAISE EXCEPTION 'RLS: anon pudo insertar en waitlist';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END $$;
 
 RESET ROLE;
@@ -154,6 +178,7 @@ BEGIN
   IF (SELECT count(*) FROM admin_audit) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la auditoría'; END IF;
   IF (SELECT count(*) FROM conversations) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró una conversación ajena'; END IF;
   IF (SELECT count(*) FROM conversation_messages) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró mensajes ajenos'; END IF;
+  IF (SELECT count(*) FROM waitlist) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la lista de espera'; END IF;
 END $$;
 
 ROLLBACK;

@@ -18,12 +18,18 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **Cola**: pg-boss sobre Postgres (`QUEUE_DATABASE_URL`, conexión directa o de sesión). El worker
   es un proceso aparte (`worker/src/index.ts`).
 - **Archivos**: Cloudflare R2 con URLs prefirmadas. **IA**: `gemini-embedding-2` (768 dims) y
-  `gemini-2.5-flash` vía Vertex AI. Dos modelos por tarea (`resolveModels()`,
-  `api/src/llm/models.ts`): **rápido** (`MODEL_FAST`) para el chat, lo que el estudiante espera;
-  **fuerte** (`MODEL_STRONG`) para lo que se hace una vez y se guarda (OCR, resúmenes) y para un
-  único segundo intento del chat si la respuesta rápida no pasa el validador o falla con un error
-  no pasajero (`AnswerDeps.fallbackGenerator`; sigue siendo una pregunta de la cuota). Ambos
-  valen `GENERATION_MODEL` si no se definen. **Externo**: Tavily.
+  `gemini-2.5-flash` vía Vertex AI. Tres niveles de modelo (`resolveModels()`,
+  `api/src/llm/models.ts`): **bajo** (`MODEL_LOW`) para tareas pequeñas (p. ej. clasificar un
+  documento en un curso); **medio** (`MODEL_MEDIUM`) para el primer intento del chat, lo que el
+  estudiante espera; **alto** (`MODEL_HIGH`) para lo que se hace una vez y se guarda (OCR,
+  resúmenes) y para un único segundo intento del chat si la respuesta no pasa el validador o falla
+  con un error no pasajero (`AnswerDeps.fallbackGenerator`; sigue siendo una pregunta de la cuota).
+  `MODEL_FAST`/`MODEL_STRONG` siguen valiendo como nombres antiguos de medio/alto; `CHAT_MODEL` y
+  `SUMMARY_MODEL` son ajustes más específicos. Todos valen `GENERATION_MODEL` si no se definen
+  (bajo = medio). Razonamiento previo por nivel (`thinkingBudget`): bajo 512, medio 1024, alto sin
+  tope; nunca 0 (el modelo lite lo rechaza con HTTP 400; `thinkingConfigFor()` lo omite).
+  El resumen a demanda de la API, si el alto falla por saturación (`isTransientAiError`), se
+  reintenta una vez con el medio sin cobrar dos veces; el worker no cae al medio. **Externo**: Tavily.
   Mientras no haya facturación, `GEMINI_API_KEY` (Google AI Studio, plan gratis) reemplaza a
   Vertex con los mismos modelos (`chooseGenAiBackend()`). Ese plan puede usar el contenido para
   mejorar productos de Google: solo pruebas propias, nunca apuntes de estudiantes reales.
@@ -71,6 +77,17 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   de letra en PDF; tamaño, negrita, color y estilos en Word; título de diapositiva en PowerPoint),
   comparado con la letra "normal" del documento; si no hay formato, por texto, sin filas de
   tablas, fórmulas ni encabezados repetidos en cada página. Sin IA.
+- **Formatos y topes de la ingesta** (`worker/src/ingestion/extractors.ts`): `.txt` y `.md` no
+  tienen firma, así que se aceptan por extensión + UTF-8 válido; sus "páginas" son saltos de
+  página (form feed) o tramos de ~3000 caracteres por párrafos, y `#` da los temas. En Word cada
+  fila de tabla es una línea `| a | b |`. En PowerPoint las notas del orador van bajo "Notas:" en
+  su diapositiva y una diapositiva sin texto pasa sus imágenes por OCR. **Topes de OCR por
+  documento:** `MAX_OCR_PAGES` = 120 páginas escaneadas de PDF (si se pasa, error permanente sin
+  gastar ninguna llamada) y `MAX_OCR_SLIDE_IMAGES` = 30 imágenes de diapositivas (las que sobran
+  se omiten, sin fallar).
+- **Reprocesar** un documento completado (panel o `npm run reprocess`, que gasta embeddings y
+  OCR de nuevo): vuelve a `pending` y se encola; el worker regenera fragmentos, temas y páginas y
+  borra `summaries/` antes de regenerarlos. Solo el panel deja rastro en `admin_audit`.
 - **Archivos derivados** en R2, dentro de la carpeta del usuario (`derivedPrefix()`:
   `usuario/doc.pdf` → `usuario/doc/`): `pages.json` (texto normalizado por página, el mismo de
   los offsets `charStart/charEnd`) y `page-N.png` (página de PDF dibujada con
@@ -82,11 +99,18 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   fórmula con ">>", figura con caja 0–1000 que el servidor recorta de la página). Se descartan
   páginas que el modelo no vio y figuras de más de media página. Se genera una vez y se guarda
   en `usuario/doc/summaries/` (se borra con el documento). Tope `maxOutputTokens` (corta bucles).
-  Modelo: `SUMMARY_MODEL` o el fuerte. El worker los genera de antemano tras marcar `completed`
+  Modelo: `SUMMARY_MODEL` o el alto. El worker los genera de antemano tras marcar `completed`
   (`worker/src/ingestion/topic-summaries.ts`): temas raíz y hojas, máx. 40, uno por uno con
   `WORKER_AI_RETRY` y como mucho 20 min (menos que el vencimiento del trabajo); un fallo nunca
   cambia el estado del documento y lo que falte se genera al pedirlo. La app muestra cada parte
   con su página, que abre la página original para comprobarla.
+- **Cuota y verificación de resúmenes:** generar un resumen desde la API cuesta 1 de la cuota
+  diaria `summaries` (30 en el plan gratis; 429 `SUMMARY_DAILY_LIMIT`). Abrir uno guardado es
+  gratis, si la generación falla se devuelve y el worker nunca cobra. La restricción
+  `usage_quotas_kind_valid` debe admitir `summaries` antes de desplegar (`0013_thankful_stingray`).
+  `verifySummaryBlocks()` (`api/src/summary-grounding.ts`) compara cada párrafo y cada punto de
+  lista con las páginas que cita (palabras con contenido) y exige las fórmulas en esas páginas
+  sin contar espacios: lo que falla se conserva, sin página y con `unverified: true`.
 - El índice de temas de la app (`TopicOutline`) es desplegable: solo se ven los temas raíz y al
   tocar uno se muestran sus secciones (al cerrarlo se cierran también sus subtemas).
 - `gemini-embedding-2` no admite `taskType`: la tarea va como prefijo en el texto
@@ -118,6 +142,8 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   `tests/db/admin.test.ts` con textos marcador). Rutas: `me`, `stats`, `users` (Admin API de
   Supabase vía `AppDeps.authUsers`, nunca SQL sobre `auth.users`), `documents` (filtro
   `status`), `POST documents/:id/retry` (solo fallidos → `pending` y se encola, 202),
+  `POST documents/:id/reprocess` (solo completados → `pending` y se encola, 202; 409 `DOC_STATE`
+  si no está completado o si su trabajo sigue activo generando resúmenes),
   `DELETE users/:id` (misma lógica que `DELETE /v1/account`, `deleteUserAccount()`; borrarse a
   sí mismo es 409 `ADMIN_TARGET_IS_SELF`) y `audit`. Listas con `page`/`perPage` (máx. 100) y
   `hasMore`. Toda acción que cambia algo se registra en `admin_audit` (RLS sin políticas: solo el
@@ -189,22 +215,27 @@ app/                      # app Expo/React Native (Expo Router, SDK 58), paquete
 └── src/data/mock.ts      # contenido estático de ejemplo para las pantallas
 ```
 
+**Agentes:** antes de lanzar agentes, sigue `docs/agentes/orquestacion.md`: cada uno con su perfil de `.claude/agents/` según la dificultad y como máximo 2 a la vez.
+
 ## Comandos clave
 
-| Comando               | Qué hace                                         |
-| --------------------- | ------------------------------------------------ |
-| `npm run dev`         | API con recarga automática                       |
-| `npm run api`         | Arranca la API (requiere `.env`)                 |
-| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)   |
-| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)       |
-| `npm run lint`        | ESLint (type-checked, `any` prohibido)           |
-| `npm run typecheck`   | `tsc --noEmit`                                   |
-| `npm test`            | Vitest (unitarios)                               |
-| `npm run format`      | Prettier                                         |
-| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`        |
-| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`   |
-| `npm run db:push`     | Sincroniza el esquema sin migración (solo local) |
-| `npm run db:studio`   | Drizzle Studio                                   |
+| Comando               | Qué hace                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`         | API con recarga automática                                                                  |
+| `npm run api`         | Arranca la API (requiere `.env`)                                                            |
+| `npm run worker`      | Arranca el worker de ingesta (requiere `.env`)                                              |
+| `npm run eval`        | Arnés de evaluación (ver `eval/README.md`)                                                  |
+| `npm run reprocess`   | Reprocesa: `-- <documentId>` o `-- --all-completed`                                         |
+| `npm run lint`        | ESLint (type-checked, `any` prohibido)                                                      |
+| `npm run typecheck`   | `tsc --noEmit`                                                                              |
+| `npm test`            | Vitest (unitarios)                                                                          |
+| `npm run test:e2e`    | Pruebas de navegador (Playwright, servidor falso, `e2e/`)                                   |
+| `npm run verificar`   | Todo en orden: tipos, lint, vitest (raíz y app) y `test:e2e`; se detiene en el primer fallo |
+| `npm run format`      | Prettier                                                                                    |
+| `npm run db:generate` | Genera migración SQL desde `db/schema.ts`                                                   |
+| `npm run db:migrate`  | Aplica migraciones pendientes a `DATABASE_URL`                                              |
+| `npm run db:push`     | Sincroniza el esquema sin migración (solo local)                                            |
+| `npm run db:studio`   | Drizzle Studio                                                                              |
 
 App móvil (dentro de `app/`, con su propio `package.json`):
 
@@ -267,7 +298,12 @@ que simula roles y `auth.uid()`), verifica el índice HNSW, prueba el aislamient
 - Migraciones `0011_admin_audit` y `0012_admin_audit_rls` escritas pero **sin aplicar** en
   Supabase; falta definir `ADMIN_EMAILS` en Railway. El admin necesita el correo confirmado en
   Supabase (se comprueba con la Admin API); mantener activada la confirmación de correo.
-- Lista de espera de menores (44): el correo solo queda en el dispositivo; nadie recibe el aviso.
+- Migraciones `0013_thankful_stingray` (tabla `waitlist` + restricción `usage_quotas_kind_valid`
+  con `summaries`), `0014_waitlist_rls` (RLS de `waitlist`) y `0015_search_fts_index` (índice de
+  texto completo de la búsqueda) escritas pero **sin aplicar** en Supabase. Orden: 0013, 0014,
+  0015, y **antes de desplegar la API** (sin 0013 los resúmenes nuevos y la lista de espera fallan).
+- Lista de espera de menores (44): el correo ya viaja al servidor (`POST /v1/waitlist`) y no se
+  queda en el dispositivo; falta que alguien reciba el aviso cuando haya plan para menores.
 - Cuentas escolares `student_restricted`: las reglas siguen por definir.
 - Animación Rive de 7 estados de la mascota.
 - Los 200 casos reales de `eval/` y la prueba con 20 documentos reales.

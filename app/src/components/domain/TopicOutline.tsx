@@ -43,6 +43,9 @@ export function TopicOutline({
         <Tap
           accessibilityRole="button"
           accessibilityState={hasChildren ? { expanded: isOpen } : undefined}
+          // En la web `accessibilityState.expanded` no llega al DOM: sin esto el lector de
+          // pantalla no anuncia si el tema está desplegado.
+          aria-expanded={hasChildren ? isOpen : undefined}
           accessibilityLabel={hasChildren ? topic.title : s.courses.openTopicLabel(topic.title)}
           onPress={() => (hasChildren ? setExpanded(toggleExpanded(expanded, node)) : open(topic))}
           style={[styles.row, indent]}

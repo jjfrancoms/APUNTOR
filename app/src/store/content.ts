@@ -31,7 +31,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'calculo-1',
     path: ['Cálculo I', 'Clase 1', 'Funciones'],
     topics: ['Función', 'Dominio y rango', 'Gráfica de una función'],
-    uploadedLabel: 'hace 3 semanas',
   },
   {
     id: 'algebra-limites',
@@ -41,7 +40,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'calculo-1',
     path: ['Cálculo I', 'Clase 2', 'Propiedades'],
     topics: ['Propiedades de los límites', 'Límite de una suma'],
-    uploadedLabel: 'hace 2 semanas',
   },
   {
     id: 'derivadas',
@@ -51,7 +49,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'calculo-1',
     path: ['Cálculo I', 'Clase 4', 'Derivadas'],
     topics: ['Derivada', 'Regla de la cadena'],
-    uploadedLabel: 'ayer',
   },
   {
     id: 'electrostatica',
@@ -61,7 +58,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'fisica-2',
     path: ['Física II', 'Clase 1', 'Electrostática'],
     topics: ['Carga eléctrica', 'Ley de Coulomb'],
-    uploadedLabel: 'hace 2 semanas',
   },
   {
     id: 'ondas',
@@ -71,7 +67,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'fisica-2',
     path: ['Física II', 'Clase 3', 'Ondas'],
     topics: ['Longitud de onda', 'Velocidad de propagación'],
-    uploadedLabel: 'hoy',
   },
   {
     id: 'virreinato',
@@ -81,7 +76,6 @@ export const extraDocuments: Omit<DocRecord, 'status' | 'topicCount' | 'createdA
     courseId: 'historia-peru',
     path: ['Historia del Perú', 'Clase 2', 'Virreinato'],
     topics: ['Virreinato', 'Encomienda'],
-    uploadedLabel: 'hace 4 días',
   },
 ];
 

@@ -23,6 +23,10 @@ export const es = {
     errorBody: 'Inténtalo de nuevo en un momento.',
     busyTitle: 'Illari está ocupado',
     busyBody: 'Hay muchas peticiones a la IA ahora. Inténtalo en un minuto.',
+    limitTitle: 'Se acabaron los resúmenes nuevos de hoy',
+    limitBody:
+      'Los resúmenes que ya guardaste siguen abriéndose sin límite. La cuota de resúmenes nuevos se renueva a la medianoche.',
+    unverified: 'No verificado con el documento',
     retry: 'Reintentar',
     loading: 'Illari está preparando el resumen…',
     loadingHint: 'La primera vez tarda unos segundos; después queda guardado.',
@@ -52,9 +56,10 @@ export const es = {
     AUTH_PASSWORD_MISMATCH: 'Las contraseñas no coinciden.',
     AUTH_BIRTHDATE_INVALID: 'Escribe una fecha válida (DD/MM/AAAA).',
     AUTH_MINOR: 'Por ahora la app es solo para mayores de 18 años.',
-    UP_FORMAT: 'Por ahora aceptamos PDF, Word, PowerPoint y texto.',
+    UP_FORMAT:
+      'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC).',
     UP_SIZE: 'Supera el límite de 50 MB.',
-    UP_QUOTA: 'Tu espacio está al 96 %. Libera espacio o cambia de plan.',
+    UP_QUOTA: 'No queda espacio suficiente. Libera espacio borrando documentos que ya no uses.',
     UP_NETWORK: 'Sin conexión durante la subida. No se perdió nada.',
     // Provisionales: la tabla de la especificación se transcribió solo hasta UP_NETWORK.
     UP_LANGUAGE: 'Por ahora solo leemos documentos en español e inglés.',
@@ -153,7 +158,6 @@ export const es = {
     wrongEmail: '¿Correo equivocado?',
   },
   onboarding: {
-    step: (n: number, total: number) => `Paso ${n} de ${total}`,
     greeting: '¡Hola! Para ayudarte mejor, cuéntame qué estudias.',
     levels: {
       school: { title: 'Colegio', detail: 'Primaria o secundaria' },
@@ -173,10 +177,6 @@ export const es = {
     external: {
       title: 'Buscar contexto externo',
       detail: 'Se muestra aparte, siempre con su fuente.',
-    },
-    analytics: {
-      title: 'Mejorar la app con datos anónimos',
-      detail: 'Opcional. Nunca incluye tus documentos.',
     },
     minorTitle: '¿Tienes menos de 18 años?',
     minorBody:
@@ -268,6 +268,8 @@ export const es = {
   },
   document: {
     header: 'Documento',
+    today: 'hoy',
+    summaryPrompt: (name: string) => `Resumen de ${name}`,
     meta: (type: string, size: string, pages: number, when: string) =>
       `${type} · ${size} · ${pages} páginas · subido ${when}`,
     page: (n: number, total: number) => `Página ${n} de ${total}`,
@@ -285,52 +287,66 @@ export const es = {
   profile: {
     title: 'Perfil',
     edit: 'Editar',
-    privacyHeader: 'PRIVACIDAD Y DATOS',
+    privacyHeader: 'Privacidad y datos',
     useDocs: { title: 'Usar mis documentos para ayudarme', detail: 'Solo tú los ves' },
     external: { title: 'Buscar contexto externo', detail: 'Con fuentes visibles' },
-    progress: { title: 'Guardar mi progreso de estudio', detail: '' },
-    mascotHeader: 'MASCOTA',
     appearance: {
-      header: 'APARIENCIA',
+      header: 'Apariencia',
       system: 'Automático',
       light: 'Claro',
       dark: 'Oscuro',
       detail: 'Automático usa el mismo modo que tu dispositivo.',
     },
     language: {
-      header: 'IDIOMA',
+      header: 'Idioma',
       detail: 'Cambia los textos de la app. Tus documentos y apuntes no se traducen.',
     },
-    lightMode: { title: 'Modo ligero (sin 3D)', detail: 'Menos batería y datos' },
-    voice: { title: 'Voz de la mascota', detail: '' },
     notifications: 'Notificaciones',
     subscription: 'Suscripción',
     help: 'Ayuda y contacto',
-    data: 'Descargar o borrar mis datos',
+    data: 'Borrar mi cuenta',
   },
   search: {
     placeholder: 'Buscar en tus temas…',
     clear: 'Borrar búsqueda',
-    tabs: (all: number, docs: number, chats: number) =>
-      [`Todo · ${all}`, `Documentos · ${docs}`, `Chats · ${chats}`] as const,
-    count: (n: number) => `${n} resultados`,
+    documents: 'Documentos',
+    topics: 'Temas',
+    inNotes: 'En tus apuntes',
+    chats: 'Chats',
     page: (n: number) => `Página ${n}`,
     empty: (q: string) => `No encontramos nada para "${q}".`,
     emptyHint: 'Prueba con otras palabras.',
+    pagesCount: (n: number) => `${n} páginas`,
+    chatTitle: (title: string) => `Chat · ${title}`,
+    chatTag: 'Chat',
+    hint: 'Escribe al menos 2 letras para buscar en tus apuntes.',
+    loading: 'Buscando en tus apuntes…',
+    errorTitle: 'No pudimos buscar en tus apuntes',
+    errorBody: 'Fue un problema nuestro. Inténtalo de nuevo en un momento.',
+    offlineTitle: 'Sin conexión',
+    offlineBody: 'Tus chats se buscan igual. Para buscar en tus apuntes, revisa tu conexión.',
+    retry: 'Reintentar',
   },
   help: {
     header: 'Ayuda',
     search: 'Buscar en la ayuda…',
-    categories: ['Subir documentos', 'Cuenta y privacidad', 'Quiz y repaso', 'Planes y pagos'],
-    faqHeader: 'PREGUNTAS FRECUENTES',
+    categories: [
+      'Subir documentos',
+      'Cuenta y privacidad',
+      'Respuestas y fuentes',
+      'Planes y pagos',
+    ],
+    faqHeader: 'Preguntas frecuentes',
     faqs: [
       '¿Qué formatos puedo subir?',
       '¿Por qué se clasificó mal mi documento?',
       '¿Cómo borro mis datos?',
       '¿Qué es el contexto externo?',
+      '¿Hay planes de pago?',
     ],
     notFoundTitle: '¿No encuentras tu respuesta?',
-    notFoundBody: 'Escríbenos, respondemos en 1 a 2 días hábiles',
+    notFoundBody: 'Escríbenos a soporte@apuntor.com',
+    supportEmail: 'soporte@apuntor.com',
   },
   contact: {
     header: 'Contactar soporte',
@@ -348,7 +364,7 @@ export const es = {
   upload: {
     header: 'Subir documentos',
     dropTitle: 'Toca para elegir archivos',
-    dropDetail: 'PDF, Word, PowerPoint, imágenes y texto · máx. 50 MB',
+    dropDetail: 'PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos · máx. 50 MB',
     processing: (n: number) => `Procesando · ${n} archivos`,
     status: {
       ready: 'Listo',
@@ -380,7 +396,7 @@ export const es = {
     saved: (n: number) => `Los demás (${n}) ya están guardados.`,
     formatTitle: 'Formato no compatible',
     formatBody:
-      'Por ahora aceptamos PDF, Word, PowerPoint y texto. Descomprime el archivo y sube su contenido.',
+      'Por ahora aceptamos PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC). Si es un .doc o .ppt antiguo, guárdalo como .docx o .pptx; si es un .zip, descomprímelo y sube su contenido.',
     chooseOther: 'Elegir otro archivo',
     sizeTitle: 'Supera el límite de 50 MB',
     sizeBody: (mb: number) =>
@@ -395,7 +411,8 @@ export const es = {
     retry: 'Reintentar',
     space: 'Espacio usado',
     spaceValue: (used: number, total: number) => `${used} de ${total} MB`,
-    seePlans: 'Ver planes',
+    freeSpaceHint: 'Libera espacio borrando documentos que ya no uses.',
+    seeDocuments: 'Ver mis documentos',
     retryFailed: 'Reintentar los que fallaron',
     dismiss: 'Quitar',
   },
@@ -427,6 +444,12 @@ export const es = {
     mixed: 'Si tu documento mezcla idiomas, se procesa el idioma que más aparece.',
     notify: 'Avísame cuando haya más idiomas',
     back: 'Volver a subir documentos',
+    spanish: 'Español',
+    english: 'English',
+    // Textos de ejemplo: la pantalla 41 solo se ve en la vista previa (no hay detector real).
+    sampleFile: 'Resumen_chino.pdf',
+    sampleLanguage: 'chino',
+    unsupportedLanguage: 'un idioma no compatible',
   },
   scanner: {
     header: 'Escanear apunte',
@@ -435,23 +458,36 @@ export const es = {
     frame: 'Encuadra la hoja completa',
     gallery: 'Elegir de la galería',
     shutter: 'Tomar foto',
-    flash: 'Flash',
     hint: 'Con buena luz y letra impresa la lectura es más precisa. La letra a mano puede fallar.',
-    pages: (n: number) => `${n} páginas`,
-    language: 'Español detectado',
+    pages: (n: number) => (n === 1 ? '1 página' : `${n} páginas`),
+    lastPhoto: 'Última foto tomada',
+    limit: (n: number) => `Llegaste al máximo de ${n} fotos por escaneo. Súbelas y sigue con otro.`,
+    failed: 'No pudimos abrir la cámara. Inténtalo de nuevo o elige fotos de tu galería.',
+    deniedBody:
+      'No tenemos permiso para usar la cámara, así que no podemos tomar fotos. Actívalo en Ajustes o elige fotos de tu galería. Solo la usamos cuando tocas el botón de foto.',
+    fileBase: 'Apunte',
   },
   scanReview: {
-    header: 'Revisar lectura',
-    warnTitle: 'Algunas partes no se leyeron bien',
-    warnBody: 'La letra a mano o una foto borrosa pueden confundir la lectura.',
-    quality: 'Calidad de lectura',
-    read: 'Texto leído',
-    tapHint: 'Toca el texto resaltado para corregirlo.',
-    doubts: (n: number) => `${n} partes dudosas`,
-    pageOf: (n: number, t: number) => `${n} de ${t} páginas`,
-    fix: 'Corregir y continuar',
-    rescan: 'Volver a escanear',
-    useAnyway: 'Usar de todos modos',
+    header: 'Revisar fotos',
+    unclearTitle: 'Lectura poco clara',
+    unclearBody:
+      'Algunas fotos tienen poca resolución y el texto puede leerse mal. Puedes repetirlas o subirlas igual.',
+    unclearChip: 'Lectura poco clara',
+    page: (n: number) => `Página ${n}`,
+    thumb: (n: number) => `Foto de la página ${n}`,
+    retake: 'Repetir',
+    remove: 'Quitar',
+    upload: (n: number) => (n === 1 ? 'Subir 1 foto' : `Subir ${n} fotos`),
+    addMore: 'Tomar otra',
+    emptyTitle: 'No hay fotos para revisar',
+    emptyBody: 'Toma una foto de tus apuntes o elige una de tu galería.',
+    scan: 'Escanear apunte',
+  },
+  connection: {
+    uploads: 'Sin conexión. Tus archivos se subirán solos cuando vuelvas.',
+    chat: 'Sin conexión: tu pregunta queda aquí y la envías cuando vuelvas',
+    courses: 'Sin conexión. Esto es lo último que se cargó.',
+    coursesBody: 'Tus cursos aparecerán cuando vuelvas a tener internet.',
   },
   chat: {
     title: 'Tu mascota',
@@ -463,6 +499,8 @@ export const es = {
     animated: 'Mascota 2D animada',
     lightModel: 'Modelo ligero',
     checkPage: (page: number) => `Ver la página ${page} en el original`,
+    scopeOnly: (names: string) => `Solo en: ${names}`,
+    scopeWiden: 'Preguntar en todos tus apuntes',
     ownSource: (page: number) => `Tus apuntes · p. ${page}`,
     externalCount: (n: number) => `Externo · ${n} fuente`,
     externalPending: 'Externo · pendiente',
@@ -495,6 +533,8 @@ export const es = {
     limitBody: (used: number, total: number, renew: string) =>
       `Usaste ${used} de ${total} preguntas gratis. Se renuevan en ${renew}.`,
     seePlans: 'Ver planes',
+    limitUsed: (used: number, total: number) => `Usaste ${used} de ${total} preguntas gratis.`,
+    plansSoon: 'Los planes de pago llegarán pronto. Tu límite se renueva a la medianoche.',
     offlineBanner: 'Sin conexión. Puedo ayudarte con lo guardado en tu dispositivo.',
     notFound: 'No encontré nada sobre esto en tus apuntes. ¿Quieres que lo busque fuera?',
     notFoundUnclear: (q: string) =>
@@ -612,14 +652,8 @@ export const es = {
   },
   notificationSettings: {
     header: 'Notificaciones',
-    deniedTitle: 'Están desactivadas en tu teléfono',
-    deniedBody: 'Actívalas en los ajustes del sistema para recibir avisos.',
-    openSettings: 'Abrir ajustes del teléfono',
-    processed: { title: 'Documentos procesados', detail: 'Cuando termine de leer y clasificar' },
-    review: { title: 'Repaso del día', detail: 'Máximo una al día' },
-    limit: { title: 'Tu límite diario se renovó', detail: 'Opcional' },
-    reviewTime: 'Hora del repaso',
-    note: 'No enviamos avisos de madrugada. Sin respuesta por 7 días, pausamos el recordatorio.',
+    soonTitle: 'Las notificaciones llegarán pronto',
+    soonBody: 'Por ahora no enviamos avisos. Verás el estado de tus documentos dentro de la app.',
   },
   share: {
     header: 'Compartir resumen',
@@ -667,9 +701,17 @@ export const es = {
     confirmWord: 'BORRAR',
     confirmLabel: (word: string) => `Escribe ${word} para confirmar`,
     confirmError: (word: string) => `Escribe ${word} en mayúsculas, tal como aparece.`,
-    note: 'Por seguridad, te pediremos tu contraseña. Podemos conservar copias de respaldo hasta 30 días por razones técnicas.',
+    passwordLabel: 'Tu contraseña',
+    passwordError: 'Esa contraseña no es correcta y no borramos nada. Escríbela de nuevo.',
+    note: 'Podemos conservar copias de respaldo hasta 30 días por razones técnicas.',
     submit: 'Borrar mi cuenta',
     deleting: 'Borrando…',
+  },
+  dataExport: {
+    title: 'Descargar mis datos',
+    preparing: 'Preparando tus datos…',
+    done: 'Listo. Guardamos tus datos en un archivo JSON.',
+    saveFailed: 'No pudimos guardar el archivo. Inténtalo de nuevo.',
   },
   waitlist: {
     title: 'Aún no estamos listos para ti',
@@ -680,6 +722,9 @@ export const es = {
       'Acepto que me envíen un aviso cuando esté disponible. Solo guardamos este correo para eso.',
     join: 'Avisarme cuando esté listo',
     joined: 'Listo, avisaremos a ese correo.',
+    failed: 'No pudimos guardar el correo. Revisa tu conexión e inténtalo de nuevo.',
+    invalid: 'Revisa que el correo esté bien escrito e inténtalo de nuevo.',
+    limited: 'Hubo muchos intentos desde esta conexión. Inténtalo de nuevo más tarde.',
     wrongAge: '¿Te equivocaste de edad?',
     fix: 'Corregir',
   },
@@ -767,7 +812,7 @@ export const es = {
     level: 'Qué estudias',
     save: 'Guardar cambios',
     saved: 'Cambios guardados',
-    passwordHeader: 'CAMBIAR CONTRASEÑA',
+    passwordHeader: 'Cambiar contraseña',
     current: 'Contraseña actual',
     next: 'Nueva contraseña',
     changePassword: 'Cambiar contraseña',
@@ -785,12 +830,13 @@ export const es = {
   },
   helpView: {
     answers: [
-      'Puedes subir PDF, Word, PowerPoint, texto y fotos de tus apuntes, de hasta 50 MB cada uno.',
-      'La clasificación compara el nombre y el contenido con tus cursos. Si se equivocó, corrígela en Revisar clasificación o en el detalle del documento con "Cambiar".',
-      'En Perfil › Descargar o borrar mis datos puedes descargarlos o borrar tu cuenta de inmediato.',
+      'Puedes subir PDF, Word (.docx), PowerPoint (.pptx), texto (.txt, .md) y fotos (JPG, PNG, HEIC), de hasta 50 MB cada uno. Los formatos antiguos .doc y .ppt no se leen: guárdalos como .docx o .pptx.',
+      'APUNTOR te sugiere un curso y tú lo confirmas. Si no es el correcto, cámbialo en el detalle del documento con "Cambiar".',
+      'En Perfil › Descargar o borrar mis datos puedes descargarlos o borrar tu cuenta.',
       'Es información de internet que se muestra aparte, en violeta y siempre con su fuente. Puedes apagarla en Perfil.',
+      'Todavía no. Los planes de pago llegarán pronto; por ahora usas el plan gratis, con un límite diario de preguntas y un límite de espacio.',
     ],
-    categories: [[0], [2], [], [3]] as const,
+    categories: [[0, 1], [2], [3], [4]] as const,
     allFaqs: 'Ver todas las preguntas',
     noResults: 'No encontramos esa pregunta.',
   },
@@ -805,7 +851,6 @@ export const es = {
       'El pago se gestiona con tu cuenta de Google Play. Para cambiarlo, abre la tienda.',
     historyTitle: 'Historial de pagos',
     historyEmpty: 'Todavía no tienes pagos.',
-    exportDone: 'Copiamos tus datos al portapapeles en formato JSON.',
     languagesDone: 'Te avisaremos cuando haya más idiomas.',
     reportDone: 'Gracias. Revisaremos este contenido.',
     flashOn: 'Flash encendido',
@@ -885,6 +930,7 @@ export const es = {
       DOC_STATE: 'Ese documento ya no está en estado fallido. Actualiza la lista.',
       DOC_NOT_FOUND: 'Ese documento ya no existe. Actualiza la lista.',
       ADMIN_TARGET_IS_SELF: 'No puedes borrar tu propia cuenta desde el panel.',
+      WAITLIST_NOT_FOUND: 'Ese correo ya no está en la lista. Actualiza la lista.',
     },
     sections: {
       overview: 'Resumen',
@@ -973,6 +1019,28 @@ export const es = {
       retry: 'Reintentar',
       retried: (title: string) => `${title} volvió a la cola.`,
     },
+    waitlist: {
+      accounts: 'Cuentas',
+      list: 'Lista de espera',
+      emptyTitle: 'La lista de espera está vacía',
+      emptyBody: 'Cuando alguien deje un correo para el aviso, aparecerá aquí.',
+      columns: {
+        email: 'Correo',
+        createdAt: 'Fecha',
+        source: 'Origen',
+        consent: 'Consentimiento',
+        actions: 'Acciones',
+      },
+      sources: { app: 'App', web: 'Web' } as Record<string, string>,
+      consentYes: 'Aceptado',
+      consentNo: 'Sin aceptar',
+      delete: 'Borrar',
+      deleteTitle: 'Borrar de la lista de espera',
+      deleteBody: (email: string) => `Se borra ${email} de la lista. No se puede deshacer.`,
+      confirm: 'Borrar correo',
+      deleting: 'Borrando…',
+      deleted: (email: string) => `Borramos ${email} de la lista.`,
+    },
     audit: {
       emptyTitle: 'Sin acciones registradas',
       emptyBody: 'Aquí aparecerá cada acción de un administrador.',
@@ -986,6 +1054,7 @@ export const es = {
       actions: {
         'document.retry': 'Reintentó un documento',
         'user.delete': 'Borró una cuenta',
+        'waitlist.delete': 'Borró un correo de la lista de espera',
       } as Record<string, string>,
     },
   },
@@ -1011,6 +1080,11 @@ export type Strings = Widen<typeof es>;
 export type ErrorCode = keyof typeof es.errors;
 
 const dictionaries: Record<Language, Strings> = { es, en };
+
+/** Textos de un idioma fuera de un componente (en el almacén, donde no hay hooks). */
+export function stringsFor(language: Language): Strings {
+  return dictionaries[language];
+}
 
 /** Textos del idioma elegido en Perfil › Idioma (español por defecto). */
 export function useStrings(): Strings {

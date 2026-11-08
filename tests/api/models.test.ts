@@ -1,60 +1,100 @@
 import { describe, expect, it } from 'vitest';
-import { resolveModels } from '../../api/src/llm/models';
+import {
+  HIGH_THINKING_BUDGET,
+  LOW_THINKING_BUDGET,
+  MEDIUM_THINKING_BUDGET,
+  resolveModels,
+} from '../../api/src/llm/models';
 import { GENERATION_MODEL } from '../../api/src/llm/vertex';
 
 describe('resolveModels', () => {
   it('sin variables, todo usa el modelo por defecto', () => {
     expect(resolveModels({})).toEqual({
-      fast: GENERATION_MODEL,
-      strong: GENERATION_MODEL,
+      low: GENERATION_MODEL,
+      medium: GENERATION_MODEL,
+      high: GENERATION_MODEL,
       chat: GENERATION_MODEL,
       summary: GENERATION_MODEL,
       ocr: GENERATION_MODEL,
     });
   });
 
-  it('GENERATION_MODEL sirve de base para ambos', () => {
+  it('GENERATION_MODEL sirve de base para los tres niveles', () => {
     const models = resolveModels({ GENERATION_MODEL: 'gemini-3.8-flash' });
-    expect(models.fast).toBe('gemini-3.8-flash');
-    expect(models.strong).toBe('gemini-3.8-flash');
+    expect(models.low).toBe('gemini-3.8-flash');
+    expect(models.medium).toBe('gemini-3.8-flash');
+    expect(models.high).toBe('gemini-3.8-flash');
   });
 
-  it('rápido para el chat y fuerte para OCR y resúmenes', () => {
+  it('bajo, medio y alto: medio para el chat, alto para OCR y resúmenes', () => {
     expect(
       resolveModels({
-        MODEL_FAST: 'gemini-flash-lite-latest',
-        MODEL_STRONG: 'gemini-3.8-flash',
+        MODEL_LOW: 'bajo',
+        MODEL_MEDIUM: 'medio',
+        MODEL_HIGH: 'alto',
         GENERATION_MODEL: 'otro',
       }),
     ).toEqual({
-      fast: 'gemini-flash-lite-latest',
-      strong: 'gemini-3.8-flash',
-      chat: 'gemini-flash-lite-latest',
-      summary: 'gemini-3.8-flash',
-      ocr: 'gemini-3.8-flash',
+      low: 'bajo',
+      medium: 'medio',
+      high: 'alto',
+      chat: 'medio',
+      summary: 'alto',
+      ocr: 'alto',
     });
   });
 
-  it('CHAT_MODEL hace de rápido si no hay MODEL_FAST', () => {
+  it('el nivel bajo es el medio si no se indica', () => {
+    expect(resolveModels({ MODEL_MEDIUM: 'medio' }).low).toBe('medio');
+  });
+
+  it('compatibilidad: MODEL_FAST hace de medio y MODEL_STRONG de alto', () => {
+    const models = resolveModels({ MODEL_FAST: 'rapido', MODEL_STRONG: 'fuerte' });
+    expect(models).toMatchObject({ medium: 'rapido', high: 'fuerte', low: 'rapido' });
+  });
+
+  it('MODEL_MEDIUM y MODEL_HIGH tienen prioridad sobre los nombres antiguos', () => {
+    const models = resolveModels({
+      MODEL_MEDIUM: 'medio',
+      MODEL_FAST: 'rapido',
+      MODEL_HIGH: 'alto',
+      MODEL_STRONG: 'fuerte',
+    });
+    expect(models).toMatchObject({ medium: 'medio', high: 'alto' });
+  });
+
+  it('CHAT_MODEL hace de medio si no hay MODEL_MEDIUM ni MODEL_FAST', () => {
     const models = resolveModels({ CHAT_MODEL: 'lite', GENERATION_MODEL: 'flash' });
-    expect(models.fast).toBe('lite');
+    expect(models.medium).toBe('lite');
     expect(models.chat).toBe('lite');
-    expect(models.strong).toBe('flash');
+    expect(models.high).toBe('flash');
   });
 
   it('CHAT_MODEL y SUMMARY_MODEL son ajustes más específicos', () => {
     const models = resolveModels({
-      MODEL_FAST: 'rapido',
-      MODEL_STRONG: 'fuerte',
+      MODEL_MEDIUM: 'medio',
+      MODEL_HIGH: 'alto',
       CHAT_MODEL: 'chat',
       SUMMARY_MODEL: 'resumen',
     });
     expect(models).toEqual({
-      fast: 'rapido',
-      strong: 'fuerte',
+      low: 'medio',
+      medium: 'medio',
+      high: 'alto',
       chat: 'chat',
       summary: 'resumen',
-      ocr: 'fuerte',
+      ocr: 'alto',
     });
+  });
+});
+
+describe('presupuestos de razonamiento', () => {
+  it('bajo 512, medio 1024 y alto sin tope; nunca 0', () => {
+    expect(LOW_THINKING_BUDGET).toBe(512);
+    expect(MEDIUM_THINKING_BUDGET).toBe(1024);
+    expect(HIGH_THINKING_BUDGET).toBeUndefined();
+    for (const budget of [LOW_THINKING_BUDGET, MEDIUM_THINKING_BUDGET]) {
+      expect(budget).toBeGreaterThan(0);
+    }
   });
 });

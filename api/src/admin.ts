@@ -60,6 +60,10 @@ export interface AuthUserIdentity {
   email: string | null;
   /** Fecha en que confirmó su correo; `null` si nunca lo confirmó. */
   emailConfirmedAt: Date | null;
+  /** Alta de la cuenta (se usa en la exportación de datos). */
+  createdAt?: Date | null;
+  /** `user_metadata` tal cual; solo la exportación de datos lee campos concretos de aquí. */
+  metadata?: Record<string, unknown>;
 }
 
 /** Usuarios de Supabase Auth (Admin API). Inyectada para simularla en las pruebas. */
@@ -158,6 +162,8 @@ const supabaseIdentitySchema = z.object({
   id: z.uuid(),
   email: z.string().nullish(),
   email_confirmed_at: z.string().nullish(),
+  created_at: z.string().nullish(),
+  user_metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 /** Admin API de Supabase con la service role key: solo en el servidor. */
@@ -177,10 +183,13 @@ export function createSupabaseUsersDirectory(
       }
       const user = supabaseIdentitySchema.parse(await response.json());
       const confirmed = user.email_confirmed_at ? new Date(user.email_confirmed_at) : null;
+      const created = user.created_at ? new Date(user.created_at) : null;
       return {
         id: user.id,
         email: user.email ?? null,
         emailConfirmedAt: confirmed && !Number.isNaN(confirmed.getTime()) ? confirmed : null,
+        createdAt: created && !Number.isNaN(created.getTime()) ? created : null,
+        metadata: user.user_metadata ?? {},
       };
     },
     async list(page, perPage) {
@@ -248,6 +257,7 @@ export interface AdminAuditRecord {
 }
 
 export type RetryResult = 'retried' | 'not_failed' | 'not_found';
+export type ReprocessResult = 'reprocessing' | 'not_completed' | 'not_found';
 
 export interface AdminRepository {
   /** `today` es el periodo de las preguntas (día de Perú, AAAA-MM-DD). */
@@ -261,6 +271,10 @@ export interface AdminRepository {
   }): Promise<AdminDocumentRecord[]>;
   /** Solo si está fallido: lo deja en `pending` y sin error (atómico). */
   retryFailedDocument(documentId: string): Promise<RetryResult>;
+  /** Vuelve a `pending` un documento `completed` para regenerar todo lo derivado. */
+  reprocessCompletedDocument(documentId: string): Promise<ReprocessResult>;
+  /** Deshace lo anterior si no se pudo encolar: sus fragmentos siguen intactos. */
+  restoreCompletedDocument(documentId: string): Promise<void>;
   recordAudit(entry: {
     adminUserId: string;
     adminEmail: string;
@@ -444,6 +458,28 @@ export function createAdminRepository(db: Database): AdminRepository {
         .where(eq(documents.id, documentId))
         .limit(1);
       return existing.length > 0 ? 'not_failed' : 'not_found';
+    },
+
+    async reprocessCompletedDocument(documentId) {
+      const updated = await db
+        .update(documents)
+        .set({ status: 'pending', errorMessage: null, updatedAt: sql`now()` })
+        .where(and(eq(documents.id, documentId), eq(documents.status, 'completed')))
+        .returning({ id: documents.id });
+      if (updated.length > 0) return 'reprocessing';
+      const existing = await db
+        .select({ id: documents.id })
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+      return existing.length > 0 ? 'not_completed' : 'not_found';
+    },
+
+    async restoreCompletedDocument(documentId) {
+      await db
+        .update(documents)
+        .set({ status: 'completed', updatedAt: sql`now()` })
+        .where(and(eq(documents.id, documentId), eq(documents.status, 'pending')));
     },
 
     async recordAudit(entry) {

@@ -11,7 +11,7 @@ import type { TopicSummarizer } from '../../../api/src/topic-summary';
 
 /**
  * Resúmenes de tema generados de antemano en el worker, tras completar la ingesta: cuando el
- * estudiante abre un tema, el resumen ya está guardado en R2 y no espera al modelo fuerte. Usa el
+ * estudiante abre un tema, el resumen ya está guardado en R2 y no espera al modelo alto. Usa el
  * mismo `createTopicSummarizer` que la API (misma clave de caché), así que un resumen que falte se
  * sigue generando al pedirlo. Nunca cambia el estado del documento.
  */

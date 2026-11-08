@@ -94,6 +94,10 @@ export interface ConversationsRepository {
   ): Promise<ConversationSummary | null>;
   /** Borrar lo que ya no existe no es un error (la app reintenta sin saber si llegó). */
   delete(userId: string, id: string): Promise<void>;
+  /** Todas las del usuario con sus mensajes, para la exportación de datos (ARCO). */
+  exportAll(
+    userId: string,
+  ): Promise<(ConversationSummary & { messages: ConversationMessageRecord[] })[]>;
 }
 
 const summaryColumns = {
@@ -238,6 +242,37 @@ export function createConversationsRepository(db: Database): ConversationsReposi
       await db
         .delete(conversations)
         .where(and(eq(conversations.id, id), eq(conversations.userId, userId)));
+    },
+
+    async exportAll(userId) {
+      const [rows, messages] = await Promise.all([
+        db
+          .select(summaryColumns)
+          .from(conversations)
+          .where(eq(conversations.userId, userId))
+          .orderBy(desc(conversations.updatedAt), desc(conversations.id)),
+        db
+          .select({
+            conversationId: conversationMessages.conversationId,
+            id: conversationMessages.id,
+            role: conversationMessages.role,
+            kind: conversationMessages.kind,
+            text: conversationMessages.text,
+            payload: conversationMessages.payload,
+            createdAt: conversationMessages.createdAt,
+          })
+          .from(conversationMessages)
+          .innerJoin(conversations, eq(conversations.id, conversationMessages.conversationId))
+          .where(eq(conversations.userId, userId))
+          .orderBy(asc(conversationMessages.seq)),
+      ]);
+      const byConversation = new Map<string, ConversationMessageRecord[]>();
+      for (const { conversationId, ...message } of messages) {
+        const list = byConversation.get(conversationId) ?? [];
+        list.push(message);
+        byConversation.set(conversationId, list);
+      }
+      return rows.map((row) => ({ ...row, messages: byConversation.get(row.id) ?? [] }));
     },
   };
 }

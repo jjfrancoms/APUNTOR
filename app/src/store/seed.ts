@@ -22,6 +22,8 @@ export interface SessionUser {
    * Google no pasó por el registro con fecha de nacimiento y debe confirmarlo antes de seguir.
    */
   adultConfirmed: boolean;
+  /** true si puede entrar con correo y contraseña: al borrar la cuenta se le vuelve a pedir. */
+  hasPassword: boolean;
 }
 
 /** Apariencia: 'system' sigue el modo claro/oscuro del dispositivo. */
@@ -32,10 +34,6 @@ export interface Settings {
   language: Language;
   useDocs: boolean;
   external: boolean;
-  analytics: boolean;
-  saveProgress: boolean;
-  lightMode: boolean;
-  voice: boolean;
   notifProcessed: boolean;
   notifReview: boolean;
   notifLimit: boolean;
@@ -71,7 +69,6 @@ export interface DocRecord {
   topics: string[];
   /** Índice de temas con páginas; `undefined` mientras no se haya cargado. */
   outline?: DocTopic[];
-  uploadedLabel: string;
   status: DocumentStatus;
   topicCount: number;
   createdAt: string;
@@ -146,6 +143,8 @@ export interface Conversation {
   course: string;
   updatedAt: number;
   messages: Message[];
+  /** Si existe, las preguntas se responden solo con estos documentos. */
+  scopeDocIds?: string[];
 }
 
 export interface ShareLink {
@@ -206,7 +205,6 @@ export interface AppState {
   /** true mientras se consulta `isAdmin` (el panel espera en vez de redirigir). */
   adminChecking: boolean;
   shares: ShareLink[];
-  waitlist: string[];
   study: {
     known: string[];
     unknown: string[];
@@ -225,12 +223,8 @@ export function todayKey(date = new Date()): string {
 export const DEFAULT_SETTINGS: Settings = {
   useDocs: true,
   external: true,
-  analytics: false,
-  saveProgress: true,
   theme: 'system',
   language: 'es',
-  lightMode: false,
-  voice: false,
   notifProcessed: true,
   notifReview: true,
   notifLimit: false,
@@ -267,7 +261,6 @@ export function createInitialState(): AppState {
     isAdmin: false,
     adminChecking: false,
     shares: [],
-    waitlist: [],
     study: { known: [], unknown: [], lastQuiz: null, boxes: {} },
     payments: [],
     notices: { languages: false, reported: [] },

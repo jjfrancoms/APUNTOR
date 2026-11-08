@@ -69,7 +69,9 @@ function ClassDetail() {
               onPress={() =>
                 router.push({
                   pathname: '/conversation',
-                  params: { q: `Resumen de ${klass.title.split(' · ')[1] ?? klass.title}` },
+                  params: {
+                    q: s.document.summaryPrompt(klass.title.split(' · ')[1] ?? klass.title),
+                  },
                 })
               }
             />

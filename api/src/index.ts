@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
+import { createAccountExportRepository } from './account-export';
 import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
+import { createSearchRepository } from './search';
 import { createTopicSummarizer } from './topic-summary';
 import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
@@ -11,6 +13,7 @@ import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
 import { createQuotaService } from './quota';
+import { createWaitlistRepository } from './waitlist';
 import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
@@ -30,6 +33,9 @@ async function main(): Promise<void> {
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
     conversations: createConversationsRepository(db),
+    waitlist: createWaitlistRepository(db),
+    accountExport: createAccountExportRepository(db),
+    contentSearch: createSearchRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),
@@ -37,6 +43,8 @@ async function main(): Promise<void> {
     summaries: createTopicSummarizer({
       models,
       model: modelChoice.summary,
+      // Resumen a demanda: si el alto está saturado, un reintento con el medio (el worker no).
+      fallbackModel: modelChoice.medium,
       storage,
     }),
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
