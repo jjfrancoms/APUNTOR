@@ -11,6 +11,7 @@ export default tseslint.config(
       'coverage/**',
       '.claude/skills/**',
       '.claude/worktrees/**',
+      'e2e/**',
     ],
   },
   js.configs.recommended,

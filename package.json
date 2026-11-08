@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verificar": "npm run typecheck && npm run lint && npm test && npm --prefix app run typecheck && npm --prefix app test && npm run test:e2e",
+    "verificar": "npm run typecheck && npx tsc -p e2e/tsconfig.json && npm run lint && npm test && npm --prefix app run typecheck && npm --prefix app test && npm run test:e2e",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
