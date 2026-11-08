@@ -25,6 +25,8 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   /** Un administrador intentó borrarse a sí mismo desde el panel (usa DELETE /v1/account). */
   | 'ADMIN_TARGET_IS_SELF'
+  /** La inscripción de la lista de espera ya no existe (panel de administrador). */
+  | 'WAITLIST_NOT_FOUND'
   | 'INTERNAL';
 
 export class ApiError extends Error {

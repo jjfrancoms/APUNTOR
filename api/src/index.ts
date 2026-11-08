@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createSupabaseUserDeleter } from './account';
+import { createAccountExportRepository } from './account-export';
 import { createAdminRepository, createSupabaseUsersDirectory, parseAdminEmails } from './admin';
 import { createTopicSummarizer } from './topic-summary';
 import { buildApp } from './app';
@@ -10,6 +11,7 @@ import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
 import { createQuotaService } from './quota';
+import { createWaitlistRepository } from './waitlist';
 import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
@@ -28,6 +30,8 @@ async function main(): Promise<void> {
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    waitlist: createWaitlistRepository(db),
+    accountExport: createAccountExportRepository(db),
     storage,
     enqueue: createIngestionEnqueuer(boss),
     quota: createQuotaService(db),

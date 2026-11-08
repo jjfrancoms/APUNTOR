@@ -5,6 +5,7 @@ import { vector } from '@electric-sql/pglite-pgvector';
 import { drizzle } from 'drizzle-orm/pglite';
 import type { FastifyInstance } from 'fastify';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createAccountExportRepository } from '../../api/src/account-export';
 import { createAdminRepository, type AuthUserRecord } from '../../api/src/admin';
 import { buildApp } from '../../api/src/app';
 import { createConsentsRepository } from '../../api/src/consents';
@@ -12,7 +13,14 @@ import { createDocumentsRepository } from '../../api/src/documents';
 import { periodFor } from '../../api/src/quota';
 import type { Database } from '../../db/client';
 import * as schema from '../../db/schema';
-import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from '../api/helpers';
+import {
+  CHUNK,
+  fakeEmbedder,
+  fakeGenerator,
+  fakeQuota,
+  fakeWaitlist,
+  VALID_ANSWER,
+} from '../api/helpers';
 
 const ROOT = join(__dirname, '..', '..', 'db');
 const ADMIN = '33333333-3333-4333-8333-333333333333';
@@ -92,6 +100,8 @@ beforeAll(async () => {
       ),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    waitlist: fakeWaitlist(),
+    accountExport: createAccountExportRepository(db),
     admin: createAdminRepository(db),
     adminEmails: ['admin@example.com'],
     authUsers: {

@@ -12,13 +12,14 @@ import {
   TextField,
   TopBar,
 } from '@/components/ui';
-import * as Clipboard from 'expo-clipboard';
-import { deleteAccount, exportUserData, useStore } from '@/store/store';
+import { useDataDownload } from '@/lib/use-data-download';
+import { deleteAccountConfirmed, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
 
 /**
- * Pantalla 40 · Borrar cuenta. Inmediato y definitivo, con confirmación escrita y contraseña.
+ * Pantalla 40 · Borrar cuenta. Inmediato y definitivo, con confirmación escrita y, si la cuenta
+ * entra con correo, contraseña (las de Google solo escriben la palabra).
  * Estado 52: texto de confirmación incorrecto → error en línea y botón deshabilitado (`?demo=wrong`).
  */
 export default function DeleteAccount() {
@@ -28,13 +29,17 @@ export default function DeleteAccount() {
   const [confirm, setConfirm] = useState(demo === 'wrong' ? 'borrar' : '');
   const [deleting, setDeleting] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [exported, setExported] = useState(false);
+  const [password, setPassword] = useState('');
+  const [wrongPassword, setWrongPassword] = useState(false);
+  const needsPassword = useStore((st) => st.session?.hasPassword ?? true);
+  const download = useDataDownload();
   const documents = useStore((st) => st.documents.length);
   const courses = useStore((st) => st.courses.length);
   const conversations = useStore((st) => st.conversations.length);
   const accountTotals = { documents, courses, conversations };
-  const ok = confirm === d.confirmWord;
-  const wrong = confirm.length > 0 && !ok;
+  const typed = confirm === d.confirmWord;
+  const wrong = confirm.length > 0 && !typed;
+  const ok = typed && (!needsPassword || password.length > 0);
   return (
     <Screen
       header={<TopBar title={d.header} />}
@@ -44,13 +49,16 @@ export default function DeleteAccount() {
             label={deleting ? d.deleting : d.submit}
             variant="danger"
             loading={deleting}
-            disabled={!ok}
+            disabled={!ok || deleting}
             onPress={() => {
               setDeleting(true);
               setFailed(false);
-              void deleteAccount().then((done) => {
+              setWrongPassword(false);
+              void deleteAccountConfirmed(password).then((result) => {
                 setDeleting(false);
-                if (done) router.replace('/login');
+                setPassword('');
+                if (result === 'deleted') router.replace('/login');
+                else if (result === 'wrong_password') setWrongPassword(true);
                 else setFailed(true);
               });
             }}
@@ -74,17 +82,13 @@ export default function DeleteAccount() {
       <Card style={styles.flat}>
         <ListRow
           icon="download"
-          title={d.download}
+          title={download.busy ? s.dataExport.preparing : d.download}
           divider={false}
-          onPress={() => {
-            void Clipboard.setStringAsync(exportUserData()).then(
-              () => setExported(true),
-              () => setExported(false),
-            );
-          }}
+          onPress={() => void download.run()}
         />
       </Card>
-      {exported ? <Banner tone="info" icon="check" title={s.sheets.exportDone} /> : null}
+      {download.done ? <Banner tone="info" icon="check" title={s.dataExport.done} /> : null}
+      {download.error ? <Banner tone="danger" title={download.error} /> : null}
       <TextField
         label={d.confirmLabel(d.confirmWord)}
         placeholder={d.confirmWord}
@@ -94,6 +98,21 @@ export default function DeleteAccount() {
         autoCorrect={false}
         error={wrong ? d.confirmError(d.confirmWord) : undefined}
       />
+      {needsPassword ? (
+        <TextField
+          label={d.passwordLabel}
+          value={password}
+          onChangeText={(value) => {
+            setPassword(value);
+            setWrongPassword(false);
+          }}
+          secureTextEntry
+          autoComplete="current-password"
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={wrongPassword ? d.passwordError : undefined}
+        />
+      ) : null}
       <Text variant="caption" color="textMuted">
         {d.note}
       </Text>
