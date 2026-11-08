@@ -32,7 +32,7 @@ async function main(): Promise<void> {
     extractor: new MultiFormatExtractor(new VertexOcrProvider(models, modelChoice.ocr)),
     embedder,
     pageRenderer: new PdfPageRenderer(),
-    // Resúmenes de tema con el modelo fuerte, tras completar la ingesta (mismo caché que la API).
+    // Resúmenes de tema con el modelo alto, tras completar la ingesta (mismo caché que la API).
     summaries: createSummaryPregenerator({
       summarizer: createTopicSummarizer({ models, model: modelChoice.summary, storage }),
       storage,

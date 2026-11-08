@@ -18,12 +18,18 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **Cola**: pg-boss sobre Postgres (`QUEUE_DATABASE_URL`, conexión directa o de sesión). El worker
   es un proceso aparte (`worker/src/index.ts`).
 - **Archivos**: Cloudflare R2 con URLs prefirmadas. **IA**: `gemini-embedding-2` (768 dims) y
-  `gemini-2.5-flash` vía Vertex AI. Dos modelos por tarea (`resolveModels()`,
-  `api/src/llm/models.ts`): **rápido** (`MODEL_FAST`) para el chat, lo que el estudiante espera;
-  **fuerte** (`MODEL_STRONG`) para lo que se hace una vez y se guarda (OCR, resúmenes) y para un
-  único segundo intento del chat si la respuesta rápida no pasa el validador o falla con un error
-  no pasajero (`AnswerDeps.fallbackGenerator`; sigue siendo una pregunta de la cuota). Ambos
-  valen `GENERATION_MODEL` si no se definen. **Externo**: Tavily.
+  `gemini-2.5-flash` vía Vertex AI. Tres niveles de modelo (`resolveModels()`,
+  `api/src/llm/models.ts`): **bajo** (`MODEL_LOW`) para tareas pequeñas (p. ej. clasificar un
+  documento en un curso); **medio** (`MODEL_MEDIUM`) para el primer intento del chat, lo que el
+  estudiante espera; **alto** (`MODEL_HIGH`) para lo que se hace una vez y se guarda (OCR,
+  resúmenes) y para un único segundo intento del chat si la respuesta no pasa el validador o falla
+  con un error no pasajero (`AnswerDeps.fallbackGenerator`; sigue siendo una pregunta de la cuota).
+  `MODEL_FAST`/`MODEL_STRONG` siguen valiendo como nombres antiguos de medio/alto; `CHAT_MODEL` y
+  `SUMMARY_MODEL` son ajustes más específicos. Todos valen `GENERATION_MODEL` si no se definen
+  (bajo = medio). Razonamiento previo por nivel (`thinkingBudget`): bajo 512, medio 1024, alto sin
+  tope; nunca 0 (el modelo lite lo rechaza con HTTP 400; `thinkingConfigFor()` lo omite).
+  El resumen a demanda de la API, si el alto falla por saturación (`isTransientAiError`), se
+  reintenta una vez con el medio sin cobrar dos veces; el worker no cae al medio. **Externo**: Tavily.
   Mientras no haya facturación, `GEMINI_API_KEY` (Google AI Studio, plan gratis) reemplaza a
   Vertex con los mismos modelos (`chooseGenAiBackend()`). Ese plan puede usar el contenido para
   mejorar productos de Google: solo pruebas propias, nunca apuntes de estudiantes reales.
@@ -93,7 +99,7 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   fórmula con ">>", figura con caja 0–1000 que el servidor recorta de la página). Se descartan
   páginas que el modelo no vio y figuras de más de media página. Se genera una vez y se guarda
   en `usuario/doc/summaries/` (se borra con el documento). Tope `maxOutputTokens` (corta bucles).
-  Modelo: `SUMMARY_MODEL` o el fuerte. El worker los genera de antemano tras marcar `completed`
+  Modelo: `SUMMARY_MODEL` o el alto. El worker los genera de antemano tras marcar `completed`
   (`worker/src/ingestion/topic-summaries.ts`): temas raíz y hojas, máx. 40, uno por uno con
   `WORKER_AI_RETRY` y como mucho 20 min (menos que el vencimiento del trabajo); un fallo nunca
   cambia el estado del documento y lo que falte se genera al pedirlo. La app muestra cada parte

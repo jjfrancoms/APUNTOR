@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { verifySummaryBlocks } from './summary-grounding';
 import { parseSummaryMarkdown, type ParsedBlock } from './summary-markdown';
-import type { GenAiModels } from './llm/vertex';
+import { HIGH_THINKING_BUDGET, MEDIUM_THINKING_BUDGET } from './llm/models';
+import { isTransientAiError } from './llm/retry';
+import { thinkingConfigFor, type GenAiModels } from './llm/vertex';
 import type { PageManifest } from './page-manifest';
 import { derivedPrefix, type FileStorage } from './storage/file-storage';
 import type { TopicBlock, TopicRow } from './topic-content';
@@ -39,8 +41,6 @@ export const SUMMARY_SYSTEM_PROMPT = [
 
 /** Tope de la respuesta: un resumen cabe de sobra y un bucle del modelo se corta aquí. */
 export const SUMMARY_MAX_OUTPUT_TOKENS = 6000;
-/** Razonamiento acotado: resumir no lo necesita y sin tope tarda casi dos minutos. */
-export const SUMMARY_THINKING_BUDGET = 512;
 
 export type SummaryBlock =
   | { type: 'heading'; text: string }
@@ -137,7 +137,13 @@ export interface SummaryBilling {
 
 export interface TopicSummarizerDeps {
   models: GenAiModels;
+  /** Modelo alto: el que genera los resúmenes. */
   model: string;
+  /**
+   * Solo para la API (resumen a demanda): si el modelo alto falla por saturación, se reintenta una
+   * vez con este (el medio) en vez de fallar. El worker no lo usa: reintenta con paciencia.
+   */
+  fallbackModel?: string;
   storage: FileStorage;
   crop?: ImageCropper;
 }
@@ -163,7 +169,11 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
     }
   }
 
-  async function generate(input: SummaryInput): Promise<StoredSummary> {
+  async function generate(
+    input: SummaryInput,
+    model: string,
+    thinkingBudget: number | undefined,
+  ): Promise<StoredSummary> {
     const pageNumbers = [...new Set(input.blocks.map((b) => b.pageNumber))]
       .sort((a, b) => a - b)
       .slice(0, MAX_SUMMARY_PAGES);
@@ -200,13 +210,13 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
     }
 
     const response = await deps.models.generateContent({
-      model: deps.model,
+      model,
       contents: [{ role: 'user', parts }],
       config: {
         systemInstruction: SUMMARY_SYSTEM_PROMPT,
         temperature: 0.2,
         maxOutputTokens: SUMMARY_MAX_OUTPUT_TOKENS,
-        thinkingConfig: { thinkingBudget: SUMMARY_THINKING_BUDGET },
+        ...thinkingConfigFor(thinkingBudget),
       },
     });
     // El texto de la página completa (el modelo la vio); sin manifiesto, el del tema.
@@ -253,7 +263,20 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
       }
     }
     if (blocks.length === 0) throw new Error('El resumen quedó vacío');
-    return { version: SUMMARY_VERSION, topicId: input.topic.id, model: deps.model, blocks };
+    return { version: SUMMARY_VERSION, topicId: input.topic.id, model, blocks };
+  }
+
+  /** Modelo alto; si falla por saturación y hay respaldo, un solo reintento con el medio. */
+  async function generateWithFallback(input: SummaryInput): Promise<StoredSummary> {
+    try {
+      return await generate(input, deps.model, HIGH_THINKING_BUDGET);
+    } catch (error) {
+      const fallback = deps.fallbackModel;
+      if (fallback === undefined || fallback === deps.model || !isTransientAiError(error)) {
+        throw error;
+      }
+      return generate(input, fallback, MEDIUM_THINKING_BUDGET);
+    }
   }
 
   const inFlight = new Map<string, Promise<StoredSummary>>();
@@ -272,7 +295,7 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
       const job = (async (): Promise<StoredSummary> => {
         if (billing && !(await billing.reserve())) throw new SummaryLimitError();
         try {
-          const summary = await generate(input);
+          const summary = await generateWithFallback(input);
           await deps.storage.upload(
             key,
             new TextEncoder().encode(JSON.stringify(summary)),

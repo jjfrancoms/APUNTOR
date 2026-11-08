@@ -41,6 +41,8 @@ async function main(): Promise<void> {
     summaries: createTopicSummarizer({
       models,
       model: modelChoice.summary,
+      // Resumen a demanda: si el alto está saturado, un reintento con el medio (el worker no).
+      fallbackModel: modelChoice.medium,
       storage,
     }),
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
