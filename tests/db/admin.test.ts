@@ -10,6 +10,7 @@ import { buildApp } from '../../api/src/app';
 import { createConsentsRepository } from '../../api/src/consents';
 import { createDocumentsRepository } from '../../api/src/documents';
 import { periodFor } from '../../api/src/quota';
+import { createSearchRepository } from '../../api/src/search';
 import type { Database } from '../../db/client';
 import * as schema from '../../db/schema';
 import { CHUNK, fakeEmbedder, fakeGenerator, fakeQuota, VALID_ANSWER } from '../api/helpers';
@@ -82,6 +83,7 @@ beforeAll(async () => {
 
   const db = drizzle(pg, { schema }) as unknown as Database;
   app = await buildApp({
+    contentSearch: createSearchRepository(db),
     authenticate: (token) =>
       Promise.resolve(
         token === 'token-admin'

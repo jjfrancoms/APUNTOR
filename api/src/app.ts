@@ -41,6 +41,7 @@ import { FREE_LIMITS, periodFor, type QuotaService } from './quota';
 import { answerQuestion, type AnswerDeps } from './rag/answer';
 import { createManifestCache } from './page-manifest';
 import { derivedPrefix, UPLOAD_URL_TTL_SECONDS, type FileStorage } from './storage/file-storage';
+import { MAX_SEARCH_QUERY, MIN_SEARCH_QUERY, type SearchRepository } from './search';
 import { withPageStructure } from './topic-content';
 import type { SummaryBlock, TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
@@ -67,6 +68,8 @@ export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
   consents: ConsentsRepository;
+  /** Búsqueda en títulos, temas y contenido de los documentos del usuario. */
+  contentSearch: SearchRepository;
   storage: FileStorage;
   enqueue: IngestionEnqueuer;
   quota: QuotaService;
@@ -116,6 +119,9 @@ const courseBody = z.object({ title: courseTitle });
 const questionBody = z.object({
   question: z.string().trim().min(1).max(2000),
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
+});
+const searchQuery = z.object({
+  q: z.string().trim().min(MIN_SEARCH_QUERY).max(MAX_SEARCH_QUERY),
 });
 const externalBody = z.object({ question: z.string().trim().min(1).max(2000) });
 const pageQuery = {
@@ -623,6 +629,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     await deps.documents.delete(userId, document.id);
     await deps.quota.release(userId, 'storage_bytes', document.sizeBytes);
     return reply.status(204).send();
+  });
+
+  // --- Búsqueda en los apuntes -----------------------------------------------------
+
+  app.get('/v1/search', async (request) => {
+    const userId = await requireUser(request);
+    const { q } = parse(searchQuery, request.query);
+    return deps.contentSearch.search(userId, q);
   });
 
   // --- Preguntas -------------------------------------------------------------------
