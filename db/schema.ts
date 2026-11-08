@@ -192,7 +192,7 @@ export const usageQuotas = pgTable(
   'usage_quotas',
   {
     userId: uuid('user_id').notNull(),
-    /** Qué se mide: 'questions' (por día) o 'storage_bytes' (acumulado). */
+    /** Qué se mide: 'questions' y 'study_generations' (por día) o 'storage_bytes' (acumulado). */
     kind: text('kind').notNull(),
     /** Inicio del periodo; el acumulado usa una fecha fija. */
     periodStart: date('period_start').notNull(),
@@ -202,7 +202,10 @@ export const usageQuotas = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.kind, t.periodStart] }),
     check('usage_quotas_used_non_negative', sql`${t.used} >= 0`),
-    check('usage_quotas_kind_valid', sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries')`),
+    check(
+      'usage_quotas_kind_valid',
+      sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries', 'study_generations')`,
+    ),
   ],
 );
 
@@ -246,6 +249,91 @@ export const adminAudit = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('admin_audit_created_at_idx').on(t.createdAt)],
+);
+
+export const STUDY_SET_KINDS = ['quiz', 'cards'] as const;
+export type StudySetKind = (typeof STUDY_SET_KINDS)[number];
+
+/** Pregunta de opción múltiple o tarjeta; `quote` es la cita literal del fragmento. */
+export type StudyItemPayload =
+  | {
+      kind: 'quiz';
+      question: string;
+      options: string[];
+      correctIndex: number;
+      explanation: string;
+      quote: string;
+    }
+  | { kind: 'cards'; front: string; back: string; quote: string };
+
+/** Quiz o juego de tarjetas generado de un documento o de uno de sus temas. */
+export const studySets = pgTable(
+  'study_sets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    /** Sin tema, el conjunto cubre el documento entero. */
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    kind: text('kind').$type<StudySetKind>().notNull(),
+    /** Último resultado del quiz (`POST /v1/study/sets/:id/results`). */
+    lastScore: integer('last_score'),
+    lastTotal: integer('last_total'),
+    lastPlayedAt: timestamp('last_played_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('study_sets_user_id_idx').on(t.userId, t.createdAt),
+    index('study_sets_document_id_idx').on(t.documentId),
+    index('study_sets_topic_id_idx').on(t.topicId),
+    check('study_sets_kind_valid', sql`${t.kind} IN ('quiz', 'cards')`),
+  ],
+);
+
+/** Cada elemento cita un fragmento: se borra con él, y la página sale de ese fragmento. */
+export const studyItems = pgTable(
+  'study_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => studySets.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    payload: jsonb('payload').$type<StudyItemPayload>().notNull(),
+    chunkId: uuid('chunk_id')
+      .notNull()
+      .references(() => documentChunks.id, { onDelete: 'cascade' }),
+    page: integer('page').notNull(),
+  },
+  (t) => [
+    uniqueIndex('study_items_set_position_idx').on(t.setId, t.position),
+    index('study_items_chunk_id_idx').on(t.chunkId),
+    check('study_items_page_positive', sql`${t.page} >= 1`),
+  ],
+);
+
+/** Repetición espaciada (cajas Leitner) de cada tarjeta del usuario. */
+export const studyReviews = pgTable(
+  'study_reviews',
+  {
+    userId: uuid('user_id').notNull(),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => studyItems.id, { onDelete: 'cascade' }),
+    box: integer('box').notNull().default(0),
+    dueDate: date('due_date').notNull(),
+    /** `null` hasta el primer repaso. */
+    lastResult: boolean('last_result'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.itemId] }),
+    index('study_reviews_user_due_idx').on(t.userId, t.dueDate),
+    index('study_reviews_item_id_idx').on(t.itemId),
+    check('study_reviews_box_valid', sql`${t.box} BETWEEN 0 AND 5`),
+  ],
 );
 
 /** Por dónde llegó la inscripción a la lista de espera. */

@@ -32,6 +32,20 @@ INSERT INTO consents (user_id, document, version) VALUES
 INSERT INTO admin_audit (admin_user_id, admin_email, action, target) VALUES
   ('11111111-1111-4111-8111-111111111111', 'admin@example.com', 'user.delete', 'user:22222222-2222-4222-8222-222222222222');
 
+INSERT INTO study_sets (id, user_id, document_id, kind) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000a1', '11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000001', 'cards'),
+  ('bbbbbbbb-0000-4000-8000-0000000000b1', '22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-000000000002', 'cards');
+
+INSERT INTO study_items (id, set_id, position, payload, chunk_id, page)
+SELECT CASE s.user_id WHEN '11111111-1111-4111-8111-111111111111'
+         THEN 'aaaaaaaa-0000-4000-8000-0000000000a2'::uuid
+         ELSE 'bbbbbbbb-0000-4000-8000-0000000000b2'::uuid END,
+       s.id, 0, '{"kind":"cards","front":"f","back":"b","quote":"una cita literal"}'::jsonb, c.id, 1
+FROM study_sets s JOIN document_chunks c ON c.document_id = s.document_id;
+
+INSERT INTO study_reviews (user_id, item_id, due_date) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-0000000000a2', '2026-01-01'),
+  ('22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-0000000000b2', '2026-01-01');
 INSERT INTO waitlist (email, consent, source) VALUES ('tutor@example.com', true, 'app');
 
 -- Usuario 1 autenticado
@@ -47,6 +61,9 @@ BEGIN
   IF (SELECT count(*) FROM classification_corrections) <> 1 THEN RAISE EXCEPTION 'RLS correcciones: ve correcciones ajenas'; END IF;
   IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
   IF (SELECT count(*) FROM consents) <> 1 THEN RAISE EXCEPTION 'RLS consentimientos: ve consentimientos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_sets) <> 1 THEN RAISE EXCEPTION 'RLS study_sets: ve conjuntos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_items) <> 1 THEN RAISE EXCEPTION 'RLS study_items: ve elementos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_reviews) <> 1 THEN RAISE EXCEPTION 'RLS study_reviews: ve repasos ajenos'; END IF;
   -- La auditoría del administrador es solo del backend: ni siquiera el propio admin la lee así.
   BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
@@ -92,6 +109,17 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
+    INSERT INTO study_sets (user_id, document_id, kind)
+    VALUES ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000001', 'quiz');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en study_sets';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    UPDATE study_reviews SET box = 3;
+    IF FOUND THEN RAISE EXCEPTION 'RLS: authenticated pudo cambiar study_reviews'; END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
     INSERT INTO admin_audit (admin_user_id, admin_email, action, target)
     VALUES ('11111111-1111-4111-8111-111111111111', 'x@example.com', 'x', 'x');
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en admin_audit';
@@ -118,6 +146,13 @@ BEGIN
   BEGIN
     IF (SELECT count(*) FROM consents) <> 0 THEN
       RAISE EXCEPTION 'RLS: anon pudo leer consents';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    IF (SELECT count(*) FROM study_sets) + (SELECT count(*) FROM study_items)
+       + (SELECT count(*) FROM study_reviews) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer el estudio';
     END IF;
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;

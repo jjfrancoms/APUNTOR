@@ -95,7 +95,12 @@ export function fakeQuota(limit = 20) {
       return used;
     },
     usage() {
-      return Promise.resolve({ questions: used, storage_bytes: 0, summaries: 0 });
+      return Promise.resolve({
+        questions: used,
+        storage_bytes: 0,
+        summaries: 0,
+        study_generations: 0,
+      });
     },
     consume(_userId: string, _kind: string, amount: number) {
       if (used + amount > limit) return Promise.resolve(false);

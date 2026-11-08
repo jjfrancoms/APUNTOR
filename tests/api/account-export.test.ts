@@ -100,6 +100,39 @@ async function world(confirmed = true, overrides: Record<string, unknown> = {}) 
           },
         ]),
       quotas: () => Promise.resolve([{ kind: 'questions', periodStart: '2026-11-01', used: 3 }]),
+      studySets: () =>
+        Promise.resolve([
+          {
+            id: 's1',
+            documentId: DOC,
+            topicId: null,
+            kind: 'cards',
+            lastScore: null,
+            lastTotal: null,
+            lastPlayedAt: null,
+            createdAt: new Date(0),
+          },
+        ]),
+      studyItems: () =>
+        Promise.resolve([
+          {
+            id: 'i1',
+            setId: 's1',
+            position: 0,
+            page: 2,
+            payload: { kind: 'cards', front: 'F', back: 'B', quote: 'una cita literal' },
+          },
+        ]),
+      studyReviews: () =>
+        Promise.resolve([
+          {
+            itemId: 'i1',
+            box: 1,
+            dueDate: '2026-11-09',
+            lastResult: true,
+            updatedAt: new Date(0),
+          },
+        ]),
     },
     storage: fakeStorage({}),
     quota: { usage: () => Promise.resolve({ questions: 3, storage_bytes: 100 }) },
@@ -186,12 +219,37 @@ describe('GET /v1/account/export', () => {
     const { app } = await world(true, {
       documents: { list: record, listCourses: record },
       consents: { list: record },
-      accountExport: { chunks: record, topics: record, quotas: record },
+      accountExport: {
+        chunks: record,
+        topics: record,
+        quotas: record,
+        studySets: record,
+        studyItems: record,
+        studyReviews: record,
+      },
     });
     const response = await app.inject({ url: '/v1/account/export', headers: AUTH });
     expect(response.statusCode).toBe(200);
-    expect(seen).toHaveLength(6);
+    expect(seen).toHaveLength(9);
     expect(new Set(seen)).toEqual(new Set([USER]));
+  });
+
+  it('incluye los conjuntos de estudio con sus elementos y repasos', async () => {
+    const { app } = await world(true);
+    const response = await app.inject({ url: '/v1/account/export', headers: AUTH });
+    expect(response.json()).toMatchObject({
+      study: {
+        sets: [
+          {
+            id: 's1',
+            kind: 'cards',
+            createdAt: new Date(0).toISOString(),
+            items: [{ id: 'i1', position: 0, page: 2, payload: { front: 'F', back: 'B' } }],
+          },
+        ],
+        reviews: [{ itemId: 'i1', box: 1, dueDate: '2026-11-09', lastResult: true }],
+      },
+    });
   });
 
   it('sin correo confirmado no liga la cuenta con la lista de espera', async () => {

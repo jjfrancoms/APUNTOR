@@ -190,6 +190,9 @@ async function createWorld(overrides: Partial<AppDeps> = {}): Promise<World> {
       chunks: () => Promise.resolve([]),
       topics: () => Promise.resolve([]),
       quotas: () => Promise.resolve([]),
+      studySets: () => Promise.resolve([]),
+      studyItems: () => Promise.resolve([]),
+      studyReviews: () => Promise.resolve([]),
     },
     consents: {
       accept(userId, document, version) {

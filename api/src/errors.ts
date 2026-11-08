@@ -1,7 +1,7 @@
 /**
  * Códigos estables de docs/producto/mvp-ux.md §4: son la clave de traducción en la app.
  * AUTH_REQUIRED, REQ_INVALID, DOC_NOT_FOUND, DOC_STATE, COURSE_NOT_FOUND, EXTERNAL_UNAVAILABLE,
- * RATE_LIMITED, FORBIDDEN, ADMIN_TARGET_IS_SELF e INTERNAL son provisionales.
+ * RATE_LIMITED, FORBIDDEN, ADMIN_TARGET_IS_SELF, STUDY_* e INTERNAL son provisionales.
  */
 export type ApiErrorCode =
   | 'AUTH_REQUIRED'
@@ -25,6 +25,15 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   /** Un administrador intentó borrarse a sí mismo desde el panel (usa DELETE /v1/account). */
   | 'ADMIN_TARGET_IS_SELF'
+  /** Estudio (fase 3): conjunto o tarjeta que no existe o no es del usuario. */
+  | 'STUDY_NOT_FOUND'
+  /** Se acabaron las generaciones de quiz/tarjetas de hoy. */
+  | 'STUDY_DAILY_LIMIT'
+  /** El documento o tema no tiene texto del que generar. */
+  | 'STUDY_NO_CONTENT'
+  /** La IA no produjo al menos 3 elementos con cita válida. */
+  | 'STUDY_TOO_FEW_ITEMS'
+  | 'STUDY_FAILED'
   /** La inscripción de la lista de espera ya no existe (panel de administrador). */
   | 'WAITLIST_NOT_FOUND'
   | 'INTERNAL';

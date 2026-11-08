@@ -47,6 +47,7 @@ import { MAX_SEARCH_QUERY, MIN_SEARCH_QUERY, type SearchRepository } from './sea
 import { withPageStructure } from './topic-content';
 import { SummaryLimitError, type SummaryBlock, type TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
+import { registerStudyRoutes, type StudyDeps } from './study/routes';
 import {
   MAX_WAITLIST_EMAIL,
   WAITLIST_SOURCES,
@@ -104,6 +105,8 @@ export interface AppDeps {
   externalSearch?: ExternalSearch;
   /** Resúmenes de tema con IA (sin configurar, la ruta responde como no disponible). */
   summaries?: TopicSummarizer;
+  /** Quizzes y tarjetas (sin configurar, las rutas responden como no disponibles). */
+  study?: StudyDeps;
   corsOrigins?: readonly string[];
   /** `true` escribe en stdout; con `{ stream }` escribe ahí (pruebas). */
   logger?: boolean | { stream: LogStream };
@@ -444,6 +447,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       storageLimit: FREE_LIMITS.storage_bytes,
       summariesToday: used.summaries,
       summariesLimit: FREE_LIMITS.summaries,
+      studyGenerationsToday: used.study_generations,
+      studyGenerationsLimit: FREE_LIMITS.study_generations,
     };
   });
 
@@ -851,6 +856,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       request.log.warn(error);
       throw new ApiError('EXTERNAL_UNAVAILABLE', 503);
     }
+  });
+
+  // --- Estudio: quizzes, tarjetas y repaso (api/src/study/) -------------------------
+  registerStudyRoutes(app, {
+    study: deps.study,
+    quota: deps.quota,
+    documents: deps.documents,
+    requireUser,
+    requireDocument,
+    strictLimit,
+    parse,
   });
 
   // --- Panel de administrador ----------------------------------------------------
