@@ -1,21 +1,45 @@
-import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 import { StyleSheet } from 'react-native';
+import { StudyError, StudyLoading } from '@/components/domain/StudyState';
 import { Button, Card, EmptyState, Icon, ListRow, Screen, Text, TopBar } from '@/components/ui';
-import { reviewToday } from '@/data/mock';
-import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
+import { api } from '@/lib/api';
+import { PREVIEW } from '@/lib/config';
+import { estimateMinutes, reviewByCourse } from '@/lib/study';
+import { previewReview } from '@/lib/study-preview';
+import { useStudyLoad } from '@/lib/use-study-load';
 import { space } from '@/theme';
 
-/** Pantalla 32 · Repaso del día; `?demo=empty` muestra el estado sin tarjetas (46). */
-function DailyReview() {
+/**
+ * Pantallas 32 y 46 · Repaso del día con las tarjetas que el servidor agenda para hoy; sin ellas
+ * se muestra el estado vacío (46). `?demo=loading|error|offline|empty` muestra cada estado.
+ */
+export default function DailyReview() {
   const s = useStrings();
   const r = s.dailyReview;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
-  // Las tarjetas que ya marcaste como sabidas salen del repaso de hoy (repetición espaciada).
-  const knownCount = useStore((st) => st.study.known.length);
-  const cards = Math.max(0, reviewToday.cards - knownCount);
-  if (demo === 'empty' || cards === 0) {
+  const fetcher = useCallback(
+    async () => (PREVIEW ? previewReview() : (await api.reviewToday()).items),
+    [],
+  );
+  const { load, reload } = useStudyLoad(fetcher, demo);
+  if (load.state === 'loading') {
+    return (
+      <Screen header={<TopBar title={r.header} />}>
+        <StudyLoading />
+      </Screen>
+    );
+  }
+  if (load.state === 'error') {
+    return (
+      <Screen header={<TopBar title={r.header} />}>
+        <StudyError code={load.code} onRetry={reload} />
+      </Screen>
+    );
+  }
+  const items = demo === 'empty' ? [] : load.data;
+  if (items.length === 0) {
     return (
       <Screen>
         <Text variant="display" accessibilityRole="header">
@@ -31,36 +55,38 @@ function DailyReview() {
       </Screen>
     );
   }
+  const rows = reviewByCourse(items);
+  const start = () => router.push({ pathname: '/study/flashcards', params: { review: '1' } });
   return (
     <Screen
       header={<TopBar title={r.header} />}
       footer={
         <>
-          <Button label={r.start} onPress={() => router.push('/study/flashcards')} />
+          <Button label={r.start} onPress={start} />
           <Button label={r.later} variant="secondary" onPress={() => router.back()} />
         </>
       }
     >
       <Card tone="primary" style={styles.hero}>
         <Text variant="display" color="primary" style={styles.big}>
-          {String(cards)}
+          {String(items.length)}
         </Text>
         <Text variant="bodyStrong">{r.cardsToday}</Text>
         <Text variant="caption" color="textMuted">
-          {r.minutes(reviewToday.minutes)}
+          {r.minutes(estimateMinutes(items.length))}
         </Text>
       </Card>
       <Text variant="overline" color="textMuted">
         {r.byCourse}
       </Text>
       <Card style={styles.list}>
-        {reviewToday.byCourse.map((row, i) => (
+        {rows.map((row, i) => (
           <ListRow
-            key={row.course}
-            title={row.course}
+            key={row.course ?? 'none'}
+            title={row.course ?? s.study.unassignedCourse}
             detail={r.cards(row.cards)}
-            divider={i < reviewToday.byCourse.length - 1}
-            onPress={() => router.push('/study/flashcards')}
+            divider={i < rows.length - 1}
+            onPress={start}
           />
         ))}
       </Card>
@@ -81,6 +107,3 @@ const styles = StyleSheet.create({
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
 });
-
-// Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.
-export default previewOnly(DailyReview);

@@ -5,6 +5,7 @@
 import { test as base, expect, type BrowserContext, type Route } from '@playwright/test';
 import {
   ANSWER,
+  CARDS,
   CONSENTS_CURRENT,
   COURSE,
   DOCUMENT,
@@ -12,6 +13,7 @@ import {
   FAKE_API_URL,
   FAKE_SUPABASE_URL,
   PASSWORD_OK,
+  QUIZ,
   SEARCH_RESULTS,
   TOPIC_SUMMARY,
   TOPICS,
@@ -215,12 +217,53 @@ export class Mock {
         return { json: ANSWER };
       default:
     }
+    const conversation = this.conversations(r);
+    if (conversation) return conversation;
+    const study = this.study(r);
+    if (study) return study;
     if (r.method === 'GET' && r.path === `/v1/documents/${DOCUMENT.id}`) return { json: DOCUMENT };
     if (r.method === 'GET' && r.path === `/v1/documents/${DOCUMENT.id}/topics`) {
       return { json: { topics: TOPICS } };
     }
     if (r.method === 'GET' && r.path.endsWith('/summary')) return { json: TOPIC_SUMMARY };
     return { status: 404, json: { error: { code: 'NOT_FOUND' } } };
+  }
+
+  /** Sincronización de conversaciones: el servidor falso no guarda nada, solo confirma. */
+  private conversations(r: RecordedRequest): Reply | null {
+    if (!r.path.startsWith('/v1/conversations')) return null;
+    const body = (r.body ?? {}) as Record<string, unknown>;
+    const id = r.path.split('/')[3] ?? '';
+    const summary = { title: '', course: '', scopeDocumentIds: null, ...body, id, messageCount: 0 };
+    const stamp = { createdAt: '2026-11-08T10:00:00.000Z', updatedAt: '2026-11-08T10:00:00.000Z' };
+    if (r.method === 'GET' && r.path === '/v1/conversations') {
+      return { json: { conversations: [], page: 1, hasMore: false } };
+    }
+    if (r.method === 'DELETE') return { status: 204 };
+    if (r.method === 'POST' && r.path === '/v1/conversations') {
+      return { status: 201, json: { ...stamp, ...summary, id: body.id } };
+    }
+    return { json: { ...stamp, ...summary } };
+  }
+
+  /** Quizzes, tarjetas y repaso: siempre el mismo juego de una pregunta o una tarjeta. */
+  private study(r: RecordedRequest): Reply | null {
+    if (!r.path.startsWith('/v1/study/')) return null;
+    const kind = (r.body as { kind?: unknown } | null)?.kind;
+    if (r.method === 'POST' && r.path === '/v1/study/sets') {
+      return { status: 201, json: kind === 'cards' ? CARDS : QUIZ };
+    }
+    if (r.method === 'GET' && r.path === '/v1/study/sets') return { json: { sets: [] } };
+    if (r.method === 'GET' && r.path === '/v1/study/review/today') return { json: { items: [] } };
+    if (r.method === 'GET' && r.path.startsWith('/v1/study/sets/')) {
+      return { json: r.path.endsWith(CARDS.set.id) ? CARDS : QUIZ };
+    }
+    if (r.method === 'DELETE') return { status: 204 };
+    if (r.method === 'POST' && r.path.endsWith('/review')) {
+      return { json: { id: r.path.split('/')[4], box: 1, dueDate: '2026-11-09' } };
+    }
+    if (r.method === 'POST' && r.path.endsWith('/results')) return { json: { ok: true } };
+    return null;
   }
 }
 

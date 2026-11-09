@@ -12,6 +12,10 @@ import {
   processDocument,
   type IngestionDeps,
 } from '../../worker/src/ingestion/queue-worker';
+import type {
+  ClassificationInput,
+  DocumentClassifier,
+} from '../../worker/src/ingestion/classification';
 import type { EmbeddingProvider } from '../../api/src/llm/embedding-provider';
 import type { FlatTopic } from '../../worker/src/topics/topic-tree';
 import type { TopicRow } from '../../api/src/topic-content';
@@ -202,6 +206,52 @@ describe('resúmenes generados de antemano', () => {
     expect(inputs[0]?.filePath).toBe('u/doc.pdf');
     expect(inputs[0]?.topics.map((t) => t.id)).toEqual(['t0', 't1']);
     expect(inputs[0]?.chunks.length).toBe(repo.chunks.length);
+  });
+
+  it('la clasificación va tras completed y antes de los resúmenes, con temas raíz y extracto', async () => {
+    const pages = [
+      { pageNumber: 1, text: '1. La célula\nLa célula es la unidad básica de la vida.' },
+      { pageNumber: 2, text: '1.1 Mitocondria\nProduce ATP.' },
+      { pageNumber: 3, text: '2. Genética\nEl ADN guarda información.' },
+    ];
+    const repo = new InMemoryRepository(pendingDoc);
+    const inputs: ClassificationInput[] = [];
+    const classifier: DocumentClassifier = {
+      classify(input) {
+        repo.events.push('classified');
+        inputs.push(input);
+        return Promise.resolve();
+      },
+    };
+    const summaries: SummaryPregenerator = {
+      generate() {
+        repo.events.push('summaries');
+        return Promise.resolve({ generated: 0, failed: 0, skipped: 0 });
+      },
+    };
+    await processDocument(DOC_ID, {
+      ...makeDeps({ totalPages: 3, pages }, repo),
+      classifier,
+      summaries,
+    });
+    expect(repo.events.slice(-3)).toEqual(['completed:3', 'classified', 'summaries']);
+    expect(inputs[0]?.topLevelTopics).toEqual(['1. La célula', '2. Genética']);
+    expect(inputs[0]?.excerpt).toContain('unidad básica');
+  });
+
+  it('un fallo de la clasificación no hace fallar la ingesta', async () => {
+    const pages = [{ pageNumber: 1, text: 'Un texto de prueba suficientemente largo.' }];
+    const repo = new InMemoryRepository(pendingDoc);
+    const classifier: DocumentClassifier = {
+      classify: () => Promise.reject(new Error('IA caída')),
+    };
+    const result = await processDocument(DOC_ID, {
+      ...makeDeps({ totalPages: 1, pages }, repo),
+      classifier,
+    });
+    expect(result.skipped).toBe(false);
+    expect(repo.events.at(-1)).toBe('completed:1');
+    expect(repo.events.some((e) => e.startsWith('failed'))).toBe(false);
   });
 
   it('un fallo de los resúmenes no hace fallar la ingesta', async () => {

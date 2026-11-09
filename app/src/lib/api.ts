@@ -1,4 +1,5 @@
 import { es, type ErrorCode } from '@/i18n/es';
+import type { Message } from '@/store/seed';
 import { config } from './config';
 import { supabase } from './supabase';
 
@@ -35,8 +36,21 @@ export interface ApiDocument {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   totalPages: number | null;
   topicCount: number;
+  /** Sugerencia de curso de la IA: 'suggested' espera la decisión del usuario (pantalla 16). */
+  classificationStatus: 'none' | 'suggested' | 'confirmed' | 'dismissed';
+  suggestedCourseId: string | null;
+  suggestedCourseTitle: string | null;
+  suggestionConfidence: number | null;
+  suggestionReason: string | null;
   createdAt: string;
 }
+
+/** Lo que decide el usuario sobre la sugerencia de curso. */
+export type ClassificationAction =
+  | { action: 'accept' }
+  | { action: 'choose'; courseId: string }
+  | { action: 'create'; title: string }
+  | { action: 'dismiss' };
 
 export interface ApiCourse {
   id: string;
@@ -74,7 +88,55 @@ export interface ApiUsage {
   questionsLimit: number;
   storageBytes: number;
   storageLimit: number;
+  /** Quizzes o juegos de tarjetas generados hoy y tope diario. */
+  studyGenerationsToday: number;
+  studyGenerationsLimit: number;
 }
+
+export type StudyKind = 'quiz' | 'cards';
+
+/** Un juego de preguntas o tarjetas ya generado (se puede reabrir sin volver a generarlo). */
+export interface ApiStudySet {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  topicId: string | null;
+  topicTitle: string | null;
+  kind: StudyKind;
+  itemCount: number;
+  lastScore: number | null;
+  lastTotal: number | null;
+  createdAt: string;
+}
+
+export interface ApiStudyCitation {
+  chunkId: string;
+  documentId: string;
+  pageNumber: number;
+  quote: string;
+}
+
+export type ApiStudyItem =
+  | {
+      id: string;
+      kind: 'quiz';
+      citation: ApiStudyCitation;
+      question: string;
+      options: string[];
+      correctIndex: number;
+      explanation: string;
+    }
+  | { id: string; kind: 'cards'; citation: ApiStudyCitation; front: string; back: string };
+
+/** Tarjeta que toca repasar hoy, con su curso y su caja actual. */
+export type ApiReviewItem = ApiStudyItem & {
+  setId: string;
+  documentTitle: string;
+  courseId: string | null;
+  courseTitle: string | null;
+  box: number;
+  dueDate: string;
+};
 
 export interface ApiClaim {
   /** Término que explica (validado contra la cita). */
@@ -156,6 +218,8 @@ export interface ApiAdminStats {
   storageBytes: number;
   questionsToday: number;
   consents: { currentVersionUsers: number };
+  /** Solo cuántas hay: el panel nunca ve títulos ni mensajes. */
+  conversations: { total: number; messages: number };
 }
 
 export interface ApiAdminUser {
@@ -225,6 +289,9 @@ export interface AskOptions extends RequestOptions {
   documentIds?: readonly string[];
 }
 
+/** Generar un juego puede tardar con el modelo saturado: espera hasta 2 minutos. */
+export const STUDY_GENERATE_TIMEOUT_MS = 120_000;
+
 async function request<T>(
   method: string,
   path: string,
@@ -286,6 +353,35 @@ async function request<T>(
   }
 }
 
+/** Conversación guardada en el servidor (fase 2). */
+export interface ApiConversationInput {
+  title: string;
+  course: string;
+  scopeDocumentIds: string[] | null;
+}
+
+export interface ApiConversationSummary extends ApiConversationInput {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface ApiConversationMessage {
+  id: string;
+  role: Message['role'];
+  kind: Message['kind'];
+  text: string;
+  payload: Pick<
+    Message,
+    'claims' | 'sources' | 'reason' | 'unclear' | 'errorCode' | 'smallTalk' | 'external'
+  >;
+}
+
+export interface ApiConversationDetail extends ApiConversationSummary {
+  messages: ApiConversationMessage[];
+}
+
 export const api = {
   usage: () => request<ApiUsage>('GET', '/v1/me/usage'),
   deleteAccount: () => request<void>('DELETE', '/v1/account'),
@@ -303,6 +399,8 @@ export const api = {
   completeDocument: (id: string) => request<unknown>('POST', `/v1/documents/${id}/complete`),
   updateDocument: (id: string, patch: { title?: string; courseId?: string | null }) =>
     request<ApiDocument>('PATCH', `/v1/documents/${id}`, patch),
+  classifyDocument: (id: string, decision: ClassificationAction) =>
+    request<ApiDocument>('POST', `/v1/documents/${id}/classification`, decision),
   deleteDocument: (id: string) => request<void>('DELETE', `/v1/documents/${id}`),
   page: (documentId: string, page: number) =>
     request<{ pageNumber: number; url: string; width: number; height: number }>(
@@ -319,6 +417,38 @@ export const api = {
       requestOptions,
     );
   },
+  /** Genera un juego con IA: puede tardar si el modelo está saturado, así que admite cancelar. */
+  createStudySet: (
+    input: { documentId: string; topicId?: string; kind: StudyKind; count?: number },
+    options: RequestOptions = {},
+  ) =>
+    request<{ set: ApiStudySet; items: ApiStudyItem[] }>('POST', '/v1/study/sets', input, {
+      timeoutMs: STUDY_GENERATE_TIMEOUT_MS,
+      ...options,
+    }),
+  studySets: (filter: { documentId?: string; kind?: StudyKind } = {}) => {
+    const params = new URLSearchParams();
+    if (filter.documentId) params.set('documentId', filter.documentId);
+    if (filter.kind) params.set('kind', filter.kind);
+    const query = params.toString();
+    return request<{ sets: ApiStudySet[] }>('GET', `/v1/study/sets${query ? `?${query}` : ''}`);
+  },
+  studySet: (id: string) =>
+    request<{ set: ApiStudySet; items: ApiStudyItem[] }>(
+      'GET',
+      `/v1/study/sets/${encodeURIComponent(id)}`,
+    ),
+  deleteStudySet: (id: string) =>
+    request<void>('DELETE', `/v1/study/sets/${encodeURIComponent(id)}`),
+  saveStudyResult: (id: string, result: { score: number; total: number }) =>
+    request<unknown>('POST', `/v1/study/sets/${encodeURIComponent(id)}/results`, result),
+  reviewStudyItem: (id: string, known: boolean) =>
+    request<{ id: string; box: number; dueDate: string }>(
+      'POST',
+      `/v1/study/items/${encodeURIComponent(id)}/review`,
+      { known },
+    ),
+  reviewToday: () => request<{ items: ApiReviewItem[] }>('GET', '/v1/study/review/today'),
   search: (query: string, options?: RequestOptions) =>
     request<ApiSearchResults>(
       'GET',
@@ -335,6 +465,26 @@ export const api = {
   /** Pública (no hace falta sesión) e idempotente: repetir el correo no lo duplica. */
   joinWaitlist: (input: { email: string; consent: true; source: 'app' | 'web' }) =>
     request<{ status: 'joined' }>('POST', '/v1/waitlist', input),
+  conversations: (page: number) =>
+    request<{ conversations: ApiConversationSummary[]; page: number; hasMore: boolean }>(
+      'GET',
+      `/v1/conversations?page=${page}&perPage=100`,
+    ),
+  conversation: (id: string) => request<ApiConversationDetail>('GET', `/v1/conversations/${id}`),
+  /** Idempotente por id: si se repite, devuelve la que ya existe. */
+  createConversation: (input: ApiConversationInput & { id: string; updatedAt: string }) =>
+    request<ApiConversationSummary>('POST', '/v1/conversations', input),
+  updateConversation: (id: string, patch: Partial<ApiConversationInput>) =>
+    request<ApiConversationSummary>('PATCH', `/v1/conversations/${id}`, patch),
+  /** Idempotente por id de mensaje: reenviar un lote no duplica. */
+  appendConversationMessages: (id: string, messages: ApiConversationMessage[], updatedAt: string) =>
+    request<ApiConversationSummary>('POST', `/v1/conversations/${id}/messages`, {
+      messages,
+      updatedAt,
+    }),
+  deleteConversationMessages: (id: string, ids: string[]) =>
+    request<ApiConversationSummary>('POST', `/v1/conversations/${id}/messages/delete`, { ids }),
+  deleteConversation: (id: string) => request<void>('DELETE', `/v1/conversations/${id}`),
   /** 200 si la cuenta es administradora; 403 FORBIDDEN si no. */
   adminMe: () => request<ApiAdminMe>('GET', '/v1/admin/me'),
   adminStats: () => request<ApiAdminStats>('GET', '/v1/admin/stats'),

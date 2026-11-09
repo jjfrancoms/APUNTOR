@@ -47,7 +47,21 @@ class FakeApiError extends Error {
     super(code);
   }
 }
+const conversationApi = {
+  conversations: vi.fn(async (_page: number) => ({
+    conversations: [] as Record<string, unknown>[],
+    page: 1,
+    hasMore: false,
+  })),
+  conversation: vi.fn(async (_id: string): Promise<unknown> => ({})),
+  createConversation: vi.fn(async (_input: unknown) => ({})),
+  updateConversation: vi.fn(async (_id: string, _patch: unknown) => ({})),
+  appendConversationMessages: vi.fn(async (_id: string, _m: unknown[], _at: string) => ({})),
+  deleteConversationMessages: vi.fn(async (_id: string, _ids: string[]) => ({})),
+  deleteConversation: vi.fn(async (_id: string) => undefined),
+};
 const api = {
+  ...conversationApi,
   usage: vi.fn(async () => ({
     questionsToday: 3,
     questionsLimit: 20,
@@ -71,6 +85,7 @@ const api = {
   })),
   completeDocument: vi.fn(async () => ({})),
   updateDocument: vi.fn(async () => ({})),
+  classifyDocument: vi.fn(async () => ({})),
   deleteDocument: vi.fn(async () => undefined),
   deleteAccount: vi.fn(async () => undefined),
   exportAccount: vi.fn(async (): Promise<unknown> => ({ profile: { id: 'u1' } })),
@@ -111,11 +126,30 @@ vi.mock('@/lib/api', () => ({
     error instanceof FakeApiError && error.code.startsWith('UP_') ? error.code : fallback,
 }));
 
-function doc(over: { id: string; courseId: string | null; title: string; topicCount: number }) {
+function doc(over: { id: string; courseId: string | null; title: string; topicCount: number }): {
+  id: string;
+  courseId: string | null;
+  title: string;
+  topicCount: number;
+  sizeBytes: number;
+  status: 'completed';
+  totalPages: number;
+  classificationStatus: 'none' | 'suggested' | 'confirmed' | 'dismissed';
+  suggestedCourseId: string | null;
+  suggestedCourseTitle: string | null;
+  suggestionConfidence: number | null;
+  suggestionReason: string | null;
+  createdAt: string;
+} {
   return {
     sizeBytes: 2 * 1024 * 1024,
     status: 'completed' as const,
     totalPages: 12,
+    classificationStatus: 'none',
+    suggestedCourseId: null,
+    suggestedCourseTitle: null,
+    suggestionConfidence: null,
+    suggestionReason: null,
     createdAt: new Date().toISOString(),
     ...over,
   };
@@ -320,16 +354,35 @@ describe('subida', () => {
     expect(api.deleteDocument).toHaveBeenCalledWith('srv-1');
   });
 
-  it('al confirmar guarda cada archivo en su curso', async () => {
-    vi.useFakeTimers();
+  it('solo los documentos con sugerencia pendiente cuentan como por revisar', async () => {
+    api.documents.mockResolvedValueOnce({
+      documents: [
+        {
+          ...doc({ id: 'd1', courseId: null, title: 'A.pdf', topicCount: 1 }),
+          classificationStatus: 'suggested' as const,
+          suggestedCourseId: 'c1',
+          suggestedCourseTitle: 'Cálculo I',
+          suggestionConfidence: 0.8,
+          suggestionReason: 'Habla de límites',
+        },
+        {
+          ...doc({ id: 'd2', courseId: 'c1', title: 'B.pdf', topicCount: 1 }),
+          classificationStatus: 'confirmed' as const,
+        },
+      ],
+    });
     await signedIn();
-    api.document.mockResolvedValue({ status: 'completed' });
-    const [job] = store.enqueueUploads([file('a.pdf', 1)]);
-    await vi.advanceTimersByTimeAsync(3500);
-    store.assignUploadCourse(job?.id ?? '', 'c1');
-    vi.useRealTimers();
-    expect(await store.confirmUploads()).toBe(1);
-    expect(api.updateDocument).toHaveBeenCalledWith('srv-1', { courseId: 'c1' });
+    const pending = store.pendingReview(store.getState());
+    expect(pending.map((d) => d.id)).toEqual(['d1']);
+    expect(pending[0]?.classification).toMatchObject({ courseTitle: 'Cálculo I', confidence: 0.8 });
+  });
+
+  it('decideClassification manda la decisión y recarga; si falla devuelve false', async () => {
+    await signedIn();
+    expect(await store.decideClassification('d1', { action: 'accept' })).toBe(true);
+    expect(api.classifyDocument).toHaveBeenCalledWith('d1', { action: 'accept' });
+    api.classifyDocument.mockRejectedValueOnce(new Error('sin red'));
+    expect(await store.decideClassification('d1', { action: 'dismiss' })).toBe(false);
   });
 });
 
@@ -1177,5 +1230,111 @@ describe('lectura estable del estado (useStore)', () => {
     expect(store.shallowEqual([], {})).toBe(false);
     expect(store.shallowEqual({ a: 1 }, { b: 1 })).toBe(false);
     expect(store.shallowEqual(null, {})).toBe(false);
+  });
+});
+
+describe('sincronización de conversaciones', () => {
+  const REMOTE = '11111111-1111-4111-8111-111111111111';
+  const flush = () => store.syncConversations();
+  const withConversation = async () => {
+    await signedIn();
+    await vi.waitFor(() => expect(api.conversations).toHaveBeenCalled());
+    const id = store.startConversation();
+    store.askQuestion(id, 'Hola');
+    await flush();
+    return id;
+  };
+
+  it('al entrar trae las conversaciones del servidor', async () => {
+    const summary = {
+      id: REMOTE,
+      title: 'De otro equipo',
+      course: '',
+      scopeDocumentIds: null,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(1000).toISOString(),
+      messageCount: 1,
+    };
+    api.conversations.mockResolvedValueOnce({ conversations: [summary], page: 1, hasMore: false });
+    api.conversation.mockResolvedValueOnce({
+      ...summary,
+      messages: [{ id: REMOTE, role: 'user', kind: 'text', text: 'Pregunta', payload: {} }],
+    });
+    await signedIn();
+    await vi.waitFor(() => expect(store.getState().conversations).toHaveLength(1));
+    expect(store.getState().conversations[0]?.title).toBe('De otro equipo');
+    expect(api.createConversation).not.toHaveBeenCalled();
+  });
+
+  it('sube lo local una sola vez, sin repetir mensajes', async () => {
+    const id = await withConversation();
+    await flush();
+    await flush();
+    expect(api.createConversation).toHaveBeenCalledTimes(1);
+    expect(api.appendConversationMessages).toHaveBeenCalledTimes(1);
+    expect(api.appendConversationMessages.mock.calls[0]?.[0]).toBe(id);
+  });
+
+  it('sin conexión conserva el mensaje y lo sube al reintentar, sin duplicar', async () => {
+    await signedIn();
+    await vi.waitFor(() => expect(api.conversations).toHaveBeenCalled());
+    const id = store.startConversation();
+    store.askQuestion(id, 'Sin red');
+    api.createConversation.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    await flush();
+    expect(api.appendConversationMessages).not.toHaveBeenCalled();
+    expect(store.getState().conversations[0]?.messages).toHaveLength(1);
+    await flush();
+    await flush();
+    expect(api.appendConversationMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('una respuesta en camino no se sube como mensaje', async () => {
+    const id = await withConversation();
+    api.ask.mockReturnValueOnce(new Promise(() => undefined));
+    void store.answerQuestion(id, 'Hola');
+    await vi.waitFor(() => expect(store.isAnswerPending(store.getState(), id)).toBe(true));
+    await flush();
+    expect(api.appendConversationMessages).toHaveBeenCalledTimes(1);
+    store.cancelAnswer(id);
+  });
+
+  it('borrar la conversación también la borra en el servidor, y no vuelve', async () => {
+    const id = await withConversation();
+    store.deleteConversation(id);
+    await flush();
+    expect(api.deleteConversation).toHaveBeenCalledWith(id);
+    expect(store.getState().conversations).toHaveLength(0);
+  });
+
+  it('editar la última pregunta borra esos mensajes en el servidor', async () => {
+    const id = await withConversation();
+    const [question] = store.getState().conversations[0]?.messages ?? [];
+    expect(store.editLastQuestion(id)).toBe('Hola');
+    await flush();
+    expect(api.deleteConversationMessages).toHaveBeenCalledWith(id, [question?.id]);
+  });
+
+  it('borrar sin conexión reintenta hasta que el servidor confirma', async () => {
+    const id = await withConversation();
+    api.deleteConversation.mockRejectedValueOnce(new FakeApiError('NETWORK', 0));
+    store.deleteConversation(id);
+    await flush();
+    expect(store.getState().conversationSync.deletedConversations).toEqual([id]);
+    await flush();
+    expect(store.getState().conversationSync.deletedConversations).toEqual([]);
+    expect(api.deleteConversation).toHaveBeenCalledTimes(2);
+  });
+
+  it('un rechazo definitivo del servidor deja la conversación en el dispositivo', async () => {
+    await signedIn();
+    await vi.waitFor(() => expect(api.conversations).toHaveBeenCalled());
+    const id = store.startConversation();
+    store.askQuestion(id, 'Rechazada');
+    api.createConversation.mockRejectedValueOnce(new FakeApiError('REQ_INVALID', 400));
+    await flush();
+    await flush();
+    expect(api.createConversation).toHaveBeenCalledTimes(1);
+    expect(store.getState().conversations).toHaveLength(1);
   });
 });

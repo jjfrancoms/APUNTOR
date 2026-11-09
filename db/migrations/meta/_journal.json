@@ -113,6 +113,34 @@
       "when": 1794157130400,
       "tag": "0015_search_fts_index",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794181375774,
+      "tag": "0016_common_blizzard",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794181384756,
+      "tag": "0017_clasificacion_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794181386728,
+      "tag": "0018_estudio_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794181388328,
+      "tag": "0019_conversaciones_rls",
+      "breakpoints": true
     }
   ]
 }

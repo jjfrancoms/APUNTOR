@@ -33,6 +33,7 @@ import {
   dailyQuestionLimit,
   editLastQuestion,
   questionsToday,
+  retryConversationSync,
   retryLastQuestion,
   searchOutside,
   startConversation,
@@ -65,6 +66,11 @@ export default function Conversation() {
   const [now, setNow] = useState(() => Date.now());
   const initialSent = useRef(false);
   const online = useOnline();
+
+  // Al volver la conexión se sube lo que quedó guardado solo en el dispositivo.
+  useEffect(() => {
+    if (online) retryConversationSync();
+  }, [online]);
 
   useEffect(() => {
     if (!id) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extLabel, suggestCourse, validateUpload } from '../src/lib/upload-rules';
+import { extLabel, validateUpload } from '../src/lib/upload-rules';
 import { overlapScore, tokenize } from '../src/lib/text-search';
 
 describe('upload-rules', () => {
@@ -28,11 +28,6 @@ describe('upload-rules', () => {
   });
   it('no inventa el idioma por el nombre del archivo', () => {
     expect(validateUpload({ name: 'Resumen_chino.pdf', sizeMb: 1 }, 0, 500)).toBeNull();
-  });
-  it('sugiere curso por palabras clave sin importar tildes', () => {
-    const courses = [{ id: 'c', title: 'Cálculo I', keywords: ['limite'] }];
-    expect(suggestCourse('LÍMITES clase 3.pdf', courses)?.id).toBe('c');
-    expect(suggestCourse('receta.pdf', courses)).toBeNull();
   });
 });
 

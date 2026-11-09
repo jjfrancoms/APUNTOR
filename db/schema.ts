@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -49,6 +50,10 @@ export const courses = pgTable(
   ],
 );
 
+/** Estado de la sugerencia de curso: el usuario siempre confirma lo que propone la IA. */
+export const CLASSIFICATION_STATUSES = ['none', 'suggested', 'confirmed', 'dismissed'] as const;
+export type ClassificationStatus = (typeof CLASSIFICATION_STATUSES)[number];
+
 export const documents = pgTable(
   'documents',
   {
@@ -63,6 +68,17 @@ export const documents = pgTable(
     totalPages: integer('total_pages'),
     status: documentStatusEnum('status').notNull().default('pending'),
     errorMessage: text('error_message'),
+    /** Curso que propone la IA; con `null` y título, la propuesta es crear ese curso. */
+    suggestedCourseId: uuid('suggested_course_id').references(() => courses.id, {
+      onDelete: 'set null',
+    }),
+    suggestedCourseTitle: text('suggested_course_title'),
+    suggestionConfidence: doublePrecision('suggestion_confidence'),
+    suggestionReason: text('suggestion_reason'),
+    classificationStatus: text('classification_status')
+      .$type<ClassificationStatus>()
+      .notNull()
+      .default('none'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -71,6 +87,38 @@ export const documents = pgTable(
     index('documents_course_id_idx').on(t.courseId),
     index('documents_status_idx').on(t.status),
     check('documents_total_pages_positive', sql`${t.totalPages} IS NULL OR ${t.totalPages} > 0`),
+    check(
+      'documents_classification_status_valid',
+      sql`${t.classificationStatus} IN ('none', 'suggested', 'confirmed', 'dismissed')`,
+    ),
+    check(
+      'documents_suggestion_confidence_range',
+      sql`${t.suggestionConfidence} IS NULL OR ${t.suggestionConfidence} BETWEEN 0 AND 1`,
+    ),
+  ],
+);
+
+/**
+ * "Aprende de tus correcciones": cuando el usuario cambia el curso que propuso la IA, se guarda
+ * documento → curso, y las últimas van como ejemplos en el prompt de sus siguientes documentos.
+ * Una fila por documento; desaparece con el documento o con el curso (nada queda tras borrarlos).
+ */
+export const classificationCorrections = pgTable(
+  'classification_corrections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    courseId: uuid('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('classification_corrections_document_idx').on(t.documentId),
+    index('classification_corrections_user_created_idx').on(t.userId, t.createdAt),
   ],
 );
 
@@ -144,7 +192,7 @@ export const usageQuotas = pgTable(
   'usage_quotas',
   {
     userId: uuid('user_id').notNull(),
-    /** Qué se mide: 'questions' (por día) o 'storage_bytes' (acumulado). */
+    /** Qué se mide: 'questions' y 'study_generations' (por día) o 'storage_bytes' (acumulado). */
     kind: text('kind').notNull(),
     /** Inicio del periodo; el acumulado usa una fecha fija. */
     periodStart: date('period_start').notNull(),
@@ -154,7 +202,10 @@ export const usageQuotas = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.kind, t.periodStart] }),
     check('usage_quotas_used_non_negative', sql`${t.used} >= 0`),
-    check('usage_quotas_kind_valid', sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries')`),
+    check(
+      'usage_quotas_kind_valid',
+      sql`${t.kind} IN ('questions', 'storage_bytes', 'summaries', 'study_generations')`,
+    ),
   ],
 );
 
@@ -198,6 +249,169 @@ export const adminAudit = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('admin_audit_created_at_idx').on(t.createdAt)],
+);
+
+export const STUDY_SET_KINDS = ['quiz', 'cards'] as const;
+export type StudySetKind = (typeof STUDY_SET_KINDS)[number];
+
+/** Pregunta de opción múltiple o tarjeta; `quote` es la cita literal del fragmento. */
+export type StudyItemPayload =
+  | {
+      kind: 'quiz';
+      question: string;
+      options: string[];
+      correctIndex: number;
+      explanation: string;
+      quote: string;
+    }
+  | { kind: 'cards'; front: string; back: string; quote: string };
+
+/** Quiz o juego de tarjetas generado de un documento o de uno de sus temas. */
+export const studySets = pgTable(
+  'study_sets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    /** Sin tema, el conjunto cubre el documento entero. */
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    kind: text('kind').$type<StudySetKind>().notNull(),
+    /** Último resultado del quiz (`POST /v1/study/sets/:id/results`). */
+    lastScore: integer('last_score'),
+    lastTotal: integer('last_total'),
+    lastPlayedAt: timestamp('last_played_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('study_sets_user_id_idx').on(t.userId, t.createdAt),
+    index('study_sets_document_id_idx').on(t.documentId),
+    index('study_sets_topic_id_idx').on(t.topicId),
+    check('study_sets_kind_valid', sql`${t.kind} IN ('quiz', 'cards')`),
+  ],
+);
+
+/** Cada elemento cita un fragmento: se borra con él, y la página sale de ese fragmento. */
+export const studyItems = pgTable(
+  'study_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    setId: uuid('set_id')
+      .notNull()
+      .references(() => studySets.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    payload: jsonb('payload').$type<StudyItemPayload>().notNull(),
+    chunkId: uuid('chunk_id')
+      .notNull()
+      .references(() => documentChunks.id, { onDelete: 'cascade' }),
+    page: integer('page').notNull(),
+  },
+  (t) => [
+    uniqueIndex('study_items_set_position_idx').on(t.setId, t.position),
+    index('study_items_chunk_id_idx').on(t.chunkId),
+    check('study_items_page_positive', sql`${t.page} >= 1`),
+  ],
+);
+
+/** Repetición espaciada (cajas Leitner) de cada tarjeta del usuario. */
+export const studyReviews = pgTable(
+  'study_reviews',
+  {
+    userId: uuid('user_id').notNull(),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => studyItems.id, { onDelete: 'cascade' }),
+    box: integer('box').notNull().default(0),
+    dueDate: date('due_date').notNull(),
+    /** `null` hasta el primer repaso. */
+    lastResult: boolean('last_result'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.itemId] }),
+    index('study_reviews_user_due_idx').on(t.userId, t.dueDate),
+    index('study_reviews_item_id_idx').on(t.itemId),
+    check('study_reviews_box_valid', sql`${t.box} BETWEEN 0 AND 5`),
+  ],
+);
+
+/** Quién escribe cada mensaje del chat y de qué tipo es (los mismos valores que usa la app). */
+export const CONVERSATION_MESSAGE_ROLES = ['user', 'mascot'] as const;
+export type ConversationMessageRole = (typeof CONVERSATION_MESSAGE_ROLES)[number];
+export const CONVERSATION_MESSAGE_KINDS = [
+  'text',
+  'answer',
+  'notFound',
+  'external',
+  'error',
+  'limit',
+  'smallTalk',
+  'cancelled',
+] as const;
+export type ConversationMessageKind = (typeof CONVERSATION_MESSAGE_KINDS)[number];
+
+/** Datos estructurados de un mensaje; su forma la valida la API al guardarlos. */
+export interface ConversationMessagePayload {
+  claims?: {
+    label?: string | undefined;
+    formula?: string | undefined;
+    text: string;
+    pages: { documentId: string; page: number }[];
+  }[];
+  sources?: { page: number; klass: number; documentId: string }[];
+  reason?: 'empty_question' | 'no_matches' | 'validation_failed';
+  unclear?: boolean;
+  errorCode?: 'TIMEOUT' | 'NETWORK' | 'RATE_LIMITED' | 'CHAT_FAILED';
+  smallTalk?: 'greeting' | 'thanks' | 'identity' | 'farewell';
+  external?: { title: string; host: string; url?: string | undefined };
+}
+
+/**
+ * Conversaciones del chat. El id lo genera la app (idempotencia y uso sin conexión). El usuario
+ * lee y borra las suyas (RLS); las escrituras las hace solo el backend.
+ */
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    title: text('title').notNull().default(''),
+    /** Nombre del curso tal como se mostró al responder (etiqueta, no referencia). */
+    course: text('course').notNull().default(''),
+    /** Documentos a los que se limitó la conversación; `null` si son todos. */
+    scopeDocumentIds: uuid('scope_document_ids').array(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('conversations_user_updated_idx').on(t.userId, t.updatedAt.desc())],
+);
+
+/** Mensajes de una conversación. El id lo genera la app: reenviar un lote no los duplica. */
+export const conversationMessages = pgTable(
+  'conversation_messages',
+  {
+    id: uuid('id').notNull(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    role: text('role').$type<ConversationMessageRole>().notNull(),
+    kind: text('kind').$type<ConversationMessageKind>().notNull(),
+    text: text('text').notNull().default(''),
+    payload: jsonb('payload').$type<ConversationMessagePayload>().notNull().default({}),
+    /** Orden de llegada: los mensajes de un mismo lote comparten `created_at`. */
+    seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.conversationId, t.id] }),
+    index('conversation_messages_order_idx').on(t.conversationId, t.seq),
+    check('conversation_messages_role_valid', sql`${t.role} IN ('user', 'mascot')`),
+    check(
+      'conversation_messages_kind_valid',
+      sql`${t.kind} IN ('text', 'answer', 'notFound', 'external', 'error', 'limit', 'smallTalk', 'cancelled')`,
+    ),
+  ],
 );
 
 /** Por dónde llegó la inscripción a la lista de espera. */

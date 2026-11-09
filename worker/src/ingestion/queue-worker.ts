@@ -5,7 +5,8 @@ import {
 } from '../../../api/src/llm/embedding-provider';
 import { derivedPrefix, type FileStorage } from '../../../api/src/storage/file-storage';
 import { EMBEDDING_DIMENSIONS } from '../../../db/schema';
-import { buildTopicTree, flattenTopicTree } from '../topics/topic-tree';
+import { buildTopicTree, flattenTopicTree, type FlatTopic } from '../topics/topic-tree';
+import { buildClassificationExcerpt, type DocumentClassifier } from './classification';
 import type { EmbeddedChunk, IngestionRepository } from './document-repository';
 import { storePageArtifacts, type PageRenderer } from './page-artifacts';
 import type { SummaryPregenerator } from './topic-summaries';
@@ -46,6 +47,11 @@ export interface IngestionDeps {
    * documento). Sus fallos nunca cambian el estado del documento ni el resultado del trabajo.
    */
   summaries?: SummaryPregenerator;
+  /**
+   * Sugerencia de curso tras marcar `completed` y antes de los resúmenes (el estudiante la está
+   * esperando). Sus fallos nunca cambian el estado del documento ni el resultado del trabajo.
+   */
+  classifier?: DocumentClassifier;
 }
 
 export class DocumentNotFoundError extends Error {
@@ -134,6 +140,7 @@ export async function processDocument(
 
   let result: IngestionJobResult;
   let completedChunks: TextChunk[];
+  let completedTopics: FlatTopic[];
   try {
     await repository.markProcessing(documentId);
     await onProgress({ stage: 'parsing', processedChunks: 0, totalChunks: 0 });
@@ -196,6 +203,7 @@ export async function processDocument(
       skipped: false,
     };
     completedChunks = chunks;
+    completedTopics = topicRows;
   } catch (error) {
     if (markFailedOnError || error instanceof PermanentIngestionError) {
       await repository.markFailed(documentId, toErrorMessage(error));
@@ -204,10 +212,31 @@ export async function processDocument(
   }
 
   // Ya está `completed`: lo que sigue no puede marcarlo como fallido.
+  if (deps.classifier) {
+    await classifyDocument(deps.classifier, document.id, completedTopics, completedChunks);
+  }
   if (deps.summaries && result.topicCount > 0) {
     await pregenerateSummaries(deps.summaries, repository, document, completedChunks);
   }
   return result;
+}
+
+async function classifyDocument(
+  classifier: DocumentClassifier,
+  documentId: string,
+  topics: readonly FlatTopic[],
+  chunks: readonly TextChunk[],
+): Promise<void> {
+  try {
+    await classifier.classify({
+      documentId,
+      topLevelTopics: topics.filter((t) => t.parentIndex === null).map((t) => t.title),
+      excerpt: buildClassificationExcerpt(chunks),
+    });
+  } catch {
+    // Sin contenido en el log: el documento queda sin sugerencia y se puede ordenar a mano.
+    console.warn(`[clasificación] ${documentId}: no se pudo sugerir un curso`);
+  }
 }
 
 async function pregenerateSummaries(

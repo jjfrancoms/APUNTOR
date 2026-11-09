@@ -69,6 +69,7 @@ export default function AdminOverview() {
     storageBytes: 0,
     questionsToday: 0,
     consents: { currentVersionUsers: 0 },
+    conversations: { total: 12, messages: 96 },
   };
   const data = demo === 'empty' ? empty : stats;
 
@@ -107,6 +108,12 @@ export default function AdminOverview() {
             desktop={desktop}
           />
           <Stat label={a.stats.questionsToday} value={n(data.questionsToday)} desktop={desktop} />
+          <Stat
+            label={a.stats.conversations}
+            value={n(data.conversations.total)}
+            detail={a.stats.conversationsDetail(data.conversations.messages)}
+            desktop={desktop}
+          />
           <Stat
             label={a.stats.consents}
             value={n(data.consents.currentVersionUsers)}

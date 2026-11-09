@@ -18,6 +18,9 @@ INSERT INTO courses (user_id, title) VALUES
   ('11111111-1111-4111-8111-111111111111', 'Curso A'),
   ('22222222-2222-4222-8222-222222222222', 'Curso B');
 
+INSERT INTO classification_corrections (user_id, document_id, course_id)
+SELECT d.user_id, d.id, c.id FROM documents d JOIN courses c ON c.user_id = d.user_id;
+
 INSERT INTO usage_quotas (user_id, kind, period_start, used) VALUES
   ('11111111-1111-4111-8111-111111111111', 'questions', '2026-01-01', 1),
   ('22222222-2222-4222-8222-222222222222', 'questions', '2026-01-01', 1);
@@ -29,6 +32,28 @@ INSERT INTO consents (user_id, document, version) VALUES
 INSERT INTO admin_audit (admin_user_id, admin_email, action, target) VALUES
   ('11111111-1111-4111-8111-111111111111', 'admin@example.com', 'user.delete', 'user:22222222-2222-4222-8222-222222222222');
 
+INSERT INTO study_sets (id, user_id, document_id, kind) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000a1', '11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000001', 'cards'),
+  ('bbbbbbbb-0000-4000-8000-0000000000b1', '22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-000000000002', 'cards');
+
+INSERT INTO study_items (id, set_id, position, payload, chunk_id, page)
+SELECT CASE s.user_id WHEN '11111111-1111-4111-8111-111111111111'
+         THEN 'aaaaaaaa-0000-4000-8000-0000000000a2'::uuid
+         ELSE 'bbbbbbbb-0000-4000-8000-0000000000b2'::uuid END,
+       s.id, 0, '{"kind":"cards","front":"f","back":"b","quote":"una cita literal"}'::jsonb, c.id, 1
+FROM study_sets s JOIN document_chunks c ON c.document_id = s.document_id;
+
+INSERT INTO study_reviews (user_id, item_id, due_date) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-0000000000a2', '2026-01-01'),
+  ('22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-0000000000b2', '2026-01-01');
+
+INSERT INTO conversations (id, user_id, title) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000c1', '11111111-1111-4111-8111-111111111111', 'Chat A'),
+  ('bbbbbbbb-0000-4000-8000-0000000000c2', '22222222-2222-4222-8222-222222222222', 'Chat B');
+
+INSERT INTO conversation_messages (id, conversation_id, role, kind, text) VALUES
+  ('aaaaaaaa-0000-4000-8000-0000000000d1', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'user', 'text', 'Hola A'),
+  ('bbbbbbbb-0000-4000-8000-0000000000d2', 'bbbbbbbb-0000-4000-8000-0000000000c2', 'user', 'text', 'Hola B');
 INSERT INTO waitlist (email, consent, source) VALUES ('tutor@example.com', true, 'app');
 
 -- Usuario 1 autenticado
@@ -41,8 +66,14 @@ BEGIN
   IF (SELECT count(*) FROM document_chunks) <> 1 THEN RAISE EXCEPTION 'RLS chunks: ve chunks ajenos'; END IF;
   IF (SELECT count(*) FROM topics) <> 1 THEN RAISE EXCEPTION 'RLS topics: ve temas ajenos'; END IF;
   IF (SELECT count(*) FROM courses) <> 1 THEN RAISE EXCEPTION 'RLS cursos: ve cursos ajenos'; END IF;
+  IF (SELECT count(*) FROM classification_corrections) <> 1 THEN RAISE EXCEPTION 'RLS correcciones: ve correcciones ajenas'; END IF;
   IF (SELECT count(*) FROM usage_quotas) <> 1 THEN RAISE EXCEPTION 'RLS cuotas: ve cuotas ajenas'; END IF;
   IF (SELECT count(*) FROM consents) <> 1 THEN RAISE EXCEPTION 'RLS consentimientos: ve consentimientos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_sets) <> 1 THEN RAISE EXCEPTION 'RLS study_sets: ve conjuntos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_items) <> 1 THEN RAISE EXCEPTION 'RLS study_items: ve elementos ajenos'; END IF;
+  IF (SELECT count(*) FROM study_reviews) <> 1 THEN RAISE EXCEPTION 'RLS study_reviews: ve repasos ajenos'; END IF;
+  IF (SELECT count(*) FROM conversations) <> 1 THEN RAISE EXCEPTION 'RLS conversations: ve conversaciones ajenas'; END IF;
+  IF (SELECT count(*) FROM conversation_messages) <> 1 THEN RAISE EXCEPTION 'RLS conversation_messages: ve mensajes ajenos'; END IF;
   -- La auditoría del administrador es solo del backend: ni siquiera el propio admin la lee así.
   BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
@@ -72,6 +103,8 @@ END $$;
 
 -- No puede borrar documentos de otro usuario (0 filas afectadas)…
 DELETE FROM documents WHERE id = 'bbbbbbbb-0000-4000-8000-000000000002';
+DELETE FROM conversations WHERE id = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+DELETE FROM conversation_messages WHERE conversation_id = 'bbbbbbbb-0000-4000-8000-0000000000c2';
 -- …ni insertar directamente (las escrituras van por el backend).
 DO $$
 BEGIN
@@ -85,6 +118,29 @@ BEGIN
     INSERT INTO consents (user_id, document, version)
     VALUES ('11111111-1111-4111-8111-111111111111', 'privacy', '2026-11-01');
     RAISE EXCEPTION 'RLS: authenticated pudo insertar en consents';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO study_sets (user_id, document_id, kind)
+    VALUES ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000001', 'quiz');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en study_sets';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    UPDATE study_reviews SET box = 3;
+    IF FOUND THEN RAISE EXCEPTION 'RLS: authenticated pudo cambiar study_reviews'; END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO conversations (id, user_id)
+    VALUES ('aaaaaaaa-0000-4000-8000-0000000000c9', '11111111-1111-4111-8111-111111111111');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en conversations';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO conversation_messages (id, conversation_id, role, kind)
+    VALUES ('aaaaaaaa-0000-4000-8000-0000000000d9', 'aaaaaaaa-0000-4000-8000-0000000000c1', 'user', 'text');
+    RAISE EXCEPTION 'RLS: authenticated pudo insertar en conversation_messages';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
@@ -118,6 +174,25 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
+    IF (SELECT count(*) FROM study_sets) + (SELECT count(*) FROM study_items)
+       + (SELECT count(*) FROM study_reviews) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer el estudio';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    IF (SELECT count(*) FROM conversations) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer conversations';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    IF (SELECT count(*) FROM conversation_messages) <> 0 THEN
+      RAISE EXCEPTION 'RLS: anon pudo leer conversation_messages';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
     IF (SELECT count(*) FROM admin_audit) <> 0 THEN
       RAISE EXCEPTION 'RLS: anon pudo leer admin_audit';
     END IF;
@@ -141,6 +216,8 @@ DO $$
 BEGIN
   IF (SELECT count(*) FROM documents) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró un documento ajeno'; END IF;
   IF (SELECT count(*) FROM admin_audit) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la auditoría'; END IF;
+  IF (SELECT count(*) FROM conversations) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró una conversación ajena'; END IF;
+  IF (SELECT count(*) FROM conversation_messages) <> 2 THEN RAISE EXCEPTION 'RLS: un usuario borró mensajes ajenos'; END IF;
   IF (SELECT count(*) FROM waitlist) <> 1 THEN RAISE EXCEPTION 'RLS: se alteró la lista de espera'; END IF;
 END $$;
 

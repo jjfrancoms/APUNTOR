@@ -38,6 +38,8 @@ export function createInfrastructure(
       modelChoice.high === modelChoice.chat
         ? undefined
         : new VertexGenerator(models, modelChoice.high, HIGH_THINKING_BUDGET),
+    /** Generación de quizzes y tarjetas con el modelo alto: se hace una vez y se guarda. */
+    strongGenerator: new VertexGenerator(models, modelChoice.high, HIGH_THINKING_BUDGET),
     search: createChunkSearch(db),
     storage: new R2FileStorage(
       env.R2_ACCOUNT_ID,

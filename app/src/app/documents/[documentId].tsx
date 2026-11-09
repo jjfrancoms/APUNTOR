@@ -80,10 +80,30 @@ export default function DocumentDetail() {
         />
       }
       footer={
-        <Button
-          label={s.document.ask}
-          onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
-        />
+        <>
+          <Button
+            label={s.document.ask}
+            onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
+          />
+          {record.status === 'completed' ? (
+            <View style={styles.row}>
+              {(['quiz', 'cards'] as const).map((kind) => (
+                <View key={kind} style={styles.flex}>
+                  <Button
+                    label={kind === 'quiz' ? s.study.practice : s.study.cards}
+                    variant="secondary"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/study/quiz-setup',
+                        params: { doc: record.id, kind },
+                      })
+                    }
+                  />
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </>
       }
     >
       <View>

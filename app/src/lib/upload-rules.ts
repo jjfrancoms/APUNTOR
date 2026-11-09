@@ -1,5 +1,4 @@
 import type { ErrorCode } from '@/i18n/es';
-import { normalize } from './text-search';
 
 export const MAX_UPLOAD_MB = 50;
 
@@ -56,18 +55,5 @@ export function validateUpload(
   if (file.sizeMb > MAX_UPLOAD_MB) return 'UP_SIZE';
   if (!(ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) return 'UP_FORMAT';
   if (usedMb + file.sizeMb > quotaMb) return 'UP_QUOTA';
-  return null;
-}
-
-/** Sugiere un curso comparando el nombre del archivo con los títulos de los cursos. */
-export function suggestCourse<T extends { id: string; title: string; keywords: readonly string[] }>(
-  fileName: string,
-  courses: readonly T[],
-): T | null {
-  const name = normalize(fileName);
-  for (const course of courses) {
-    const words = [normalize(course.title), ...course.keywords.map(normalize)];
-    if (words.some((w) => w.length > 2 && name.includes(w))) return course;
-  }
   return null;
 }

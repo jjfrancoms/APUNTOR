@@ -19,6 +19,7 @@ import {
   type AuthUsersDirectory,
 } from './admin';
 import type { AuthSession, Authenticator } from './auth';
+import { registerConversationRoutes, type ConversationsRepository } from './conversations';
 import {
   CONSENT_DOCUMENTS,
   MAX_CONSENT_VERSION,
@@ -29,6 +30,7 @@ import {
   extensionOf,
   MAX_COURSE_TITLE,
   MAX_UPLOAD_BYTES,
+  sameCourseTitle,
   UPLOAD_CONTENT_TYPES,
   type CourseRecord,
   type DocumentRecord,
@@ -46,6 +48,7 @@ import { MAX_SEARCH_QUERY, MIN_SEARCH_QUERY, type SearchRepository } from './sea
 import { withPageStructure } from './topic-content';
 import { SummaryLimitError, type SummaryBlock, type TopicSummarizer } from './topic-summary';
 import { isTransientAiError } from './llm/retry';
+import { registerStudyRoutes, type StudyDeps } from './study/routes';
 import {
   MAX_WAITLIST_EMAIL,
   WAITLIST_SOURCES,
@@ -80,6 +83,7 @@ export interface AppDeps {
   authenticate: Authenticator;
   documents: DocumentsRepository;
   consents: ConsentsRepository;
+  conversations: ConversationsRepository;
   /** Lista de espera de menores: solo la escribe y lee el backend. */
   waitlist: WaitlistRepository;
   /** Consultas propias de la exportación de datos (ARCO). */
@@ -103,6 +107,8 @@ export interface AppDeps {
   externalSearch?: ExternalSearch;
   /** Resúmenes de tema con IA (sin configurar, la ruta responde como no disponible). */
   summaries?: TopicSummarizer;
+  /** Quizzes y tarjetas (sin configurar, las rutas responden como no disponibles). */
+  study?: StudyDeps;
   corsOrigins?: readonly string[];
   /** `true` escribe en stdout; con `{ stream }` escribe ahí (pruebas). */
   logger?: boolean | { stream: LogStream };
@@ -132,6 +138,12 @@ const updateDocumentBody = z
   })
   .refine((body) => body.title !== undefined || body.courseId !== undefined);
 const courseBody = z.object({ title: courseTitle });
+const classificationBody = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('accept') }),
+  z.object({ action: z.literal('choose'), courseId: z.uuid() }),
+  z.object({ action: z.literal('create'), title: courseTitle }),
+  z.object({ action: z.literal('dismiss') }),
+]);
 const questionBody = z.object({
   question: z.string().trim().min(1).max(2000),
   documentIds: z.array(z.uuid()).min(1).max(100).optional(),
@@ -181,6 +193,11 @@ function toPublicDocument(document: DocumentRecord) {
     status: document.status,
     totalPages: document.totalPages,
     topicCount: document.topicCount,
+    classificationStatus: document.classificationStatus,
+    suggestedCourseId: document.suggestedCourseId,
+    suggestedCourseTitle: document.suggestedCourseTitle,
+    suggestionConfidence: document.suggestionConfidence,
+    suggestionReason: document.suggestionReason,
     createdAt: document.createdAt.toISOString(),
   };
 }
@@ -376,6 +393,48 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return course;
   }
 
+  /** El curso con ese título si ya existe (sin duplicar); si no, lo crea. */
+  async function findOrCreateCourse(userId: string, title: string): Promise<CourseRecord> {
+    const existing = (await deps.documents.listCourses(userId)).find((c) =>
+      sameCourseTitle(c.title, title),
+    );
+    return existing ?? deps.documents.createCourse(userId, title);
+  }
+
+  /** El curso que propuso la IA: el existente, o uno nuevo con el título sugerido. */
+  async function suggestedCourse(userId: string, document: DocumentRecord): Promise<CourseRecord> {
+    if (document.classificationStatus !== 'suggested') throw new ApiError('DOC_STATE', 409);
+    if (document.suggestedCourseId !== null) {
+      const course = await deps.documents.getCourse(userId, document.suggestedCourseId);
+      if (course) return course;
+    }
+    if (document.suggestedCourseTitle === null) throw new ApiError('DOC_STATE', 409);
+    return findOrCreateCourse(userId, document.suggestedCourseTitle);
+  }
+
+  /** Solo es corrección si había sugerencia y el usuario eligió otro curso. */
+  function correctsSuggestion(document: DocumentRecord, course: CourseRecord): boolean {
+    if (document.classificationStatus !== 'suggested') return false;
+    if (course.id === document.suggestedCourseId) return false;
+    return !(
+      document.suggestedCourseTitle !== null &&
+      sameCourseTitle(course.title, document.suggestedCourseTitle)
+    );
+  }
+
+  async function confirmCourse(
+    userId: string,
+    document: DocumentRecord,
+    course: CourseRecord,
+  ): Promise<DocumentRecord> {
+    await deps.documents.applyClassification(userId, document.id, {
+      status: 'confirmed',
+      courseId: course.id,
+      recordCorrection: correctsSuggestion(document, course),
+    });
+    return { ...document, courseId: course.id, classificationStatus: 'confirmed' };
+  }
+
   app.get('/health', { config: { rateLimit: false } }, () => ({ status: 'ok' }));
 
   // --- Cuenta y consumo ------------------------------------------------------------
@@ -390,6 +449,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       storageLimit: FREE_LIMITS.storage_bytes,
       summariesToday: used.summaries,
       summariesLimit: FREE_LIMITS.summaries,
+      studyGenerationsToday: used.study_generations,
+      studyGenerationsLimit: FREE_LIMITS.study_generations,
     };
   });
 
@@ -687,14 +748,36 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.patch('/v1/documents/:id', async (request) => {
+  // La sugerencia de curso la decide siempre el usuario (pantalla 16).
+  app.post('/v1/documents/:id/classification', async (request) => {
     const userId = await requireUser(request);
     const document = await requireDocument(userId, request.params);
+    const body = parse(classificationBody, request.body);
+    if (body.action === 'dismiss') {
+      if (document.classificationStatus !== 'suggested') throw new ApiError('DOC_STATE', 409);
+      await deps.documents.applyClassification(userId, document.id, { status: 'dismissed' });
+      return toPublicDocument({ ...document, classificationStatus: 'dismissed' });
+    }
+    const course =
+      body.action === 'accept'
+        ? await suggestedCourse(userId, document)
+        : body.action === 'choose'
+          ? await requireCourse(userId, body.courseId)
+          : await findOrCreateCourse(userId, body.title);
+    return toPublicDocument(await confirmCourse(userId, document, course));
+  });
+
+  app.patch('/v1/documents/:id', async (request) => {
+    const userId = await requireUser(request);
+    let document = await requireDocument(userId, request.params);
     const body = parse(updateDocumentBody, request.body);
-    if (typeof body.courseId === 'string') await requireCourse(userId, body.courseId);
+    // Elegir curso por aquí también resuelve la sugerencia: no queda pendiente de revisar.
+    const course =
+      typeof body.courseId === 'string' ? await requireCourse(userId, body.courseId) : null;
+    if (course) document = await confirmCourse(userId, document, course);
     await deps.documents.update(userId, document.id, {
       ...(body.title === undefined ? {} : { title: body.title }),
-      ...(body.courseId === undefined ? {} : { courseId: body.courseId }),
+      ...(body.courseId === undefined || course ? {} : { courseId: body.courseId }),
     });
     return toPublicDocument({
       ...document,
@@ -777,6 +860,18 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
   });
 
+  // --- Estudio: quizzes, tarjetas y repaso (api/src/study/) -------------------------
+  registerStudyRoutes(app, {
+    study: deps.study,
+    quota: deps.quota,
+    documents: deps.documents,
+    requireUser,
+    requireDocument,
+    strictLimit,
+    parse,
+  });
+  registerConversationRoutes(app, { conversations: deps.conversations, requireUser });
+
   // --- Panel de administrador ----------------------------------------------------
   // Solo metadatos, conteos y estados: nunca fragmentos, preguntas, respuestas ni archivos.
   // Toda acción que cambia algo queda en `admin_audit`. Usa el límite global de peticiones.
@@ -816,6 +911,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           storageBytes: summary?.storageBytes ?? 0,
           questionsToday: summary?.questionsToday ?? 0,
           consentVersion: summary?.consentVersion ?? null,
+          conversations: summary?.conversations ?? 0,
+          conversationMessages: summary?.conversationMessages ?? 0,
         };
       }),
       page,

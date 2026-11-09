@@ -8,17 +8,28 @@ import { buildApp } from './app';
 import { createSupabaseAuthenticator } from './auth';
 import { getServerEnv } from './config/env';
 import { createConsentsRepository } from './consents';
+import { createConversationsRepository } from './conversations';
 import { createDocumentsRepository } from './documents';
 import { createTavilySearch } from './external/tavily';
 import { createIngestionEnqueuer, createQueueClient, ensureIngestionQueue } from './queue';
 import { createQuotaService } from './quota';
+import { createStudyRepository } from './study/repository';
 import { createWaitlistRepository } from './waitlist';
 import { createInfrastructure } from './wiring';
 
 async function main(): Promise<void> {
   const env = getServerEnv();
-  const { db, models, modelChoice, embedder, generator, fallbackGenerator, search, storage } =
-    createInfrastructure(env);
+  const {
+    db,
+    models,
+    modelChoice,
+    embedder,
+    generator,
+    fallbackGenerator,
+    strongGenerator,
+    search,
+    storage,
+  } = createInfrastructure(env);
 
   const boss = createQueueClient(env.QUEUE_DATABASE_URL);
   boss.on('error', (error) => {
@@ -31,6 +42,7 @@ async function main(): Promise<void> {
     authenticate: createSupabaseAuthenticator(env.SUPABASE_URL),
     documents: createDocumentsRepository(db),
     consents: createConsentsRepository(db),
+    conversations: createConversationsRepository(db),
     waitlist: createWaitlistRepository(db),
     accountExport: createAccountExportRepository(db),
     contentSearch: createSearchRepository(db),
@@ -45,6 +57,7 @@ async function main(): Promise<void> {
       fallbackModel: modelChoice.medium,
       storage,
     }),
+    study: { repository: createStudyRepository(db), generator: strongGenerator },
     deleteAuthUser: createSupabaseUserDeleter(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
     admin: createAdminRepository(db),
     authUsers: createSupabaseUsersDirectory(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
