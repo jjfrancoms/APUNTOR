@@ -144,8 +144,8 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   descarta. Las correcciones se guardan en `classification_corrections` y viajan al borrar la cuenta.
 - **Estudio** (`api/src/study/`, rutas `/v1/study/*`): quizzes y tarjetas generados con cita
   literal validada; generar cuesta 1 de la cuota diaria `study_generations`. Las reglas Leitner
-  son el módulo puro `app/src/lib/flashcards.ts` (sin imports: el servidor lo importa y el job
-  raíz de CI no instala `app/`; no le agregues dependencias).
+  viven en `api/src/study/leitner.ts`: el servidor no importa nada de `app/`, porque sus
+  dependencias no existen en la CI del servidor ni en Railway.
 - Cabeceras de seguridad con `@fastify/helmet`.
 - **Panel de administrador** (`api/src/admin.ts`, rutas `/v1/admin/*`): es admin quien tenga en
   el JWT un `email` incluido en `ADMIN_EMAILS` (separado por comas, sin distinguir mayúsculas)
