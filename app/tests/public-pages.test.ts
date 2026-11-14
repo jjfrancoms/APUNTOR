@@ -135,6 +135,24 @@ describe('landing', () => {
     for (const node of data['@graph']) expect(node.name).toBe('Apuntor');
   });
 
+  it('las secciones no se centran: tienen cita de ejemplo, pasos numerados y CTA dividido', () => {
+    expect(html).toContain('class="pill"');
+    expect(html).toMatch(/<ol class="steps">/);
+    expect(html).toMatch(/<section class="cta"/);
+    expect(html).not.toMatch(/text-align:center;padding/);
+    expect(html).toMatch(/\.copy\{text-align:left/);
+  });
+
+  it('las páginas legales y la 404 comparten cabecera y pie con la landing', () => {
+    for (const ruta of ['public/404.html', 'public/legal/privacy.html']) {
+      const pagina = read(ruta);
+      expect(pagina).toContain('<svg class="logo"');
+      expect(pagina).toContain('href="/legal/terms"');
+      expect(pagina).toContain('max-width:1120px');
+    }
+    expect(read('public/legal/terms.html')).toContain('main{max-width:70ch');
+  });
+
   it('no promete precios ni tiendas', () => {
     expect(html).not.toMatch(/gratis|gratuit|free|S\/\s?\d|app store|google play/i);
   });

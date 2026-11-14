@@ -64,21 +64,25 @@ const CSS = `:root{color-scheme:light dark;--bg:#FAF9F6;--surface:#FFFFFF;--bord
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font-size-adjust:from-font;background:var(--bg);color:var(--text);font:400 1rem/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--primary)}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:720px;margin:0 auto;padding:16px 20px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:1.125rem;text-decoration:none}
-.brand .logo{display:block;height:26px;width:auto;fill:var(--primary)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--text);font-weight:800;font-size:1.375rem;text-decoration:none}
+.brand .logo{display:block;height:36px;width:auto;fill:var(--primary)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.enter{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-weight:700;text-decoration:none}
-main{max-width:720px;margin:0 auto;padding:8px 20px 32px}
-h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;margin:16px 0 8px}
+.bar-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-weight:700;font-size:0.9375rem;color:var(--primary);text-decoration:none}
+.bar-link:hover{text-decoration:underline}
+main{max-width:70ch;padding:16px 0 40px}
+h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;letter-spacing:-.4px;margin:16px 0 8px}
 .meta{color:var(--muted);font-size:0.8125rem;line-height:1.125rem;margin:0 0 24px}
-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin:0 0 16px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;margin:0 0 16px}
 h2{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0 0 12px}
 p{margin:0 0 12px;overflow-wrap:anywhere}
 p:last-child{margin-bottom:0}
-footer{max-width:720px;margin:0 auto;padding:16px 20px 40px;color:var(--muted);font-size:0.8125rem;line-height:1.125rem;display:flex;flex-wrap:wrap;gap:8px 20px}
-footer a{color:var(--muted)}
-a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}`;
+footer{border-top:1px solid var(--border);padding:16px 0 32px;color:var(--muted);font-size:0.875rem;line-height:1.25rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+@media (min-width:900px){.wrap{padding:0 32px}h1{font-size:2.25rem;line-height:2.75rem}}`;
 
 export function renderLegalPage(doc: PublicLegalDoc): string {
   const title = TITLES[doc];
@@ -119,19 +123,23 @@ ${CSS}
 </style>
 </head>
 <body>
+<div class="wrap">
 <header class="bar">
 <a class="brand" href="/">${BRAND_LOGO}<span class="sr">Apuntor</span></a>
-<a class="enter" href="/login">Entrar</a>
+<a class="bar-link" href="/login">Entrar</a>
 </header>
 <main>
 <h1>${escapeHtml(title)}</h1>
 <p class="meta">${escapeHtml(`${labels.updated}: ${LEGAL_UPDATED.es} · ${labels.version} ${LEGAL_VERSION}`)}</p>
 ${sections}
 </main>
+</div>
 <footer>
+<div class="wrap">
 <a href="/">Inicio</a>
 <a href="/legal/privacy">Política de privacidad</a>
 <a href="/legal/terms">Términos y condiciones</a>
+</div>
 </footer>
 </body>
 </html>
