@@ -75,6 +75,7 @@ h1{font-size:1.875rem;line-height:2.375rem;font-weight:800;letter-spacing:-.4px;
 .strip p{margin:0;font-size:0.9375rem;line-height:1.5rem;font-weight:700;color:var(--muted)}
 .formats{display:flex;flex-wrap:wrap;gap:0 10px;margin:0;padding:0;list-style:none;font-weight:700;font-size:1rem;line-height:1.5rem}
 .formats li:not(:last-child)::after{content:"·";margin-left:10px;color:var(--muted)}
+@media (max-width:560px){.formats{gap:0 20px}.formats li:not(:last-child)::after{content:none}}
 h2{font-size:1.5rem;line-height:1.875rem;font-weight:800;letter-spacing:-.2px;margin:0 0 16px}
 .section{padding:56px 0 8px}
 .about{display:grid;gap:12px}
