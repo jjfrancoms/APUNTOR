@@ -1,5 +1,5 @@
 import { Image, Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { Card, Chip, Tap, Text } from '@/components/ui';
+import { Card, Chip, Text } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ApiSummaryBlock, ApiTopicSummary } from '@/lib/api';
 import { formatPageRanges } from '@/lib/outline';
@@ -23,18 +23,25 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
     if (pages.length === 0) return null;
     const first = pages[0];
     const url = first === undefined ? undefined : images.get(first);
-    const chip = <Chip label={t.pages(formatPageRanges(pages))} tone="primary" icon="file-text" />;
-    if (!url || first === undefined) return <View style={styles.chip}>{chip}</View>;
+    const label = t.pages(formatPageRanges(pages));
+    if (!url || first === undefined) {
+      return (
+        <View style={styles.chip}>
+          <Chip label={label} tone="primary" icon="file-text" />
+        </View>
+      );
+    }
     return (
-      <Tap
-        accessibilityRole="link"
-        accessibilityLabel={t.checkPage(first)}
-        onPress={() => void Linking.openURL(url)}
-        hitSlop={8}
-        style={styles.chip}
-      >
-        {chip}
-      </Tap>
+      <View style={styles.chip}>
+        <Chip
+          label={label}
+          tone="primary"
+          icon="file-text"
+          accessibilityRole="link"
+          accessibilityLabel={t.checkPage(first)}
+          onPress={() => void Linking.openURL(url)}
+        />
+      </View>
     );
   };
 

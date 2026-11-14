@@ -1,7 +1,8 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Icon } from './Icon';
 import { Text } from './Text';
-import { Tap } from './Tap';
+import { Tap, type TapState } from './Tap';
 
 /**
  * Filtros en chips desplazables: no se parten en dos líneas aunque haya muchas opciones.
@@ -28,15 +29,21 @@ export function FilterChips<T extends string>({
         accessibilityRole="tab"
         accessibilityState={{ selected: active }}
         onPress={() => onChange(o.value)}
-        style={[
+        style={({ pressed, hovered }: TapState) => [
           styles.chip,
           {
-            backgroundColor: active ? c.primary : c.surface,
+            // Seleccionado: fondo suave de marca, borde y marca de verificación (no solo color).
+            backgroundColor: active
+              ? c.primarySoft
+              : pressed || hovered === true
+                ? c.surfaceAlt
+                : c.surface,
             borderColor: active ? c.primary : c.border,
           },
         ]}
       >
-        <Text variant="smallStrong" color={active ? 'onPrimary' : 'text'} numberOfLines={1}>
+        {active ? <Icon name="check" size={14} color="primary" /> : null}
+        <Text variant="smallStrong" color={active ? 'primary' : 'text'} numberOfLines={1}>
           {o.label}
         </Text>
       </Tap>
@@ -69,6 +76,9 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs + 2,
     borderWidth: 1,
     borderRadius: radius.pill,
     paddingHorizontal: space.lg,

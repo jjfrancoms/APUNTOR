@@ -1,36 +1,42 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
-import { fonts, layout, radius, space, useTheme } from '@/theme';
-import { Text } from './Text';
+import { fonts, layout, radius, space } from '@/theme';
+import { Field, FIELD_HEIGHT, useFieldColors } from './Field';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label: string;
-  /** Mensaje de error en línea, bajo el campo. */
+  /** Mensaje de error en línea, bajo el campo (con ícono, nunca solo color). */
   error?: string;
+  /** Texto de ayuda bajo el campo; se oculta mientras haya un error. */
+  helper?: string;
   multiline?: boolean;
   /** Control a la derecha dentro del campo (p. ej. el botón de calendario). */
   trailing?: ReactNode;
 }
 
+/** Campo de texto (referencia: HeroUI Input): etiqueta arriba, foco con borde y halo de marca. */
 export function TextField({
   label,
   error,
+  helper,
   multiline,
   trailing,
   onFocus,
   onBlur,
+  editable,
   ...input
 }: TextFieldProps) {
-  const { c } = useTheme();
   const [focused, setFocused] = useState(false);
+  const disabled = editable === false;
+  const colors = useFieldColors({ focused, error, disabled });
   return (
-    <View style={styles.wrap}>
-      <Text variant="smallStrong">{label}</Text>
+    <Field label={label} helper={helper} error={error} ring={colors.ring}>
       <View>
         <TextInput
           accessibilityLabel={label}
-          placeholderTextColor={c.textMuted}
+          placeholderTextColor={colors.placeholder}
           multiline={multiline}
+          editable={editable}
           {...input}
           onFocus={(e) => {
             setFocused(true);
@@ -43,11 +49,11 @@ export function TextField({
           style={[
             styles.input,
             {
-              color: c.text,
-              backgroundColor: c.surface,
+              color: colors.text,
+              backgroundColor: colors.background,
               // El foco se indica con el borde (en web se quita el contorno del navegador).
-              borderColor: error ? c.danger : focused ? c.primary : c.border,
-              minHeight: multiline ? 120 : layout.primaryButtonHeight,
+              borderColor: colors.border,
+              minHeight: multiline ? 120 : FIELD_HEIGHT,
               textAlignVertical: multiline ? 'top' : 'center',
             },
             trailing ? styles.withTrailing : null,
@@ -55,17 +61,11 @@ export function TextField({
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
-      {error ? (
-        <Text variant="caption" color="danger" accessibilityLiveRegion="polite">
-          {error}
-        </Text>
-      ) : null}
-    </View>
+    </Field>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.xs + 2 },
   withTrailing: { paddingRight: layout.minTouchTarget + space.sm },
   trailing: {
     position: 'absolute',
