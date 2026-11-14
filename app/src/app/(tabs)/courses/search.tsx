@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import {
   Banner,
-  Card,
   Chip,
   EmptyState,
   Icon,
@@ -26,7 +25,7 @@ import { formatPageRanges } from '@/lib/outline';
 import { openSourcePage } from '@/lib/source-page';
 import { highlightParts, splitMatch, type TextPart } from '@/lib/text';
 import { searchAll, useStore, type SearchHit } from '@/store/store';
-import { fonts, layout, radius, space, useTheme } from '@/theme';
+import { fonts, layout, radius, space, useTheme, useWide } from '@/theme';
 
 const DEBOUNCE_MS = 300;
 const SEARCH_TIMEOUT_MS = 15_000;
@@ -85,6 +84,7 @@ function useContentSearch(query: string, enabled: boolean): Remote & { retry: ()
 export default function Search() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const { demo, q } = useLocalSearchParams<{ demo?: string; q?: string }>();
   const [query, setQuery] = useState(q ?? '');
   const trimmed = query.trim();
@@ -121,7 +121,7 @@ export default function Search() {
       </View>
 
       {tooShort ? (
-        <Text variant="small" color="textMuted" align="center">
+        <Text variant="small" color="textMuted">
           {s.search.hint}
         </Text>
       ) : null}
@@ -153,75 +153,111 @@ export default function Search() {
         />
       ) : (
         <>
-          <Section title={s.search.documents} visible={documents.length > 0}>
-            {documents.map((doc) => (
-              <Tap
-                key={doc.id}
-                accessibilityRole="button"
-                accessibilityLabel={doc.title}
-                onPress={() => router.push(`/documents/${doc.id}`)}
-              >
-                <Card>
-                  <TitleRow icon="file-text" title={doc.title} />
-                </Card>
-              </Tap>
-            ))}
-          </Section>
-          <Section title={s.search.topics} visible={topics.length > 0}>
-            {topics.map((topic) => (
-              <Tap
-                key={topic.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${topic.title}, ${topic.documentTitle}`}
-                onPress={() =>
-                  router.push({
-                    pathname: '/topic',
-                    params: { doc: topic.documentId, id: topic.id, title: topic.title },
-                  })
-                }
-              >
-                <Card>
-                  <TitleRow icon="book-open" title={topic.title} />
-                  <Text variant="caption" color="textMuted" numberOfLines={1}>
-                    {topic.documentTitle}
-                  </Text>
-                  {topic.pages.length > 0 ? (
-                    <Chip
-                      label={s.document.pages(topic.pages.length, formatPageRanges(topic.pages))}
-                      tone="primary"
-                      icon="file-text"
-                    />
-                  ) : null}
-                </Card>
-              </Tap>
-            ))}
-          </Section>
-          <Section title={s.search.inNotes} visible={snippets.length > 0}>
-            {snippets.map((hit) => (
-              <Tap
-                key={hit.chunkId}
-                accessibilityRole="link"
-                accessibilityLabel={`${hit.documentTitle}, ${s.search.page(hit.pageNumber)}`}
-                onPress={() => void openSourcePage(hit.documentId, hit.pageNumber)}
-              >
-                <Card>
-                  <Text variant="caption" color="textMuted" numberOfLines={1}>
-                    {hit.documentTitle}
-                  </Text>
-                  <Highlighted parts={highlightParts(hit.snippet, hit.highlights)} />
-                  <Chip label={s.search.page(hit.pageNumber)} tone="primary" icon="file-text" />
-                </Card>
-              </Tap>
-            ))}
-          </Section>
-          <Section title={s.search.chats} visible={chats.length > 0}>
-            {chats.map((hit) => (
-              <ChatResult key={hit.id} result={hit} query={trimmed} />
-            ))}
-          </Section>
+          {/* En pantalla ancha: documentos y temas a la izquierda, fragmentos de tus apuntes a la derecha. */}
+          <View
+            style={{
+              flexDirection: wide && snippets.length > 0 ? 'row' : 'column',
+              gap: space.xxl,
+            }}
+          >
+            <View style={styles.col}>
+              <Section title={s.search.documents} visible={documents.length > 0}>
+                {documents.map((doc) => (
+                  <Tap
+                    key={doc.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={doc.title}
+                    onPress={() => router.push(`/documents/${doc.id}`)}
+                  >
+                    <ResultBox>
+                      <TitleRow icon="file-text" title={doc.title} />
+                    </ResultBox>
+                  </Tap>
+                ))}
+              </Section>
+              <Section title={s.search.topics} visible={topics.length > 0}>
+                {topics.map((topic) => (
+                  <Tap
+                    key={topic.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${topic.title}, ${topic.documentTitle}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/topic',
+                        params: { doc: topic.documentId, id: topic.id, title: topic.title },
+                      })
+                    }
+                  >
+                    <ResultBox>
+                      <TitleRow icon="book-open" title={topic.title} />
+                      <Text variant="caption" color="textMuted" numberOfLines={1}>
+                        {topic.documentTitle}
+                      </Text>
+                      {topic.pages.length > 0 ? (
+                        <Chip
+                          label={s.document.pages(
+                            topic.pages.length,
+                            formatPageRanges(topic.pages),
+                          )}
+                          tone="primary"
+                          icon="file-text"
+                        />
+                      ) : null}
+                    </ResultBox>
+                  </Tap>
+                ))}
+              </Section>
+              <Section title={s.search.chats} visible={chats.length > 0}>
+                {chats.map((hit) => (
+                  <ChatResult key={hit.id} result={hit} query={trimmed} />
+                ))}
+              </Section>
+            </View>
+            {snippets.length > 0 ? (
+              <View style={styles.col}>
+                <Section title={s.search.inNotes} visible={snippets.length > 0}>
+                  {snippets.map((hit) => (
+                    <Tap
+                      key={hit.chunkId}
+                      accessibilityRole="link"
+                      accessibilityLabel={`${hit.documentTitle}, ${s.search.page(hit.pageNumber)}`}
+                      onPress={() => void openSourcePage(hit.documentId, hit.pageNumber)}
+                    >
+                      <ResultBox>
+                        <Text variant="caption" color="textMuted" numberOfLines={1}>
+                          {hit.documentTitle}
+                        </Text>
+                        <Highlighted parts={highlightParts(hit.snippet, hit.highlights)} />
+                        <Chip
+                          label={s.search.page(hit.pageNumber)}
+                          tone="primary"
+                          icon="file-text"
+                        />
+                      </ResultBox>
+                    </Tap>
+                  ))}
+                </Section>
+              </View>
+            ) : null}
+          </View>
         </>
       )}
     </Screen>
+  );
+}
+
+/** Resultado: sin recuadro, separado del siguiente por una línea fina. */
+function ResultBox({ children }: { children: ReactNode }) {
+  const { c } = useTheme();
+  return (
+    <View
+      style={[
+        styles.result,
+        { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -279,13 +315,13 @@ function ChatResult({ result, query }: { result: SearchHit; query: string }) {
       accessibilityLabel={`${result.title}, ${result.location}`}
       onPress={() => router.push({ pathname: '/conversation', params: { id: result.targetId } })}
     >
-      <Card>
+      <ResultBox>
         <TitleRow icon="message-circle" title={result.title} />
         <Text variant="caption" color="textMuted">
           {result.location}
         </Text>
         <Highlighted parts={splitMatch(result.snippet, query)} />
-      </Card>
+      </ResultBox>
     </Tap>
   );
 }
@@ -308,7 +344,9 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
     outlineColor: 'transparent',
   },
-  section: { gap: space.sm },
+  section: { gap: space.xs },
+  col: { flex: 1, minWidth: 0, gap: space.xl },
+  result: { gap: space.xs, paddingVertical: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
 });

@@ -15,12 +15,13 @@ import {
 import { sharedSummary } from '@/data/mock';
 import { reportContent, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
-import { space, useTheme } from '@/theme';
+import { space, useTheme, useWide } from '@/theme';
 
 /** Pantalla 37 · Resumen compartido (web, solo lectura). `expired` muestra el enlace caducado (48). */
 function PublicSummary() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const p = s.publicSummary;
   const { token } = useLocalSearchParams<{ token: string }>();
   const share = useStore((st) => st.shares.find((sh) => sh.token === token));
@@ -42,6 +43,7 @@ function PublicSummary() {
   }
   return (
     <Screen
+      wide
       footer={
         <View style={styles.center}>
           <Icon name="flag" size={12} color="textMuted" />
@@ -62,34 +64,36 @@ function PublicSummary() {
         <Chip label={p.aiBadge} tone="primary" icon="star" />
         <Chip label={p.readOnly} icon="lock" />
       </View>
-      <View>
-        <Text variant="title" accessibilityRole="header">
-          {sharedSummary.title}
-        </Text>
-        <Text variant="caption" color="textMuted">
-          {p.sharedBy(owner, sharedSummary.course)}
-        </Text>
-      </View>
-      <Card>
-        {sharedSummary.points.map((pt) => (
-          <View key={pt} style={styles.bullet}>
-            <View style={[styles.dot, { backgroundColor: c.primary }]} />
-            <Text variant="small" style={styles.flex}>
-              {pt}
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={styles.main}>
+          <View>
+            <Text variant="title" accessibilityRole="header">
+              {sharedSummary.title}
+            </Text>
+            <Text variant="caption" color="textMuted">
+              {p.sharedBy(owner, sharedSummary.course)}
             </Text>
           </View>
-        ))}
-      </Card>
-      <Text variant="caption" color="textMuted">
-        {p.disclaimer(sharedSummary.expires)}
-      </Text>
-      <Card tone="primary" style={styles.cta}>
-        <Text variant="bodyStrong">{p.ctaTitle}</Text>
-        <Text variant="caption" color="textMuted">
-          {p.ctaBody}
-        </Text>
-        <Button label={p.ctaButton} onPress={() => router.push('/register')} />
-      </Card>
+          <Card>
+            {sharedSummary.points.map((pt) => (
+              <View key={pt} style={styles.bullet}>
+                <View style={[styles.dot, { backgroundColor: c.primary }]} />
+                <Text variant="small" style={styles.flex}>
+                  {pt}
+                </Text>
+              </View>
+            ))}
+          </Card>
+          <Text variant="caption" color="textMuted">
+            {p.disclaimer(sharedSummary.expires)}
+          </Text>
+        </View>
+        <View style={[styles.cta, wide && styles.ctaWide]}>
+          <Text variant="heading">{p.ctaTitle}</Text>
+          <Text variant="muted">{p.ctaBody}</Text>
+          <Button label={p.ctaButton} onPress={() => router.push('/register')} />
+        </View>
+      </View>
     </Screen>
   );
 }
@@ -99,7 +103,11 @@ const styles = StyleSheet.create({
   bullet: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
   flex: { flex: 1 },
-  cta: { marginTop: 'auto' },
+  layout: { gap: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  main: { flex: 1, minWidth: 0, gap: space.lg },
+  cta: { gap: space.sm },
+  ctaWide: { width: 300 },
   center: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xs },
 });
 

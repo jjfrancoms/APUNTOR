@@ -91,7 +91,7 @@ function Subscription() {
   }
   return (
     <Screen header={<TopBar title={sub.header} />}>
-      <Card tone="primary">
+      <Card>
         <View style={styles.row}>
           <Text variant="heading" style={styles.flex}>
             {s.plans.student}
@@ -139,12 +139,12 @@ function Subscription() {
           onPress={() => choosePlan('free')}
         />
       </Card>
-      <Card style={styles.note}>
+      <View style={styles.note}>
         <Icon name="shield" size={14} color="textMuted" />
         <Text variant="caption" color="textMuted" style={styles.flex}>
           {sub.storeNote}
         </Text>
-      </Card>
+      </View>
       <View style={styles.links}>
         <TextLink
           label={sub.terms}
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   list: { padding: 0, gap: 0 },
   note: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
-  links: { flexDirection: 'row', justifyContent: 'center', gap: space.xl },
+  links: { flexDirection: 'row', gap: space.xl },
 });
 
 // Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.

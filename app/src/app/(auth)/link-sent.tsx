@@ -2,9 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Linking } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Icon, Screen, Text, TextLink, TopBar } from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Button, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { space, useTheme } from '@/theme';
+import { space } from '@/theme';
 import { formatCountdown } from '@/lib/format';
 import { requestPasswordReset, resendSignupEmail } from '@/store/store';
 
@@ -13,7 +14,6 @@ const RESEND_SECONDS = 42;
 /** Pantalla 13 · Enlace enviado */
 export default function LinkSent() {
   const s = useStrings();
-  const { c } = useTheme();
   const { email = '', mode = 'reset' } = useLocalSearchParams<{
     email?: string;
     mode?: 'reset' | 'signup';
@@ -25,62 +25,35 @@ export default function LinkSent() {
     return () => clearTimeout(t);
   }, [left]);
   return (
-    <Screen
-      narrow
+    <AuthLayout
+      title={s.linkSent.title}
+      subtitle={s.linkSent.body(email)}
       header={<TopBar />}
-      footer={
-        <>
-          <Button
-            label={s.linkSent.openMail}
-            onPress={() => void Linking.openURL('mailto:').catch(() => undefined)}
-          />
-          <Button
-            label={left > 0 ? s.linkSent.resendIn(formatCountdown(left)) : s.linkSent.resend}
-            variant="secondary"
-            disabled={left > 0}
-            onPress={() => {
-              setLeft(RESEND_SECONDS);
-              void (mode === 'signup' ? resendSignupEmail(email) : requestPasswordReset(email));
-            }}
-          />
-          <View style={styles.inline}>
-            <Text variant="small" color="textMuted">
-              {s.linkSent.wrongEmail}
-            </Text>
-            <TextLink label={s.common.change} onPress={() => router.back()} />
-          </View>
-        </>
-      }
+      mood="happy"
     >
-      <View style={styles.center}>
-        <View style={[styles.badge, { backgroundColor: c.primarySoft }]}>
-          <Icon name="mail" size={28} color="primary" />
-        </View>
-        <Text variant="title" align="center" accessibilityRole="header">
-          {s.linkSent.title}
+      <Button
+        label={s.linkSent.openMail}
+        onPress={() => void Linking.openURL('mailto:').catch(() => undefined)}
+      />
+      <Button
+        label={left > 0 ? s.linkSent.resendIn(formatCountdown(left)) : s.linkSent.resend}
+        variant="secondary"
+        disabled={left > 0}
+        onPress={() => {
+          setLeft(RESEND_SECONDS);
+          void (mode === 'signup' ? resendSignupEmail(email) : requestPasswordReset(email));
+        }}
+      />
+      <View style={styles.inline}>
+        <Text variant="small" color="textMuted">
+          {s.linkSent.wrongEmail}
         </Text>
-        <Text variant="small" color="textMuted" align="center">
-          {s.linkSent.body(email)}
-        </Text>
+        <TextLink label={s.common.change} onPress={() => router.back()} />
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.md,
-    paddingHorizontal: space.lg,
-  },
-  badge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
 });

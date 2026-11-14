@@ -66,18 +66,16 @@ function UnsupportedLanguage() {
           {s.language.mixed}
         </Text>
       </Card>
-      <Card tone="primary" style={styles.flat}>
-        {notified ? (
-          <Banner tone="info" icon="check" title={s.sheets.languagesDone} />
-        ) : (
-          <ListRow
-            icon="globe"
-            title={s.language.notify}
-            divider={false}
-            onPress={notifyMoreLanguages}
-          />
-        )}
-      </Card>
+      {notified ? (
+        <Banner tone="info" icon="check" title={s.sheets.languagesDone} />
+      ) : (
+        <ListRow
+          icon="globe"
+          title={s.language.notify}
+          divider={false}
+          onPress={notifyMoreLanguages}
+        />
+      )}
     </Screen>
   );
 }
@@ -87,5 +85,4 @@ export default previewOnly(UnsupportedLanguage);
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', gap: space.sm },
-  flat: { padding: 0 },
 });

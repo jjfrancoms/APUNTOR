@@ -12,6 +12,13 @@ import {
   LEGAL_VERSION,
   type LegalDoc,
 } from '../src/i18n/legal';
+import {
+  HORIZONTAL_VIEWBOX as VB,
+  ISOTIPO_PATH,
+  ISOTIPO_TRANSFORM,
+  LETRAS_PATH,
+  LETRAS_TRANSFORM,
+} from '../src/components/ui/brandLogoPaths';
 
 export const SITE_URL = 'https://apuntor.com';
 
@@ -45,26 +52,37 @@ function escapeHtml(text: string): string {
 }
 
 // Paleta de DESIGN.md (claro y oscuro). Sin JavaScript ni recursos externos.
-const CSS = `:root{--bg:#FAF9F6;--surface:#FFFFFF;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
-@media (prefers-color-scheme:dark){:root{--bg:#121413;--surface:#1C1F1E;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
+/** Logo horizontal en línea (el color sale de `fill` en CSS, según el tema claro u oscuro). */
+const BRAND_LOGO =
+  `<svg class="logo" viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" aria-hidden="true" focusable="false"><title>Apuntor</title>` +
+  `<g transform="${ISOTIPO_TRANSFORM}"><path fill-rule="evenodd" d="${ISOTIPO_PATH}"/></g>` +
+  `<g transform="${LETRAS_TRANSFORM}"><path d="${LETRAS_PATH}"/></g></svg>`;
+
+const CSS = `:root{color-scheme:light dark;--bg:#FAF9F6;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--bg:#121413;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;font-size-adjust:from-font;background:var(--bg);color:var(--text);font:400 1rem/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--primary)}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:720px;margin:0 auto;padding:16px 20px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:18px;text-decoration:none}
-.brand img{width:32px;height:32px;border-radius:8px}
-.enter{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-weight:700;text-decoration:none}
-main{max-width:720px;margin:0 auto;padding:8px 20px 32px}
-h1{font-size:28px;line-height:34px;font-weight:800;margin:16px 0 8px}
-.meta{color:var(--muted);font-size:13px;line-height:18px;margin:0 0 24px}
-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin:0 0 16px}
-h2{font-size:18px;line-height:24px;font-weight:700;margin:0 0 12px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--text);font-weight:800;font-size:1.375rem;text-decoration:none}
+.brand .logo{display:block;height:36px;width:auto;fill:var(--primary)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.bar-link{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-weight:700;font-size:0.9375rem;color:var(--primary);text-decoration:none}
+.bar-link:hover{text-decoration:underline}
+main{max-width:70ch;padding:16px 0 40px}
+h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;letter-spacing:-.4px;margin:16px 0 8px}
+.meta{color:var(--muted);font-size:0.8125rem;line-height:1.125rem;margin:0 0 24px}
+section{border-top:1px solid var(--border);padding:24px 0}
+h2{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0 0 12px}
 p{margin:0 0 12px;overflow-wrap:anywhere}
 p:last-child{margin-bottom:0}
-footer{max-width:720px;margin:0 auto;padding:16px 20px 40px;color:var(--muted);font-size:13px;line-height:18px;display:flex;flex-wrap:wrap;gap:8px 20px}
-footer a{color:var(--muted)}
-a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}`;
+footer{border-top:1px solid var(--border);padding:16px 0 32px;color:var(--muted);font-size:0.875rem;line-height:1.25rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+@media (min-width:900px){.wrap{padding:0 32px}h1{font-size:2.25rem;line-height:2.75rem}}`;
 
 export function renderLegalPage(doc: PublicLegalDoc): string {
   const title = TITLES[doc];
@@ -81,11 +99,18 @@ export function renderLegalPage(doc: PublicLegalDoc): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Declara ambos temas antes de pintar (evita el destello blanco en modo oscuro) y respeta el tamaño de texto del sistema. -->
+<meta name="color-scheme" content="light dark">
+<meta name="text-scale" content="scale">
 <title>${escapeHtml(title)} · Apuntor</title>
 <meta name="description" content="${escapeHtml(DESCRIPTIONS[doc])}">
 <link rel="canonical" href="${url}">
 <link rel="icon" href="/favicon.png" type="image/png">
-<meta name="theme-color" content="#FAF9F6">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121413" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Apuntor">
 <meta property="og:title" content="${escapeHtml(title)} · Apuntor">
@@ -98,19 +123,23 @@ ${CSS}
 </style>
 </head>
 <body>
+<div class="wrap">
 <header class="bar">
-<a class="brand" href="/"><img src="/apuntor-icon-192.png" alt="" width="32" height="32">Apuntor</a>
-<a class="enter" href="/login">Entrar</a>
+<a class="brand" href="/">${BRAND_LOGO}<span class="sr">Apuntor</span></a>
+<a class="bar-link" href="/login">Entrar</a>
 </header>
 <main>
 <h1>${escapeHtml(title)}</h1>
 <p class="meta">${escapeHtml(`${labels.updated}: ${LEGAL_UPDATED.es} · ${labels.version} ${LEGAL_VERSION}`)}</p>
 ${sections}
 </main>
+</div>
 <footer>
+<div class="wrap">
 <a href="/">Inicio</a>
 <a href="/legal/privacy">Política de privacidad</a>
 <a href="/legal/terms">Términos y condiciones</a>
+</div>
 </footer>
 </body>
 </html>

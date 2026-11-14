@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { previewOnly } from '@/components/domain/PreviewOnly';
+import { AuthLayout } from '@/components/domain/AuthLayout';
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, Icon, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
+import { Button, Icon, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings } from '@/store/store';
 import { space, useTheme } from '@/theme';
@@ -20,28 +21,22 @@ function NotificationsPermission() {
     done();
   };
   return (
-    <Screen
-      narrow
+    <AuthLayout
+      title={s.notificationsPermission.title}
+      subtitle={s.notificationsPermission.subtitle}
       header={<TopBar icon="x" onBack={done} />}
+      mood="surprised"
       footer={
         <>
           <Button label={s.notificationsPermission.enable} onPress={enable} />
-          <View style={styles.center}>
+          <View style={styles.start}>
             <TextLink label={s.notificationsPermission.notNow} color="textMuted" onPress={skip} />
           </View>
         </>
       }
     >
-      <View style={styles.hero}>
-        <Mascot size={96} mood="surprised" />
-        <Text variant="title" align="center" accessibilityRole="header">
-          {s.notificationsPermission.title}
-        </Text>
-        <Text variant="small" color="textMuted" align="center">
-          {s.notificationsPermission.subtitle}
-        </Text>
-      </View>
-      <Card style={styles.list}>
+      {/* Lista plana separada por líneas finas: la marca de verificación no lleva recuadro. */}
+      <View>
         {s.notificationsPermission.items.map((item, i) => (
           <View
             key={item.title}
@@ -50,19 +45,17 @@ function NotificationsPermission() {
               i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
             ]}
           >
-            <View style={[styles.check, { backgroundColor: c.primarySoft }]}>
-              <Icon name="check" size={14} color="primary" />
-            </View>
+            <Icon name="check" size={18} color="primary" />
             <View style={styles.flex}>
-              <Text variant="smallStrong">{item.title}</Text>
+              <Text variant="bodyStrong">{item.title}</Text>
               <Text variant="caption" color="textMuted">
                 {item.detail}
               </Text>
             </View>
           </View>
         ))}
-      </Card>
-    </Screen>
+      </View>
+    </AuthLayout>
   );
 }
 
@@ -70,16 +63,7 @@ function NotificationsPermission() {
 export default previewOnly(NotificationsPermission);
 
 const styles = StyleSheet.create({
-  hero: { alignItems: 'center', gap: space.sm },
-  list: { padding: 0, gap: 0 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
-  check: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
   flex: { flex: 1 },
-  center: { alignItems: 'center' },
+  start: { alignItems: 'flex-start' },
 });

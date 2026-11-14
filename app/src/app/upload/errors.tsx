@@ -1,7 +1,7 @@
 import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Banner, Button, Card, Chip, FileRow, Mascot, Screen, Text, TopBar } from '@/components/ui';
+import { Banner, Button, Chip, FileRow, Screen, Text, TopBar } from '@/components/ui';
 import { processResults } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { space } from '@/theme';
@@ -52,20 +52,12 @@ function ProcessErrors() {
           />
         </View>
       </Banner>
-      <Card style={styles.row}>
-        <Mascot size={48} mood="curious" />
-        <Text variant="small" style={styles.flex}>
-          {s.processError.mascot}
-        </Text>
-      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  flex: { flex: 1 },
 });
 
 // Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.

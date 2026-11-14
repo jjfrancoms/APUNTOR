@@ -8,7 +8,6 @@ import {
   Card,
   Chip,
   ListRow,
-  Mascot,
   Screen,
   SelectField,
   Segmented,
@@ -30,7 +29,7 @@ import {
 } from '@/lib/study';
 import { previewSet } from '@/lib/study-preview';
 import { useStore } from '@/store/store';
-import { radius, space, useTheme } from '@/theme';
+import { space, useWide } from '@/theme';
 
 /** Ruta de cada tipo de juego. */
 function routeFor(kind: StudyKind): '/study/quiz' | '/study/flashcards' {
@@ -44,7 +43,7 @@ function routeFor(kind: StudyKind): '/study/quiz' | '/study/flashcards' {
  */
 export default function QuizSetup() {
   const s = useStrings();
-  const { c } = useTheme();
+  const wide = useWide();
   const q = s.quizSetup;
   const st = s.study;
   const params = useLocalSearchParams<{
@@ -159,6 +158,7 @@ export default function QuizSetup() {
 
   return (
     <Screen
+      wide
       header={<TopBar icon="x" title={q.header} />}
       footer={
         <Button
@@ -168,12 +168,7 @@ export default function QuizSetup() {
         />
       }
     >
-      <View style={styles.bubbleRow}>
-        <Mascot size={64} />
-        <View style={[styles.bubble, { backgroundColor: c.surface, borderColor: c.border }]}>
-          <Text variant="smallStrong">{q.mascot}</Text>
-        </View>
-      </View>
+      <Text variant="lead">{q.mascot}</Text>
       {!online ? <Banner tone="warning" icon="wifi-off" title={st.offlineBody} /> : null}
       {error ? <Banner tone="danger" icon="alert-circle" title={st.errors[error]} /> : null}
       {usage ? (
@@ -188,89 +183,101 @@ export default function QuizSetup() {
       {limitReached ? (
         <Banner tone="warning" icon="clock" title={st.errors.STUDY_DAILY_LIMIT} />
       ) : null}
-      {documents.length === 0 ? (
-        <Card>
-          <Text variant="bodyStrong">{st.noDocumentsTitle}</Text>
-          <Text variant="small" color="textMuted">
-            {st.noDocumentsBody}
-          </Text>
-        </Card>
-      ) : (
-        <>
-          <Text variant="smallStrong" accessibilityRole="header">
-            {st.document}
-          </Text>
-          <SelectField
-            value={documents.find((d) => d.id === selectedDoc)?.name}
-            placeholder={st.documentPlaceholder}
-            options={documents.map((d) => ({ value: d.id, label: d.name }))}
-            selected={selectedDoc}
-            onSelect={(id) => {
-              setDocId(id);
-              setTopicId(undefined);
-            }}
-          />
-          {topicId ? (
-            <Chip label={st.topicOnly(params.topicTitle ?? '')} tone="primary" icon="book-open" />
-          ) : null}
-        </>
-      )}
-      <Text variant="smallStrong" accessibilityRole="header">
-        {st.kindLabel}
-      </Text>
-      <Segmented
-        options={[
-          { value: 'quiz' as StudyKind, label: st.kindQuiz },
-          { value: 'cards' as StudyKind, label: st.kindCards },
-        ]}
-        value={kind}
-        onChange={setKind}
-      />
-      <Text variant="smallStrong" accessibilityRole="header">
-        {kind === 'quiz' ? st.amountQuiz : st.amountCards}
-      </Text>
-      <Segmented
-        options={STUDY_COUNTS.map((a) => ({ value: a, label: a }))}
-        value={amount}
-        onChange={setAmount}
-      />
-      <View style={styles.chips}>
-        <Chip label={q.minutes(estimateMinutes(count))} icon="clock" />
-      </View>
-      {saved.length > 0 ? (
-        <>
-          <Text variant="overline" color="textMuted">
-            {st.savedTitle}
-          </Text>
-          <Text variant="caption" color="textMuted">
-            {st.savedHint}
-          </Text>
-          <Card style={styles.list}>
-            {saved.map((set, i) => (
-              <ListRow
-                key={set.id}
-                title={`${st.savedKind[set.kind]} · ${set.topicTitle ?? set.documentTitle}`}
-                detail={
-                  set.lastScore !== null && set.lastTotal !== null
-                    ? `${st.savedRow(set.itemCount)} · ${st.savedScore(set.lastScore, set.lastTotal)}`
-                    : st.savedRow(set.itemCount)
-                }
-                divider={i < saved.length - 1}
-                onPress={() =>
-                  router.push({ pathname: routeFor(set.kind), params: { setId: set.id } })
-                }
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={styles.form}>
+          {documents.length === 0 ? (
+            <Card>
+              <Text variant="bodyStrong">{st.noDocumentsTitle}</Text>
+              <Text variant="small" color="textMuted">
+                {st.noDocumentsBody}
+              </Text>
+            </Card>
+          ) : (
+            <>
+              <Text variant="smallStrong" accessibilityRole="header">
+                {st.document}
+              </Text>
+              <SelectField
+                value={documents.find((d) => d.id === selectedDoc)?.name}
+                placeholder={st.documentPlaceholder}
+                options={documents.map((d) => ({ value: d.id, label: d.name }))}
+                selected={selectedDoc}
+                onSelect={(id) => {
+                  setDocId(id);
+                  setTopicId(undefined);
+                }}
               />
-            ))}
-          </Card>
-        </>
-      ) : null}
+              {topicId ? (
+                <Chip
+                  label={st.topicOnly(params.topicTitle ?? '')}
+                  tone="primary"
+                  icon="book-open"
+                />
+              ) : null}
+            </>
+          )}
+          <Text variant="smallStrong" accessibilityRole="header">
+            {st.kindLabel}
+          </Text>
+          <Segmented
+            options={[
+              { value: 'quiz' as StudyKind, label: st.kindQuiz },
+              { value: 'cards' as StudyKind, label: st.kindCards },
+            ]}
+            value={kind}
+            onChange={setKind}
+          />
+          <Text variant="smallStrong" accessibilityRole="header">
+            {kind === 'quiz' ? st.amountQuiz : st.amountCards}
+          </Text>
+          <Segmented
+            options={STUDY_COUNTS.map((a) => ({ value: a, label: a }))}
+            value={amount}
+            onChange={setAmount}
+          />
+          <View style={styles.chips}>
+            <Chip label={q.minutes(estimateMinutes(count))} icon="clock" />
+          </View>
+        </View>
+        <View style={styles.saved}>
+          {saved.length > 0 ? (
+            <>
+              <Text variant="heading" accessibilityRole="header">
+                {st.savedTitle}
+              </Text>
+              <Text variant="caption" color="textMuted">
+                {st.savedHint}
+              </Text>
+              <Card style={styles.list}>
+                {saved.map((set, i) => (
+                  <ListRow
+                    key={set.id}
+                    title={`${st.savedKind[set.kind]} · ${set.topicTitle ?? set.documentTitle}`}
+                    detail={
+                      set.lastScore !== null && set.lastTotal !== null
+                        ? `${st.savedRow(set.itemCount)} · ${st.savedScore(set.lastScore, set.lastTotal)}`
+                        : st.savedRow(set.itemCount)
+                    }
+                    divider={i < saved.length - 1}
+                    onPress={() =>
+                      router.push({ pathname: routeFor(set.kind), params: { setId: set.id } })
+                    }
+                  />
+                ))}
+              </Card>
+            </>
+          ) : null}
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  bubbleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  bubble: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: space.md },
+  layout: { gap: space.lg },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  form: { flex: 1, minWidth: 0, gap: space.md },
+  saved: { flex: 1, minWidth: 0, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   list: { padding: 0, gap: 0 },
 });

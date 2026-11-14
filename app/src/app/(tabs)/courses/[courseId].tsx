@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import {
   Button,
-  Card,
   Icon,
   IconButton,
   ListRow,
@@ -17,13 +16,14 @@ import { PREVIEW } from '@/lib/config';
 import { useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
-import { space, useTheme } from '@/theme';
+import { layout, space, useTheme, useWide } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 20 · Detalle de curso */
 export default function CourseDetail() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const [menu, setMenu] = useState(false);
   const course = useStore((st) => st.courses.find((k) => k.id === courseId));
@@ -38,6 +38,7 @@ export default function CourseDetail() {
   ] as const;
   return (
     <Screen
+      wide
       header={
         <TopBar
           title={course.title}
@@ -61,64 +62,70 @@ export default function CourseDetail() {
         </>
       }
     >
-      <View style={styles.stats}>
-        {stats.map(([n, label]) => (
-          <Card key={label} style={styles.stat}>
-            <Text variant="title" color="primary" align="center">
-              {String(n)}
-            </Text>
-            <Text variant="caption" color="textMuted" align="center">
-              {label}
-            </Text>
-          </Card>
-        ))}
-      </View>
-      <View style={styles.gapXs}>
-        <View style={styles.row}>
-          <Text variant="smallStrong" style={styles.flex}>
-            {s.course.progress}
-          </Text>
-          <Text variant="smallStrong" color="primary">
-            {formatPercent(course.progress)}
-          </Text>
-        </View>
-        <ProgressBar value={course.progress} label={s.course.progress} />
-      </View>
-      <Text variant="overline" color="textMuted">
-        {s.course.classesHeader}
-      </Text>
-      <Card style={styles.list}>
-        {course.classes.map((klass, i) => {
-          const status =
-            klass.progress >= 1
-              ? s.course.completed
-              : klass.progress === 0
-                ? s.course.notStarted
-                : formatPercent(klass.progress);
-          return (
-            <Tap
-              key={klass.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${klass.title}, ${status}`}
-              // Hasta la fase 2, cada clase es un documento.
-              onPress={() => router.push(`/documents/${klass.id}`)}
-              style={[
-                styles.klass,
-                i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
-              ]}
-            >
-              <View style={[styles.flex, styles.gapXs]}>
-                <Text variant="smallStrong">{klass.title}</Text>
-                <ProgressBar value={klass.progress} label={klass.title} />
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.summary, wide && styles.summaryWide]}>
+          <View style={styles.stats}>
+            {stats.map(([n, label]) => (
+              <View key={label} style={styles.stat}>
+                <Text variant="title" color="primary">
+                  {String(n)}
+                </Text>
                 <Text variant="caption" color="textMuted">
-                  {s.course.classProgress(klass.topicCount, status)}
+                  {label}
                 </Text>
               </View>
-              <Icon name="chevron-right" color="textMuted" />
-            </Tap>
-          );
-        })}
-      </Card>
+            ))}
+          </View>
+          <View style={styles.gapXs}>
+            <View style={styles.row}>
+              <Text variant="smallStrong" style={styles.flex}>
+                {s.course.progress}
+              </Text>
+              <Text variant="smallStrong" color="primary">
+                {formatPercent(course.progress)}
+              </Text>
+            </View>
+            <ProgressBar value={course.progress} label={s.course.progress} />
+          </View>
+        </View>
+        <View style={styles.classes}>
+          <Text variant="heading" accessibilityRole="header">
+            {s.course.classesHeader}
+          </Text>
+          <View>
+            {course.classes.map((klass) => {
+              const status =
+                klass.progress >= 1
+                  ? s.course.completed
+                  : klass.progress === 0
+                    ? s.course.notStarted
+                    : formatPercent(klass.progress);
+              return (
+                <Tap
+                  key={klass.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${klass.title}, ${status}`}
+                  // Hasta la fase 2, cada clase es un documento.
+                  onPress={() => router.push(`/documents/${klass.id}`)}
+                  style={[
+                    styles.klass,
+                    { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+                  ]}
+                >
+                  <View style={[styles.flex, styles.gapXs]}>
+                    <Text variant="smallStrong">{klass.title}</Text>
+                    <ProgressBar value={klass.progress} label={klass.title} />
+                    <Text variant="caption" color="textMuted">
+                      {s.course.classProgress(klass.topicCount, status)}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" color="textMuted" />
+                </Tap>
+              );
+            })}
+          </View>
+        </View>
+      </View>
       <Sheet visible={menu} onClose={() => setMenu(false)} title={s.courseMenu.title}>
         {PREVIEW ? (
           <ListRow
@@ -153,11 +160,21 @@ export default function CourseDetail() {
 }
 
 const styles = StyleSheet.create({
-  stats: { flexDirection: 'row', gap: space.sm },
-  stat: { flex: 1, alignItems: 'center', gap: 0, paddingVertical: space.md },
+  layout: { gap: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  summary: { gap: space.lg },
+  summaryWide: { width: 300 },
+  stats: { flexDirection: 'row', gap: space.xl },
+  stat: { gap: 0 },
+  classes: { flex: 1, minWidth: 0, gap: space.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
   flex: { flex: 1 },
   gapXs: { gap: space.xs },
-  list: { padding: 0, gap: 0 },
-  klass: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
+  klass: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.lg,
+    minHeight: layout.minTouchTarget,
+  },
 });

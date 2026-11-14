@@ -1,7 +1,8 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, DateField, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Button, DateField, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings, type ErrorCode } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
 import { confirmAdult, signOut, useStore } from '@/store/store';
@@ -32,18 +33,12 @@ export default function ConfirmAge() {
   };
 
   return (
-    <Screen narrow header={<TopBar title={k.header} />}>
-      <View style={styles.center}>
-        <Mascot size={96} mood="curious" />
-      </View>
-      <View style={styles.intro}>
-        <Text variant="title" accessibilityRole="header">
-          {k.title}
-        </Text>
-        <Text variant="small" color="textMuted">
-          {k.subtitle}
-        </Text>
-      </View>
+    <AuthLayout
+      title={k.title}
+      subtitle={k.subtitle}
+      header={<TopBar title={k.header} />}
+      mood="curious"
+    >
       <View style={styles.intro}>
         <DateField
           label={k.birthDate}
@@ -65,17 +60,17 @@ export default function ConfirmAge() {
         disabled={birthDate.length < 10}
         onPress={() => void submit()}
       />
-      <View style={styles.center}>
+      <View style={styles.start}>
         <TextLink
           label={k.signOut}
           onPress={() => void signOut().then(() => router.replace('/login'))}
         />
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center' },
+  start: { alignItems: 'flex-start' },
   intro: { gap: space.xs },
 });

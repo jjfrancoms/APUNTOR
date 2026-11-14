@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Mascot, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Button, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { isValidEmail } from '@/lib/validation';
 import { requestPasswordReset } from '@/store/store';
@@ -21,9 +22,11 @@ export default function ForgotPassword() {
     if (ok) router.push({ pathname: '/link-sent', params: { email: email.trim(), mode: 'reset' } });
   };
   return (
-    <Screen
-      narrow
+    <AuthLayout
+      title={s.forgot.title}
+      subtitle={s.forgot.subtitle}
       header={<TopBar title={s.forgot.header} />}
+      mood="curious"
       footer={
         <View style={styles.inline}>
           <Text variant="small" color="textMuted">
@@ -33,17 +36,6 @@ export default function ForgotPassword() {
         </View>
       }
     >
-      <View style={styles.center}>
-        <Mascot size={96} mood="curious" />
-      </View>
-      <View style={styles.intro}>
-        <Text variant="title" accessibilityRole="header">
-          {s.forgot.title}
-        </Text>
-        <Text variant="small" color="textMuted">
-          {s.forgot.subtitle}
-        </Text>
-      </View>
       <TextField
         label={s.forgot.email}
         placeholder={s.login.emailPlaceholder}
@@ -60,12 +52,10 @@ export default function ForgotPassword() {
         loading={busy}
         onPress={() => void send()}
       />
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center' },
-  intro: { gap: space.xs },
-  inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
 });

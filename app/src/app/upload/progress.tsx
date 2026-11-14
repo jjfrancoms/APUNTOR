@@ -8,7 +8,9 @@ import {
   IconButton,
   ProgressBar,
   Screen,
+  Steps,
   Text,
+  type StepItem,
   TopBar,
 } from '@/components/ui';
 import { OfflineBanner } from '@/components/domain/OfflineBanner';
@@ -17,7 +19,7 @@ import { formatPercent } from '@/lib/format';
 import { pickFiles } from '@/lib/pick-files';
 import { extLabel } from '@/lib/upload-rules';
 import { enqueueUploads, removeUpload, useStore } from '@/store/store';
-import { space } from '@/theme';
+import { space, useWide } from '@/theme';
 
 /** Pantalla 17 · Subiendo documentos (avance de cada archivo: subida a R2 y procesamiento en el servidor). */
 export default function Uploading() {
@@ -37,8 +39,32 @@ export default function Uploading() {
           )) /
         (jobs.length - failed.length || 1);
   const finished = active.length === 0;
+  const wide = useWide();
+  const sp = s.uploading.steps;
+  const uploading = jobs.some((u) => u.status === 'uploading');
+  const processing = jobs.some((u) => u.status === 'processing');
+  const allFailed = jobs.length > 0 && failed.length === jobs.length;
+  // Los pasos resumen todos los archivos: subir, leer y ordenar.
+  const steps: StepItem[] = [
+    {
+      title: sp.upload,
+      description: sp.uploadBody,
+      status: allFailed ? 'error' : uploading ? 'active' : 'done',
+    },
+    {
+      title: sp.read,
+      description: sp.readBody,
+      status: allFailed ? 'error' : uploading ? 'pending' : processing ? 'active' : 'done',
+    },
+    {
+      title: sp.organize,
+      description: sp.organizeBody,
+      status: allFailed ? 'error' : finished && ready.length > 0 ? 'done' : 'pending',
+    },
+  ];
   return (
     <Screen
+      wide
       header={<TopBar title={s.uploading.header} />}
       footer={
         <>
@@ -61,62 +87,69 @@ export default function Uploading() {
       }
     >
       <OfflineBanner title={s.connection.uploads} />
-      <View style={styles.head}>
-        <Text variant="heading" style={styles.flex}>
-          {s.uploading.count(ready.length, jobs.length - failed.length)}
-        </Text>
-        <Text variant="smallStrong" color="primary">
-          {formatPercent(ratio)}
-        </Text>
-      </View>
-      <ProgressBar value={ratio} label={s.uploading.count(ready.length, jobs.length)} />
-      {jobs
-        .filter((j) => j.status !== 'failed')
-        .map((j) => {
-          if (j.status === 'review') {
-            return (
-              <FileRow
-                key={j.id}
-                ext={extLabel(j.name)}
-                name={j.name}
-                detail={`${j.sizeMb} MB · ${s.upload.classified}`}
-                trailing={<Chip label={s.upload.status.ready} tone="primary" icon="check" />}
-              />
-            );
-          }
-          if (j.status === 'processing') {
-            return (
-              <FileRow
-                key={j.id}
-                ext={extLabel(j.name)}
-                name={j.name}
-                detail={s.upload.classifying}
-                trailing={
-                  <Chip label={s.upload.status.processing} tone="warning" icon="refresh-cw" />
-                }
-              >
-                <ProgressBar value={j.progress} tone="accent" label={j.name} />
-              </FileRow>
-            );
-          }
-          return (
-            <FileRow
-              key={j.id}
-              ext={extLabel(j.name)}
-              name={j.name}
-              detail={s.upload.uploading(Math.round(j.progress * 100), `${j.sizeMb} MB`)}
-              trailing={
-                <IconButton
-                  icon="x"
-                  label={s.upload.cancelFile}
-                  onPress={() => removeUpload(j.id)}
-                />
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.side, wide && styles.sideWide]}>
+          <View style={styles.head}>
+            <Text variant="heading" style={styles.flex}>
+              {s.uploading.count(ready.length, jobs.length - failed.length)}
+            </Text>
+            <Text variant="smallStrong" color="primary">
+              {formatPercent(ratio)}
+            </Text>
+          </View>
+          <ProgressBar value={ratio} label={s.uploading.count(ready.length, jobs.length)} />
+          <Steps items={steps} statusLabels={s.uploading.stepsStatus} />
+        </View>
+        <View style={styles.files}>
+          {jobs
+            .filter((j) => j.status !== 'failed')
+            .map((j) => {
+              if (j.status === 'review') {
+                return (
+                  <FileRow
+                    key={j.id}
+                    ext={extLabel(j.name)}
+                    name={j.name}
+                    detail={`${j.sizeMb} MB · ${s.upload.classified}`}
+                    trailing={<Chip label={s.upload.status.ready} tone="primary" icon="check" />}
+                  />
+                );
               }
-            >
-              <ProgressBar value={j.progress} tone="accent" label={j.name} />
-            </FileRow>
-          );
-        })}
+              if (j.status === 'processing') {
+                return (
+                  <FileRow
+                    key={j.id}
+                    ext={extLabel(j.name)}
+                    name={j.name}
+                    detail={s.upload.classifying}
+                    trailing={
+                      <Chip label={s.upload.status.processing} tone="warning" icon="refresh-cw" />
+                    }
+                  >
+                    <ProgressBar value={j.progress} tone="accent" label={j.name} />
+                  </FileRow>
+                );
+              }
+              return (
+                <FileRow
+                  key={j.id}
+                  ext={extLabel(j.name)}
+                  name={j.name}
+                  detail={s.upload.uploading(Math.round(j.progress * 100), `${j.sizeMb} MB`)}
+                  trailing={
+                    <IconButton
+                      icon="x"
+                      label={s.upload.cancelFile}
+                      onPress={() => removeUpload(j.id)}
+                    />
+                  }
+                >
+                  <ProgressBar value={j.progress} tone="accent" label={j.name} />
+                </FileRow>
+              );
+            })}
+        </View>
+      </View>
       {failed.length > 0 ? (
         <Banner
           tone="danger"
@@ -134,6 +167,11 @@ export default function Uploading() {
 }
 
 const styles = StyleSheet.create({
+  layout: { gap: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  side: { gap: space.md },
+  sideWide: { width: 340 },
+  files: { flex: 1, minWidth: 0, gap: space.md },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
 });

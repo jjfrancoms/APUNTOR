@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   Button,
-  Card,
   Chip,
   EmptyState,
   Icon,
@@ -13,20 +12,14 @@ import {
   FilterChips,
   Text,
   TopBar,
-  type ChipTone,
 } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { formatPercent } from '@/lib/format';
 import { classOf, useStore, type ContentKind } from '@/store/store';
-import { space } from '@/theme';
+import { layout, space, useTheme, useWide } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 type Filter = 'all' | ContentKind;
-const KIND_TONE: Record<ContentKind, ChipTone> = {
-  definicion: 'primary',
-  concepto: 'neutral',
-  ejercicio: 'warning',
-};
 const KIND_ICON = { definicion: 'book', concepto: 'zap', ejercicio: 'edit-3' } as const;
 
 /**
@@ -36,6 +29,8 @@ const KIND_ICON = { definicion: 'book', concepto: 'zap', ejercicio: 'edit-3' } a
 function ClassDetail() {
   const s = useStrings();
   const cv = s.classView;
+  const { c } = useTheme();
+  const wide = useWide();
   const { classId } = useLocalSearchParams<{ classId: string }>();
   const state = useStore((st) => st);
   const found = useMemo(() => classOf(state, classId), [state, classId]);
@@ -55,6 +50,7 @@ function ClassDetail() {
 
   return (
     <Screen
+      wide
       header={<TopBar title={klass.title} subtitle={course.title} />}
       footer={
         items.length > 0 ? (
@@ -81,35 +77,45 @@ function ClassDetail() {
         )
       }
     >
-      <View style={styles.gapXs}>
-        <View style={styles.row}>
-          <Text variant="smallStrong" style={styles.flex}>
-            {cv.progress}
-          </Text>
-          <Text variant="smallStrong" color="primary">
-            {formatPercent(klass.progress)}
-          </Text>
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.side, wide && styles.sideWide]}>
+          <View style={styles.gapXs}>
+            <View style={styles.row}>
+              <Text variant="smallStrong" style={styles.flex}>
+                {cv.progress}
+              </Text>
+              <Text variant="smallStrong" color="primary">
+                {formatPercent(klass.progress)}
+              </Text>
+            </View>
+            <ProgressBar value={klass.progress} label={klass.title} />
+          </View>
+          {items.length > 0 ? (
+            <FilterChips
+              options={filters.map((f) => ({ value: f, label: `${cv.filters[f]} · ${count(f)}` }))}
+              value={filter}
+              onChange={setFilter}
+            />
+          ) : null}
         </View>
-        <ProgressBar value={klass.progress} label={klass.title} />
-      </View>
-      {items.length === 0 ? (
-        <EmptyState mood="curious" title={s.classView.count(0)} body={cv.emptyClass} />
-      ) : (
-        <>
-          <FilterChips
-            options={filters.map((f) => ({ value: f, label: `${cv.filters[f]} · ${count(f)}` }))}
-            value={filter}
-            onChange={setFilter}
-          />
-          {visible.length === 0 ? (
-            <Text variant="small" color="textMuted" align="center">
+        <View style={styles.main}>
+          {items.length === 0 ? (
+            <EmptyState mood="curious" title={s.classView.count(0)} body={cv.emptyClass} />
+          ) : visible.length === 0 ? (
+            <Text variant="small" color="textMuted">
               {cv.empty}
             </Text>
           ) : (
             visible.map((item) => (
               // La cita va al lado, no dentro, del botón: un botón dentro de otro queda fuera del
               // alcance de VoiceOver y TalkBack, y verificar la fuente no puede depender de eso.
-              <Card key={item.id}>
+              <View
+                key={item.id}
+                style={[
+                  styles.item,
+                  { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+                ]}
+              >
                 <Tap
                   accessibilityRole="button"
                   accessibilityLabel={`${cv.kind[item.kind]}: ${item.title}`}
@@ -117,12 +123,10 @@ function ClassDetail() {
                   style={styles.itemBody}
                 >
                   <View style={styles.row}>
-                    <Chip
-                      label={cv.kind[item.kind]}
-                      tone={KIND_TONE[item.kind]}
-                      icon={KIND_ICON[item.kind]}
-                    />
-                    <View style={styles.flex} />
+                    <Icon name={KIND_ICON[item.kind]} size={14} color="textMuted" />
+                    <Text variant="label" color="textMuted" style={styles.flex}>
+                      {cv.kind[item.kind]}
+                    </Text>
                     <Icon name="chevron-right" size={16} color="textMuted" />
                   </View>
                   <Text variant="bodyStrong">{item.title}</Text>
@@ -143,11 +147,11 @@ function ClassDetail() {
                     icon="file-text"
                   />
                 </Tap>
-              </Card>
+              </View>
             ))
           )}
-        </>
-      )}
+        </View>
+      </View>
     </Screen>
   );
 }
@@ -156,7 +160,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
   gapXs: { gap: space.xs },
-  itemBody: { gap: space.sm },
+  layout: { gap: space.lg },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  side: { gap: space.lg },
+  sideWide: { width: 280 },
+  main: { flex: 1, minWidth: 0 },
+  item: { gap: space.sm, paddingVertical: space.lg },
+  itemBody: { gap: space.sm, minHeight: layout.minTouchTarget },
   // Sin el máximo, un nombre de archivo largo saca la cita de la pantalla.
   source: { alignSelf: 'flex-start', maxWidth: '100%' },
 });

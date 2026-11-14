@@ -1,16 +1,7 @@
 import { router } from 'expo-router';
 import { useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
-import {
-  Chip,
-  Icon,
-  IconButton,
-  Mascot,
-  Screen,
-  Text,
-  TopBar,
-  type MascotMood,
-} from '@/components/ui';
+import { Chip, Icon, IconButton, Screen, Text, TopBar } from '@/components/ui';
 import { courses } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { useLanguage } from '@/i18n/language';
@@ -30,30 +21,19 @@ export function UserBubble({ text }: { text: string }) {
   );
 }
 
-/** Respuesta de la mascota con sus fuentes: propio en verde, externo en violeta. */
+/**
+ * Respuesta de la mascota con sus fuentes: texto plano alineado a la izquierda, sin caja ni
+ * relleno; las citas van debajo (propio en verde, externo en violeta).
+ */
 export function MascotBubble({ children, sources }: { children: ReactNode; sources?: ReactNode }) {
-  const { c } = useTheme();
   return (
     <View
       // Los lectores de pantalla anuncian la respuesta cuando llega.
       accessibilityLiveRegion="polite"
-      style={[styles.mascot, { backgroundColor: c.surface, borderColor: c.border }]}
+      style={styles.mascot}
     >
       {children}
       {sources ? <View style={styles.sources}>{sources}</View> : null}
-    </View>
-  );
-}
-
-export function MascotStage({ label, mood = 'happy' }: { label: string; mood?: MascotMood }) {
-  const { c } = useTheme();
-  return (
-    <View style={[styles.stage, { backgroundColor: c.primarySoft }]}>
-      <View style={[styles.stageTag, { backgroundColor: c.surface }]}>
-        <Icon name="box" size={11} color="primary" />
-        <Text variant="caption">{label}</Text>
-      </View>
-      <Mascot size={92} mood={mood} />
     </View>
   );
 }
@@ -265,29 +245,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   mascot: {
-    alignSelf: 'flex-start',
-    maxWidth: '92%',
-    borderWidth: 1,
-    padding: space.lg,
-    borderRadius: radius.lg,
-    borderBottomLeftRadius: 4,
+    alignSelf: 'stretch',
     gap: space.sm,
   },
   sources: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
-  stage: {
-    borderRadius: radius.xl,
-    alignItems: 'center',
-    paddingVertical: space.lg,
-    gap: space.xs,
-  },
-  stageTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    paddingHorizontal: space.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
   composerWrap: { alignSelf: 'stretch', gap: space.xs },
   composer: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   mic: {

@@ -100,6 +100,31 @@ export const layout = {
   sidebarWidth: { tablet: 88, desktop: 280 },
 } as const;
 
+/**
+ * Movimiento: duraciones (ms) y curvas compartidas. Discreto y funcional: sin rebote, sin
+ * sobreimpulso. Los valores se documentan en DESIGN.md (sección «Movimiento») y un test
+ * comprueba que ambos coincidan.
+ */
+export const motion = {
+  duration: {
+    /** Respuesta al toque (escala, tinte al pasar el puntero). */
+    fast: 120,
+    /** Cambios de estado (interruptor, segmentado, foco, marca, aviso). */
+    base: 180,
+    /** Entrada de hojas y diálogos. */
+    slow: 240,
+    /** Revelado circular al cambiar de tema (solo web). */
+    reveal: 400,
+  },
+  /** Curvas cúbicas [x1, y1, x2, y2]: `out` para entradas, `inOut` para cambios de estado. */
+  easing: {
+    out: [0.23, 1, 0.32, 1],
+    inOut: [0.77, 0, 0.175, 1],
+  },
+  /** Escala al presionar un control. */
+  pressScale: 0.97,
+} as const;
+
 export type NavigationLayout = 'bottom-bar' | 'rail' | 'sidebar';
 
 /** Tablet entre 600 y 1023 px: barra lateral de 88 px; ≥ 1024 px: 280 px. */

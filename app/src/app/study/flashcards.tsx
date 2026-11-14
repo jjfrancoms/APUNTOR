@@ -24,7 +24,7 @@ import { answerCard, knownFirstTry, learnedCount, startSession } from '@/lib/fla
 import { cardFace } from '@/lib/study';
 import { previewReview, previewSet } from '@/lib/study-preview';
 import { useStudyLoad } from '@/lib/use-study-load';
-import { radius, space, useTheme } from '@/theme';
+import { radius, space, useTheme, useWide } from '@/theme';
 
 /**
  * Pantalla 22 · Flashcards con repetición espaciada del servidor. Se abre con `?setId=` (un juego
@@ -82,6 +82,7 @@ export default function Flashcards() {
 function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[] }) {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const f = s.flashcards;
   const [session, setSession] = useState(() => startSession(items.map((x) => x.id)));
   const [flipped, setFlipped] = useState(false);
@@ -111,23 +112,26 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
         header={<TopBar icon="x" title={f.header} onBack={() => router.replace('/home')} />}
         footer={<Button label={s.empty.backHome} onPress={() => router.replace('/home')} />}
       >
-        <View style={styles.done}>
-          <Mascot size={110} mood="sparkle" halo />
-          <Text variant="title" align="center" accessibilityRole="header">
-            {s.demo.cardsDone}
-          </Text>
-          <Text variant="heading" color="primary" align="center">
-            {s.demo.cardsResult(knownFirstTry(session), total)}
-          </Text>
-          <Text variant="small" color="textMuted" align="center">
-            {f.doneDetail}
-          </Text>
+        <View style={[styles.done, wide && styles.doneWide]}>
+          <Mascot size={wide ? 96 : 64} mood="sparkle" />
+          <View style={styles.doneText}>
+            <Text variant="title" accessibilityRole="header">
+              {s.demo.cardsDone}
+            </Text>
+            <Text variant="heading" color="primary">
+              {s.demo.cardsResult(knownFirstTry(session), total)}
+            </Text>
+            <Text variant="small" color="textMuted">
+              {f.doneDetail}
+            </Text>
+          </View>
         </View>
       </Screen>
     );
   }
   return (
     <Screen
+      wide
       header={
         <TopBar
           icon="x"
@@ -159,41 +163,41 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
       {saveFailed ? (
         <Banner tone="warning" icon="alert-circle" title={s.study.reviewNotSaved} />
       ) : null}
-      <ProgressBar value={learned / total} label={f.learned(learned, total)} />
-      <View style={styles.row}>
-        {repeated ? <Chip label={f.again} tone="warning" icon="rotate-ccw" /> : <View />}
-        <TextLink label={f.howTitle} onPress={() => setShowHow((v) => !v)} />
-      </View>
-      {showHow ? <Banner tone="info" icon="info" title={f.how} /> : null}
-      <Tap
-        accessibilityRole="button"
-        accessibilityHint={flipped ? f.tapToReturn : f.tapToFlip}
-        onPress={() => setFlipped(!flipped)}
-        style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
-      >
-        {flipped ? (
-          <>
-            <Text variant="smallStrong" color="textMuted" align="center">
-              {card.front}
-            </Text>
-            <Text variant="subheading" align="center">
-              {card.back}
-            </Text>
-          </>
-        ) : (
-          <Text variant="title" align="center">
-            {card.front}
-          </Text>
-        )}
-        <View style={styles.hint}>
-          <Icon name="refresh-cw" size={12} color="textMuted" />
-          <Text variant="caption" color="textMuted">
-            {flipped ? f.tapToReturn : f.tapToFlip}
-          </Text>
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.side, wide && styles.sideWide]}>
+          <ProgressBar value={learned / total} label={f.learned(learned, total)} />
+          <View style={styles.row}>
+            {repeated ? <Chip label={f.again} tone="warning" icon="rotate-ccw" /> : <View />}
+            <TextLink label={f.howTitle} onPress={() => setShowHow((v) => !v)} />
+          </View>
+          {showHow ? <Banner tone="info" icon="info" title={f.how} /> : null}
+          <View style={styles.cite}>
+            <CitationChip citation={item.citation} />
+          </View>
         </View>
-      </Tap>
-      <View style={styles.center}>
-        <CitationChip citation={item.citation} />
+        <Tap
+          accessibilityRole="button"
+          accessibilityHint={flipped ? f.tapToReturn : f.tapToFlip}
+          onPress={() => setFlipped(!flipped)}
+          style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
+        >
+          {flipped ? (
+            <>
+              <Text variant="smallStrong" color="textMuted">
+                {card.front}
+              </Text>
+              <Text variant="subheading">{card.back}</Text>
+            </>
+          ) : (
+            <Text variant="title">{card.front}</Text>
+          )}
+          <View style={styles.hint}>
+            <Icon name="refresh-cw" size={12} color="textMuted" />
+            <Text variant="caption" color="textMuted">
+              {flipped ? f.tapToReturn : f.tapToFlip}
+            </Text>
+          </View>
+        </Tap>
       </View>
     </Screen>
   );
@@ -206,7 +210,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.xl,
     padding: space.xxl,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     gap: space.md,
   },
@@ -214,6 +218,12 @@ const styles = StyleSheet.create({
   hint: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   grades: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
-  center: { alignItems: 'center' },
-  done: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  cite: { flexDirection: 'row' },
+  layout: { flex: 1, gap: space.lg },
+  layoutWide: { flexDirection: 'row-reverse', alignItems: 'stretch', gap: space.xxl },
+  side: { gap: space.md },
+  sideWide: { width: 260 },
+  done: { gap: space.lg, paddingVertical: space.xl },
+  doneWide: { flexDirection: 'row', alignItems: 'center', gap: space.xxl },
+  doneText: { flex: 1, gap: space.sm },
 });

@@ -7,7 +7,6 @@ import {
   Sheet,
   TextField,
   Button,
-  Card,
   Chip,
   Icon,
   IconButton,
@@ -28,15 +27,15 @@ import { useStrings } from '@/i18n/es';
 import { useLanguage } from '@/i18n/language';
 import { formatDate, isToday } from '@/lib/format';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
-import { layout, radius, space, useTheme } from '@/theme';
+import { radius, space, useTheme, useWide } from '@/theme';
 import { TopicOutline } from '@/components/domain/TopicOutline';
-import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 19 · Detalle de documento, con la confirmación de eliminación (27). */
 export default function DocumentDetail() {
   const s = useStrings();
   const language = useLanguage();
   const { c } = useTheme();
+  const wide = useWide();
   const reducedMotion = useReducedMotion();
   const { documentId, confirm } = useLocalSearchParams<{ documentId: string; confirm?: string }>();
   const record = useStore((st) => st.documents.find((d) => d.id === documentId));
@@ -67,6 +66,7 @@ export default function DocumentDetail() {
   };
   return (
     <Screen
+      wide
       header={
         <TopBar
           title={s.document.header}
@@ -106,65 +106,78 @@ export default function DocumentDetail() {
         </>
       }
     >
-      <View>
-        <Text variant="title" accessibilityRole="header">
-          {doc.name}
-        </Text>
-        <Text variant="caption" color="textMuted">
-          {s.document.meta(doc.type, doc.size, doc.pages, doc.uploaded)}
-        </Text>
-      </View>
-      <View style={styles.row}>
-        <Chip
-          label={s.live.status[doc.status]}
-          tone={
-            doc.status === 'failed' ? 'danger' : doc.status === 'completed' ? 'primary' : 'warning'
-          }
-        />
-        {doc.pages > 0 ? <Chip label={s.live.pagesOf(doc.pages)} /> : null}
-      </View>
-      {failed ? <Banner tone="danger" title={s.live.actionFailed} /> : null}
-      <Card>
-        <Text variant="smallStrong" accessibilityRole="header">
-          {s.document.classifiedIn}
-        </Text>
-        <View style={styles.row}>
-          <Text variant="small" style={styles.flex}>
-            {doc.classification.length > 1
-              ? `${doc.classification.slice(0, -1).join(' › ')} › `
-              : ''}
-            <Text variant="smallStrong" color="primary">
-              {doc.classification.at(-1) ?? ''}
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.info, wide && styles.infoWide]}>
+          <View>
+            <Text variant="title" accessibilityRole="header">
+              {doc.name}
             </Text>
-          </Text>
-          <TextLink label={s.common.change} onPress={() => setSheet('move')} />
+            <Text variant="caption" color="textMuted">
+              {s.document.meta(doc.type, doc.size, doc.pages, doc.uploaded)}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Chip
+              label={s.live.status[doc.status]}
+              tone={
+                doc.status === 'failed'
+                  ? 'danger'
+                  : doc.status === 'completed'
+                    ? 'primary'
+                    : 'warning'
+              }
+            />
+            {doc.pages > 0 ? <Chip label={s.live.pagesOf(doc.pages)} /> : null}
+          </View>
+          {failed ? <Banner tone="danger" title={s.live.actionFailed} /> : null}
+          <View style={[styles.rule, { borderTopColor: c.border }]}>
+            <Text variant="label" color="textMuted" accessibilityRole="header">
+              {s.document.classifiedIn}
+            </Text>
+            <View style={styles.row}>
+              <Text variant="small" style={styles.flex}>
+                {doc.classification.length > 1
+                  ? `${doc.classification.slice(0, -1).join(' › ')} › `
+                  : ''}
+                <Text variant="smallStrong" color="primary">
+                  {doc.classification.at(-1) ?? ''}
+                </Text>
+              </Text>
+              <TextLink label={s.common.change} onPress={() => setSheet('move')} />
+            </View>
+          </View>
+          <View style={styles.actions}>
+            <View style={styles.flex}>
+              <Button
+                label={s.document.rename}
+                icon="edit-2"
+                variant="secondary"
+                size="sm"
+                onPress={() => {
+                  setNewName(record.name);
+                  setSheet('rename');
+                }}
+              />
+            </View>
+            <View style={styles.flex}>
+              <Button
+                label={s.document.delete}
+                icon="trash-2"
+                variant="dangerOutline"
+                size="sm"
+                onPress={() => setConfirming(true)}
+              />
+            </View>
+          </View>
         </View>
-      </Card>
-      {doc.outline && doc.outline.length > 0 ? (
-        <>
-          <Text variant="subheading" accessibilityRole="header">
-            {s.document.detectedTopics}
-          </Text>
-          <Card>
+        {doc.outline && doc.outline.length > 0 ? (
+          <View style={styles.topics}>
+            <Text variant="heading" accessibilityRole="header">
+              {s.document.detectedTopics}
+            </Text>
             <TopicOutline documentId={doc.id} outline={doc.outline} />
-          </Card>
-        </>
-      ) : null}
-      <View style={styles.actions}>
-        <ActionButton
-          icon="edit-2"
-          label={s.document.rename}
-          onPress={() => {
-            setNewName(record.name);
-            setSheet('rename');
-          }}
-        />
-        <ActionButton
-          icon="trash-2"
-          label={s.document.delete}
-          danger
-          onPress={() => setConfirming(true)}
-        />
+          </View>
+        ) : null}
       </View>
 
       <Sheet visible={sheet === 'menu'} onClose={() => setSheet(null)} title={s.documentMenu.title}>
@@ -251,13 +264,10 @@ export default function DocumentDetail() {
         <View style={[styles.backdrop, { backgroundColor: c.scrim }]}>
           <View style={[styles.sheet, { backgroundColor: c.surface }]} accessibilityViewIsModal>
             <View style={[styles.handle, { backgroundColor: c.border }]} />
-            <View style={[styles.dangerIcon, { backgroundColor: c.dangerSoft }]}>
-              <Icon name="trash-2" size={22} color="danger" />
-            </View>
-            <Text variant="heading" align="center" accessibilityRole="header">
+            <Text variant="heading" accessibilityRole="header">
               {s.document.deleteTitle}
             </Text>
-            <Text variant="small" color="textMuted" align="center">
+            <Text variant="small" color="textMuted">
               {s.document.deleteBody(doc.name, doc.topics.length)}
             </Text>
             <View style={styles.sheetActions}>
@@ -285,65 +295,26 @@ export default function DocumentDetail() {
   );
 }
 
-function ActionButton({
-  icon,
-  label,
-  danger,
-  onPress,
-}: {
-  icon: 'share-2' | 'edit-2' | 'trash-2';
-  label: string;
-  danger?: boolean;
-  onPress?: () => void;
-}) {
-  const { c } = useTheme();
-  return (
-    <Tap
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={[styles.action, { backgroundColor: c.surface, borderColor: c.border }]}
-    >
-      <Icon name={icon} size={16} color={danger ? 'danger' : 'text'} />
-      <Text variant="smallStrong" color={danger ? 'danger' : 'text'}>
-        {label}
-      </Text>
-    </Tap>
-  );
-}
-
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
+  layout: { gap: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  info: { gap: space.md },
+  infoWide: { width: 360 },
+  topics: { flex: 1, minWidth: 0, gap: space.sm },
+  rule: { gap: space.xs, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md },
   actions: { flexDirection: 'row', gap: space.sm },
-  action: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.xs,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    minHeight: layout.minTouchTarget,
-  },
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     padding: space.xxl,
     gap: space.md,
-    alignItems: 'center',
     width: '100%',
     maxWidth: 720,
     alignSelf: 'center',
   },
   handle: { width: 40, height: 4, borderRadius: 2 },
-  dangerIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   sheetActions: { alignSelf: 'stretch', gap: space.sm, marginTop: space.sm },
 });

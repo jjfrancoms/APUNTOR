@@ -1,17 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { AuthLayout } from '@/components/domain/AuthLayout';
 import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
-import {
-  Button,
-  Checkbox,
-  DateField,
-  Screen,
-  Text,
-  TextField,
-  TextLink,
-  TopBar,
-} from '@/components/ui';
+import { Button, Checkbox, DateField, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ErrorCode } from '@/i18n/es';
 import { signUp, type AuthField } from '@/store/store';
@@ -43,15 +35,12 @@ export default function Register() {
     else setError({ code: r.error, field: r.field });
   };
   return (
-    <Screen narrow header={<TopBar title={s.register.header} />}>
-      <View style={styles.intro}>
-        <Text variant="title" accessibilityRole="header">
-          {s.register.title}
-        </Text>
-        <Text variant="small" color="textMuted">
-          {s.register.subtitle}
-        </Text>
-      </View>
+    <AuthLayout
+      title={s.register.title}
+      subtitle={s.register.subtitle}
+      header={<TopBar title={s.register.header} />}
+      mood="curious"
+    >
       <TextField
         label={s.register.name}
         placeholder={s.register.namePlaceholder}
@@ -150,11 +139,11 @@ export default function Register() {
         </Text>
         <TextLink label={s.register.signIn} onPress={() => router.replace('/login')} />
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  intro: { gap: space.xs },
-  inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
+  intro: { gap: space.sm },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
 });

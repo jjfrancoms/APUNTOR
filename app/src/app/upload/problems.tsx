@@ -123,14 +123,14 @@ export default function UploadProblems() {
           </FileRow>
         );
       })}
-      <Card tone="accent">
+      <Card>
         <View style={styles.row}>
           <Text variant="smallStrong" style={styles.flex}>
             {p.space}
           </Text>
           <Text variant="smallStrong">{p.spaceValue(used, quota)}</Text>
         </View>
-        <ProgressBar value={used / quota} tone="accent" label={p.space} />
+        <ProgressBar value={used / quota} label={p.space} />
         <TextLink label={p.seeDocuments} onPress={() => router.navigate('/courses')} />
       </Card>
     </Screen>

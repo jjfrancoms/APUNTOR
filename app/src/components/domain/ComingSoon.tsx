@@ -1,11 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import { Mascot, Screen, Text, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
-import { space } from '@/theme';
+import { space, useWide } from '@/theme';
 
 /** Marcador para pantallas del mapa aún no diseñadas o pendientes de la siguiente entrega. */
 export function ComingSoon({ title, withBack = false }: { title: string; withBack?: boolean }) {
   const s = useStrings();
+  const wide = useWide();
   return (
     <Screen header={withBack ? <TopBar title={title} /> : undefined}>
       {!withBack ? (
@@ -13,9 +14,10 @@ export function ComingSoon({ title, withBack = false }: { title: string; withBac
           {title}
         </Text>
       ) : null}
-      <View style={styles.center}>
-        <Mascot size={96} mood="curious" />
-        <Text variant="small" color="textMuted" align="center">
+      {/* Illari pequeña junto al texto, alineado a la izquierda (sin pila centrada). */}
+      <View style={[styles.row, wide && styles.rowWide]}>
+        <Mascot size={wide ? 72 : 56} mood="curious" />
+        <Text variant="body" color="textMuted" style={styles.text}>
           {s.common.comingSoon}
         </Text>
       </View>
@@ -24,5 +26,7 @@ export function ComingSoon({ title, withBack = false }: { title: string; withBac
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingTop: space.xl },
+  rowWide: { gap: space.xxl },
+  text: { flexShrink: 1, maxWidth: 480 },
 });

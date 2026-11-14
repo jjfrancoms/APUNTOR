@@ -7,7 +7,7 @@ import {
   MascotBubble,
   UserBubble,
 } from '@/components/chat/Chat';
-import { Chip, Icon, Mascot, Text } from '@/components/ui';
+import { Chip, Icon, Text } from '@/components/ui';
 import { chatSample } from '@/data/mock';
 import { useStrings } from '@/i18n/es';
 import { space, useTheme } from '@/theme';
@@ -21,9 +21,6 @@ function Responding() {
       subtitle={s.chat.knowsShort(courseCount)}
       composer={<Composer placeholder={s.chat.placeholderShort} busy />}
     >
-      <View style={styles.center}>
-        <Mascot size={96} mood="curious" />
-      </View>
       <UserBubble text={chatSample.question} />
       <MascotBubble
         sources={
@@ -51,7 +48,6 @@ function Responding() {
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   skeleton: { height: 8, borderRadius: 4, minWidth: 180 },
 });

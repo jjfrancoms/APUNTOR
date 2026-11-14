@@ -4,19 +4,14 @@ import { openSourcePage } from '@/lib/source-page';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import {
-  ChatScreen,
-  Composer,
-  MascotBubble,
-  MascotStage,
-  UserBubble,
-} from '@/components/chat/Chat';
+import { ChatScreen, Composer, MascotBubble, UserBubble } from '@/components/chat/Chat';
 import {
   Banner,
   Button,
   Card,
   Chip,
   Icon,
+  ListRow,
   Mascot,
   ProgressBar,
   Text,
@@ -160,11 +155,11 @@ export default function Conversation() {
           ? s.chat.searchingExternal
           : s.chat.searching;
   const suggestions = [
-    { label: s.chat.suggestions[0], run: () => send(s.live.prompts[0] ?? '') },
+    { label: s.chat.suggestions[0] ?? '', run: () => send(s.live.prompts[0] ?? '') },
     ...(PREVIEW
-      ? [{ label: s.chat.suggestions[1], run: () => router.push('/study/quiz-setup') }]
+      ? [{ label: s.chat.suggestions[1] ?? '', run: () => router.push('/study/quiz-setup') }]
       : []),
-    { label: s.chat.suggestions[2], run: () => send(s.live.prompts[1] ?? '') },
+    { label: s.chat.suggestions[2] ?? '', run: () => send(s.live.prompts[1] ?? '') },
   ];
 
   const renderMascot = (m: Message, index: number) => {
@@ -179,14 +174,15 @@ export default function Conversation() {
                 {m.claims
                   ? null
                   : (m.sources ?? []).map((src) => (
-                      <Tap
+                      <Chip
                         key={`${src.documentId}-${src.page}`}
+                        label={s.chat.ownSource(src.page)}
+                        tone="primary"
+                        icon="file-text"
                         accessibilityRole="link"
                         accessibilityLabel={s.chat.checkPage(src.page)}
                         onPress={() => void openSourcePage(src.documentId, src.page)}
-                      >
-                        <Chip label={s.chat.ownSource(src.page)} tone="primary" icon="file-text" />
-                      </Tap>
+                      />
                     ))}
                 {m.external ? (
                   <Chip label={s.chat.externalCount(1)} tone="external" icon="globe" />
@@ -332,22 +328,6 @@ export default function Conversation() {
       composer={
         <>
           <OfflineBanner title={s.connection.chat} />
-          {messages.length === 0 ? (
-            <View style={styles.suggestions}>
-              {suggestions.map((sg) => (
-                <Tap
-                  key={sg.label}
-                  accessibilityRole="button"
-                  onPress={sg.run}
-                  style={[styles.suggestion, { borderColor: c.border, backgroundColor: c.surface }]}
-                >
-                  <Text variant="smallStrong" color="primary">
-                    {sg.label}
-                  </Text>
-                </Tap>
-              ))}
-            </View>
-          ) : null}
           <Composer
             placeholder={thinking ? s.chat.placeholderShort : s.chat.placeholder}
             busy={thinking}
@@ -375,7 +355,25 @@ export default function Conversation() {
           </Tap>
         </View>
       ) : null}
-      {messages.length === 0 ? <MascotStage label={s.chat.animated} /> : null}
+      {messages.length === 0 ? (
+        <View style={styles.intro}>
+          <Text variant="title" accessibilityRole="header">
+            {s.chat.emptyTitle}
+          </Text>
+          <Text variant="muted">{s.chat.emptyBody}</Text>
+          <View style={styles.suggestions}>
+            {suggestions.map((sg, i) => (
+              <ListRow
+                key={sg.label}
+                title={sg.label}
+                icon="message-circle"
+                divider={i < suggestions.length - 1}
+                onPress={sg.run}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
       {messages.map((m, i) =>
         m.role === 'user' ? (
           <View key={m.id} style={styles.userTurn}>
@@ -390,12 +388,9 @@ export default function Conversation() {
       )}
       {thinking ? (
         <>
-          <View style={styles.center}>
-            <Mascot size={72} mood="curious" />
-          </View>
           <MascotBubble>
             <View style={styles.row} accessibilityLiveRegion="polite">
-              <Icon name="refresh-cw" size={14} color="primary" />
+              <Mascot size={28} mood="curious" />
               <Text variant="smallStrong" color="primary">
                 {progressText}
               </Text>
@@ -417,14 +412,8 @@ export default function Conversation() {
 }
 
 const styles = StyleSheet.create({
-  suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  suggestion: {
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    minHeight: layout.minTouchTarget,
-    justifyContent: 'center',
-  },
+  intro: { gap: space.sm, paddingTop: space.lg },
+  suggestions: { marginTop: space.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, alignItems: 'center' },
   pill: {
     flexDirection: 'row',
@@ -443,7 +432,6 @@ const styles = StyleSheet.create({
     padding: space.md,
   },
   flex: { flex: 1 },
-  center: { alignItems: 'center' },
   userTurn: { alignSelf: 'stretch', alignItems: 'flex-end', gap: space.xs },
   cancelled: { alignSelf: 'flex-start', gap: space.xs },
   skeleton: { height: 8, borderRadius: 4, minWidth: 180 },

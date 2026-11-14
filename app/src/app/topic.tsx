@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Button, Chip, EmptyState, Mascot, Screen, Text, TopBar } from '@/components/ui';
+import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Button, Chip, EmptyState, Screen, Text, TopBar } from '@/components/ui';
+import { StudyLoading } from '@/components/domain/StudyState';
 import { TopicSummary } from '@/components/domain/TopicSummary';
 import { useStrings } from '@/i18n/es';
 import { api, ApiRequestError, type ApiTopicSummary } from '@/lib/api';
 import { formatPageRanges } from '@/lib/outline';
-import { space } from '@/theme';
+import { space, useWide } from '@/theme';
 
 type Load =
   | { state: 'loading' }
@@ -36,6 +37,7 @@ export default function TopicSummaryScreen() {
     title?: string;
     demo?: string;
   }>();
+  const wide = useWide();
   const [load, setLoad] = useState<Load>({ state: 'loading' });
 
   const fetchSummary = useCallback(() => {
@@ -88,48 +90,75 @@ export default function TopicSummaryScreen() {
       },
     });
 
+  const metaBlock = summary ? (
+    <View style={[styles.meta, wide && styles.metaWide]}>
+      {summary.path.length > 1 ? (
+        <Text variant="caption" color="textMuted">
+          {summary.path.slice(0, -1).join(' › ')}
+        </Text>
+      ) : null}
+      {summary.topic.sourcePages.length > 0 ? (
+        <Chip
+          label={s.document.pages(
+            summary.topic.sourcePages.length,
+            formatPageRanges(summary.topic.sourcePages),
+          )}
+          tone="primary"
+          icon="file-text"
+        />
+      ) : null}
+      <Text variant="caption" color="textMuted">
+        {t.aiNote}
+      </Text>
+    </View>
+  ) : null;
+  const openDocument = () => router.push(`/documents/${summary?.document.id ?? doc ?? ''}`);
+  // Pantalla ancha: las acciones van en la columna de la derecha. En móvil, una principal al pie y
+  // las otras tres en una fila de botones pequeños.
+
   return (
     <Screen
+      wide
       header={<TopBar title={topicTitle} subtitle={summary?.document.title} />}
       footer={
-        load.state === 'ready' ? (
+        load.state === 'ready' && !wide ? (
           <>
             <Button label={t.ask} onPress={ask} />
             <View style={styles.study}>
               <View style={styles.flex}>
                 <Button
                   label={s.study.practice}
-                  variant="secondary"
+                  variant="ghost"
+                  icon="edit-3"
+                  size="sm"
                   onPress={() => practice('quiz')}
                 />
               </View>
               <View style={styles.flex}>
                 <Button
                   label={s.study.cards}
-                  variant="secondary"
+                  variant="ghost"
+                  icon="layers"
+                  size="sm"
                   onPress={() => practice('cards')}
                 />
               </View>
+              <View style={styles.flexWide}>
+                <Button
+                  label={t.openDocument}
+                  variant="ghost"
+                  icon="file-text"
+                  size="sm"
+                  onPress={openDocument}
+                />
+              </View>
             </View>
-            <Button
-              label={t.openDocument}
-              variant="secondary"
-              onPress={() => router.push(`/documents/${summary?.document.id ?? doc ?? ''}`)}
-            />
           </>
         ) : null
       }
     >
       {load.state === 'loading' ? (
-        <View style={styles.loading}>
-          <Mascot mood="curious" size={96} />
-          <Text variant="bodyStrong" align="center">
-            {t.loading}
-          </Text>
-          <Text variant="small" color="textMuted" align="center">
-            {t.loadingHint}
-          </Text>
-        </View>
+        <StudyLoading title={t.loading} hint={t.loadingHint} />
       ) : load.state === 'error' ? (
         load.reason === 'limit' ? (
           // Sin reintento: la cuota vuelve a medianoche; los resúmenes guardados siguen abriéndose.
@@ -150,37 +179,68 @@ export default function TopicSummaryScreen() {
       ) : blocks.length === 0 || !summary ? (
         <EmptyState mood="curious" title={t.emptyTitle} body={t.emptyBody} />
       ) : (
-        <>
-          <View style={styles.meta}>
-            {summary.path.length > 1 ? (
-              <Text variant="caption" color="textMuted">
-                {summary.path.slice(0, -1).join(' › ')}
-              </Text>
-            ) : null}
-            {summary.topic.sourcePages.length > 0 ? (
-              <Chip
-                label={s.document.pages(
-                  summary.topic.sourcePages.length,
-                  formatPageRanges(summary.topic.sourcePages),
-                )}
-                tone="primary"
-                icon="file-text"
-              />
-            ) : null}
-            <Text variant="caption" color="textMuted">
-              {t.aiNote}
-            </Text>
+        <View style={[styles.layout, wide && styles.layoutWide]}>
+          {wide ? null : metaBlock}
+          <View style={styles.main}>
+            <TopicSummary summary={{ ...summary, blocks }} />
           </View>
-          <TopicSummary summary={{ ...summary, blocks }} />
-        </>
+          {wide ? (
+            <View style={[styles.aside, stickyTop]}>
+              {metaBlock}
+              <View style={styles.actions}>
+                <Button label={t.ask} onPress={ask} />
+                <View style={styles.actionsRow}>
+                  <View style={styles.flex}>
+                    <Button
+                      label={s.study.practice}
+                      variant="ghost"
+                      icon="edit-3"
+                      size="sm"
+                      onPress={() => practice('quiz')}
+                    />
+                  </View>
+                  <View style={styles.flex}>
+                    <Button
+                      label={s.study.cards}
+                      variant="ghost"
+                      icon="layers"
+                      size="sm"
+                      onPress={() => practice('cards')}
+                    />
+                  </View>
+                </View>
+                <Button
+                  label={t.openDocument}
+                  variant="ghost"
+                  icon="file-text"
+                  size="sm"
+                  onPress={openDocument}
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
       )}
     </Screen>
   );
 }
 
+// En web la columna de acciones se queda a la vista al desplazar (`sticky`, que RN no tipa).
+const stickyTop: ViewStyle | undefined =
+  Platform.OS === 'web'
+    ? ({ position: 'sticky', top: space.lg } as unknown as ViewStyle)
+    : undefined;
+
 const styles = StyleSheet.create({
   meta: { gap: space.sm, alignItems: 'flex-start' },
   study: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
-  loading: { alignItems: 'center', gap: space.md, paddingVertical: space.xxxl },
+  flexWide: { flex: 1.6 },
+  layout: { gap: space.lg, paddingBottom: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  main: { flex: 1, minWidth: 0, maxWidth: 680 },
+  metaWide: { gap: space.sm },
+  aside: { width: 280, gap: space.xl },
+  actions: { gap: space.sm },
+  actionsRow: { flexDirection: 'row', gap: space.sm },
 });

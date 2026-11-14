@@ -1,6 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { CourseBadge } from '@/components/domain/CourseBadge';
 import {
   Banner,
   Button,
@@ -8,7 +7,6 @@ import {
   Chip,
   EmptyState,
   Icon,
-  ListRow,
   Mascot,
   ProgressBar,
   Screen,
@@ -79,11 +77,11 @@ export default function Home() {
   }
   const greetingBlock = (
     <>
-      <View>
+      <View style={styles.greeting}>
         <Text variant="display" accessibilityRole="header">
           {s.home.hello(name)}
         </Text>
-        <Text variant="small" color="textMuted">
+        <Text variant="lead" color="textMuted">
           {s.home.subtitle}
         </Text>
       </View>
@@ -110,16 +108,19 @@ export default function Home() {
   const main = (
     <>
       {syncError}
-      <Card tone="primary" style={styles.review}>
-        <Mascot size={desktop ? 112 : 80} />
+      {/* Invitación a preguntar: fila simple, sin recuadro; separada por una línea fina. */}
+      <View style={[styles.ask, { borderBottomColor: c.border }]}>
+        <Mascot size={56} />
         <View style={styles.flex}>
-          <Text variant="bodyStrong">{s.live.askTitle}</Text>
-          <Text variant="caption">{s.live.askBody}</Text>
+          <Text variant="heading">{s.live.askTitle}</Text>
+          <Text variant="body" color="textMuted">
+            {s.live.askBody}
+          </Text>
           <View style={styles.start}>
-            <Button label={s.live.askCta} compact onPress={() => router.push('/conversation')} />
+            <Button label={s.live.askCta} onPress={() => router.push('/conversation')} />
           </View>
         </View>
-      </Card>
+      </View>
       {lastDoc ? (
         <>
           {/* Encabezado de sección (sin etiqueta en mayúsculas sobre el título). */}
@@ -129,7 +130,8 @@ export default function Home() {
             accessibilityLabel={`${s.live.lastDocument}: ${lastDoc.name}`}
             onPress={() => router.push(`/documents/${lastDoc.id}`)}
           >
-            <Card>
+            {/* Fila sin caja: solo espacio vertical, sin borde ni fondo. */}
+            <View style={styles.bareRow}>
               <View style={styles.row}>
                 <View style={styles.flex}>
                   <Text variant="bodyStrong" numberOfLines={1}>
@@ -151,7 +153,7 @@ export default function Home() {
                 />
                 <Icon name="chevron-right" color="textMuted" />
               </View>
-            </Card>
+            </View>
           </Tap>
         </>
       ) : null}
@@ -161,7 +163,7 @@ export default function Home() {
         </Text>
         <TextLink label={s.common.seeAll} onPress={() => router.navigate('/courses')} />
       </View>
-      <Card style={styles.list}>
+      <View style={styles.list}>
         {courses.map((course, i) => (
           <Tap
             key={course.id}
@@ -173,7 +175,11 @@ export default function Home() {
               i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
             ]}
           >
-            <CourseBadge course={course} size={32} />
+            <Icon
+              name={course.icon}
+              size={20}
+              color={course.tone === 'primary' ? 'primary' : 'textMuted'}
+            />
             <View style={styles.flex}>
               <View style={styles.row}>
                 <Text variant="smallStrong" style={styles.flex}>
@@ -187,7 +193,7 @@ export default function Home() {
             </View>
           </Tap>
         ))}
-      </Card>
+      </View>
     </>
   );
   // Columna lateral (solo escritorio): resumen de uso y accesos rápidos.
@@ -223,19 +229,21 @@ export default function Home() {
         </View>
       </Card>
       <Text variant="heading">{s.home.quickActions}</Text>
-      <Card style={styles.list}>
-        <ListRow
+      {/* Acciones sin caja: ícono y etiqueta, alineadas a la izquierda. */}
+      <View style={styles.actions}>
+        <Button
+          label={s.live.firstUploadCta}
+          variant="ghost"
           icon="upload"
-          title={s.live.firstUploadCta}
           onPress={() => router.push('/upload')}
         />
-        <ListRow
+        <Button
+          label={s.home.ask}
+          variant="ghost"
           icon="message-circle"
-          title={s.home.ask}
-          divider={false}
           onPress={() => router.push('/conversation')}
         />
-      </Card>
+      </View>
     </>
   );
   if (desktop) {
@@ -258,16 +266,30 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  review: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  greeting: { gap: space.xs },
+  ask: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.lg,
+    paddingBottom: space.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   skeleton: { gap: space.md },
   start: { alignItems: 'flex-start', marginTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1, gap: space.xs },
-  list: { padding: 0, gap: 0 },
+  list: { gap: 0 },
+  actions: { alignItems: 'flex-start', gap: space.xs },
   summary: { gap: space.lg },
   stat: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
   mainCol: { flex: 2, gap: space.lg, minWidth: 0 },
   sideCol: { flex: 1, gap: space.lg, minWidth: 0 },
-  courseRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
+  courseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.lg,
+  },
+  bareRow: { paddingVertical: space.sm, minHeight: 44, justifyContent: 'center' },
 });
