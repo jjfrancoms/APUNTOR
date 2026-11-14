@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { BrandLogo, Icon, Text, type IconName } from '@/components/ui';
+import { Avatar, BrandLogo, Icon, Text, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings, useStore } from '@/store/store';
 import { layout, radius, space, useTheme, navigationLayoutFor } from '@/theme';
-import { Tap } from '@/components/ui/Tap';
+import { Tap, type TapState } from '@/components/ui/Tap';
 
 export const TAB_ROUTES = ['home', 'courses', 'chat', 'profile'] as const;
 type TabRoute = (typeof TAB_ROUTES)[number];
@@ -18,8 +18,13 @@ const ICONS: Record<TabRoute, IconName> = {
 };
 
 /**
- * Barra de navegación: inferior en móvil (< 600 px) con el botón "+" central;
- * lateral de 88 px en tablet y de 280 px en escritorio (docs/producto/mvp-ux.md §7).
+ * Barra de navegación (docs/producto/mvp-ux.md §7):
+ * - móvil (< 600 px): barra inferior con pestañas redondeadas (la activa lleva una píldora suave
+ *   detrás del ícono; referencia Origin UI) y el botón "+" central;
+ * - tablet: riel de 88 px con solo íconos y etiqueta corta;
+ * - escritorio (≥ 1024 px): barra lateral de 280 px (referencia shadcn Sidebar) con el logo, la
+ *   acción principal, el grupo de navegación con el elemento activo en `primarySoft`, y al pie
+ *   el cambio de tema y el perfil.
  */
 export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
   const s = useStrings();
@@ -44,15 +49,28 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
           accessibilityLabel={label}
           accessibilityState={{ selected: focused }}
           onPress={() => navigateToTab(route.key)}
-          style={[
+          style={({ hovered }: TapState) => [
             styles.item,
             mode === 'sidebar' && styles.itemWide,
-            mode === 'sidebar' && focused && { backgroundColor: c.primarySoft },
+            mode === 'sidebar' && {
+              backgroundColor: focused
+                ? c.primarySoft
+                : hovered === true
+                  ? c.surfaceAlt
+                  : undefined,
+            },
           ]}
         >
-          <Icon name={ICONS[route.name]} size={22} color={focused ? 'primary' : 'textMuted'} />
+          {mode === 'sidebar' ? (
+            <Icon name={ICONS[route.name]} size={20} color={focused ? 'primary' : 'textMuted'} />
+          ) : (
+            // Píldora de la pestaña activa: no depende solo del color (forma + etiqueta en negrita).
+            <View style={[styles.pill, focused && { backgroundColor: c.primarySoft }]}>
+              <Icon name={ICONS[route.name]} size={22} color={focused ? 'primary' : 'textMuted'} />
+            </View>
+          )}
           <Text
-            variant={mode === 'sidebar' ? 'bodyStrong' : 'caption'}
+            variant={mode === 'sidebar' ? 'bodyStrong' : focused ? 'smallStrong' : 'caption'}
             color={focused ? 'primary' : 'textMuted'}
             // La barra inferior tiene alto fijo: con texto muy grande cortaría las etiquetas.
             maxFontSizeMultiplier={mode === 'sidebar' ? undefined : 1.3}
@@ -70,9 +88,9 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       accessibilityRole="button"
       accessibilityLabel={s.tabs.upload}
       onPress={() => router.push('/upload')}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }: TapState) => [
         sidebar ? [styles.uploadWide, { backgroundColor: c.primary }] : styles.item,
-        { opacity: pressed ? 0.85 : 1 },
+        { opacity: pressed ? 0.85 : hovered === true ? 0.92 : 1 },
       ]}
     >
       {sidebar ? (
@@ -99,7 +117,14 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       accessibilityRole="button"
       accessibilityLabel={themeLabel}
       onPress={() => updateSettings({ theme: nextTheme })}
-      style={[styles.item, sidebar && [styles.itemWide, styles.flexNone]]}
+      style={({ hovered }: TapState) => [
+        styles.item,
+        sidebar && [
+          styles.itemWide,
+          styles.flexNone,
+          { backgroundColor: hovered === true ? c.surfaceAlt : undefined },
+        ],
+      ]}
     >
       <Icon name={colorMode === 'dark' ? 'sun' : 'moon'} size={20} color="textMuted" />
       {sidebar ? (
@@ -150,6 +175,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
         <BrandLogo variant="isotipo" size={36} />
       )}
       {upload}
+      {sidebar ? <View style={[styles.divider, { backgroundColor: c.border }]} /> : null}
       <View style={[styles.nav, sidebar && styles.navWide]}>{items}</View>
       <View style={styles.spacer} />
       {themeToggle}
@@ -160,11 +186,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
           onPress={() => router.navigate('/profile')}
           style={[styles.user, { borderColor: c.border }]}
         >
-          <View style={[styles.avatar, { backgroundColor: c.primarySoft }]}>
-            <Text variant="bodyStrong" color="primary">
-              {fullName.charAt(0)}
-            </Text>
-          </View>
+          <Avatar name={fullName} size="sm" />
           <View style={styles.flex}>
             <Text variant="smallStrong" numberOfLines={1}>
               {fullName}
@@ -199,13 +221,15 @@ const styles = StyleSheet.create({
   nav: { gap: space.md, alignItems: 'center' },
   navWide: { gap: space.xs, alignItems: 'stretch' },
   spacer: { flex: 1 },
+  divider: { height: StyleSheet.hairlineWidth },
   flex: { flex: 1, minWidth: 0 },
   flexNone: { minHeight: 40 },
   uploadWide: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
+    justifyContent: 'flex-start',
+    gap: space.md,
+    paddingHorizontal: space.md,
     minHeight: 48,
     borderRadius: radius.md,
   },
@@ -216,13 +240,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: space.lg,
     paddingHorizontal: space.xs,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   item: {
     alignItems: 'center',
@@ -237,8 +254,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: space.md,
     paddingHorizontal: space.md,
-    borderRadius: 12,
+    borderRadius: radius.md,
     minHeight: 48,
   },
-  fab: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  // El centrado es del ícono dentro de su píldora o del botón redondo.
+  pill: {
+    width: 56,
+    height: 30,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fab: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
