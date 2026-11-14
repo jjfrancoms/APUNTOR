@@ -22,7 +22,7 @@ import { api, type ApiStudyItem } from '@/lib/api';
 import { PREVIEW } from '@/lib/config';
 import { previewSet } from '@/lib/study-preview';
 import { useStudyLoad } from '@/lib/use-study-load';
-import { layout, radius, space, useTheme } from '@/theme';
+import { layout, radius, space, useTheme, useWide } from '@/theme';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -87,6 +87,7 @@ function QuizPlay({
 }) {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const total = items.length;
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -131,18 +132,20 @@ function QuizPlay({
           </>
         }
       >
-        <View style={styles.result}>
-          <Mascot size={110} mood={score / total >= 0.6 ? 'sparkle' : 'curious'} halo />
-          <Text variant="title" align="center" accessibilityRole="header">
-            {s.demo.quizDone}
-          </Text>
-          <Text variant="heading" color="primary" align="center">
-            {s.demo.quizResult(score, total)}
-          </Text>
-          <ProgressBar value={score / total} label={s.demo.quizResult(score, total)} />
-          {saveFailed ? (
-            <Banner tone="warning" icon="alert-circle" title={s.study.resultNotSaved} />
-          ) : null}
+        <View style={[styles.result, wide && styles.resultWide]}>
+          <Mascot size={wide ? 96 : 64} mood={score / total >= 0.6 ? 'sparkle' : 'curious'} />
+          <View style={styles.resultText}>
+            <Text variant="title" accessibilityRole="header">
+              {s.demo.quizDone}
+            </Text>
+            <Text variant="heading" color="primary">
+              {s.demo.quizResult(score, total)}
+            </Text>
+            <ProgressBar value={score / total} label={s.demo.quizResult(score, total)} />
+            {saveFailed ? (
+              <Banner tone="warning" icon="alert-circle" title={s.study.resultNotSaved} />
+            ) : null}
+          </View>
         </View>
       </Screen>
     );
@@ -150,6 +153,7 @@ function QuizPlay({
 
   return (
     <Screen
+      wide
       header={
         <TopBar
           icon="x"
@@ -161,66 +165,77 @@ function QuizPlay({
         <Button label={last ? s.quiz.finish : s.quiz.next} disabled={!answered} onPress={next} />
       }
     >
-      <ProgressBar
-        value={(index + (answered ? 1 : 0)) / total}
-        label={s.quiz.progress(index + 1, total)}
-      />
-      <Text variant="heading" accessibilityRole="header">
-        {q.question}
-      </Text>
-      <View accessibilityRole="radiogroup" style={styles.options}>
-        {q.options.map((opt, i) => {
-          const right = answered && i === q.correctIndex;
-          const wrong = answered && i === selected && i !== q.correctIndex;
-          const border = right ? c.primary : wrong ? c.danger : c.border;
-          const bg = right ? c.primarySoft : wrong ? c.dangerSoft : c.surface;
-          const label = right ? s.quiz.correct : wrong ? s.quiz.incorrect : '';
-          return (
-            <Tap
-              key={opt}
-              accessibilityRole="radio"
-              accessibilityLabel={`${LETTERS[i] ?? ''}. ${opt}${label ? `. ${label}` : ''}`}
-              accessibilityState={{ selected: selected === i, disabled: answered }}
-              disabled={answered}
-              onPress={() => choose(i)}
-              style={[styles.option, { borderColor: border, backgroundColor: bg }]}
-            >
-              <View
-                style={[
-                  styles.letter,
-                  { backgroundColor: right ? c.primary : wrong ? c.danger : c.surfaceAlt },
-                ]}
-              >
-                {right ? (
-                  <Icon name="check" size={14} color="onPrimary" />
-                ) : wrong ? (
-                  <Icon name="x" size={14} color="onPrimary" />
-                ) : (
-                  <Text variant="caption">{LETTERS[i] ?? ''}</Text>
-                )}
-              </View>
-              <Text
-                variant="small"
-                color={right ? 'primary' : wrong ? 'danger' : 'text'}
-                style={styles.flex}
-              >
-                {opt}
-              </Text>
-            </Tap>
-          );
-        })}
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.question, wide && styles.questionWide]}>
+          <ProgressBar
+            value={(index + (answered ? 1 : 0)) / total}
+            label={s.quiz.progress(index + 1, total)}
+          />
+          <Text variant={wide ? 'title' : 'heading'} accessibilityRole="header">
+            {q.question}
+          </Text>
+        </View>
+        <View style={styles.answers}>
+          <View accessibilityRole="radiogroup" style={styles.options}>
+            {q.options.map((opt, i) => {
+              const right = answered && i === q.correctIndex;
+              const wrong = answered && i === selected && i !== q.correctIndex;
+              const border = right ? c.primary : wrong ? c.danger : c.border;
+              const bg = right ? c.primarySoft : wrong ? c.dangerSoft : c.surface;
+              const label = right ? s.quiz.correct : wrong ? s.quiz.incorrect : '';
+              return (
+                <Tap
+                  key={opt}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${LETTERS[i] ?? ''}. ${opt}${label ? `. ${label}` : ''}`}
+                  accessibilityState={{ selected: selected === i, disabled: answered }}
+                  disabled={answered}
+                  onPress={() => choose(i)}
+                  style={[styles.option, { borderColor: border, backgroundColor: bg }]}
+                >
+                  <View
+                    style={[
+                      styles.letter,
+                      { backgroundColor: right ? c.primary : wrong ? c.danger : c.surfaceAlt },
+                    ]}
+                  >
+                    {right ? (
+                      <Icon name="check" size={14} color="onPrimary" />
+                    ) : wrong ? (
+                      <Icon name="x" size={14} color="onPrimary" />
+                    ) : (
+                      <Text variant="caption">{LETTERS[i] ?? ''}</Text>
+                    )}
+                  </View>
+                  <Text
+                    variant="small"
+                    color={right ? 'primary' : wrong ? 'danger' : 'text'}
+                    style={styles.flex}
+                  >
+                    {opt}
+                  </Text>
+                </Tap>
+              );
+            })}
+          </View>
+          {answered ? (
+            <Card>
+              <CitationChip citation={q.citation} />
+              <Text variant="small">{q.explanation}</Text>
+            </Card>
+          ) : null}
+        </View>
       </View>
-      {answered ? (
-        <Card tone="primary">
-          <CitationChip citation={q.citation} />
-          <Text variant="small">{q.explanation}</Text>
-        </Card>
-      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  layout: { gap: space.lg },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  question: { gap: space.md },
+  questionWide: { flex: 1, minWidth: 0 },
+  answers: { flex: 1, minWidth: 0, gap: space.md },
   options: { gap: space.sm },
   option: {
     flexDirection: 'row',
@@ -239,5 +254,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   flex: { flex: 1 },
-  result: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  result: { gap: space.lg, paddingVertical: space.xl },
+  resultWide: { flexDirection: 'row', alignItems: 'center', gap: space.xxl },
+  resultText: { flex: 1, gap: space.md },
 });

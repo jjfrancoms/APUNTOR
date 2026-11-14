@@ -3,10 +3,28 @@ import { Card, Chip, Text } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ApiSummaryBlock, ApiTopicSummary } from '@/lib/api';
 import { formatPageRanges } from '@/lib/outline';
+import { sameTitle, splitDefinition, tidyText } from '@/lib/summary-text';
 import { radius, space, useTheme } from '@/theme';
 
 /** Celda mínima: una tabla ancha se desplaza de lado en vez de aplastarse. */
 const MIN_CELL_WIDTH = 72;
+
+/** Elemento de lista: si es «Término: explicación», el término va en negrita. */
+function ListText({ text }: { text: string }) {
+  const def = splitDefinition(text);
+  return (
+    <Text variant="body" selectable style={styles.flex}>
+      {def ? (
+        <>
+          <Text variant="bodyStrong">{`${def.term}:`}</Text>
+          {` ${def.rest}`}
+        </>
+      ) : (
+        text
+      )}
+    </Text>
+  );
+}
 
 /**
  * Resumen de un tema con la estructura del original: subtítulos, párrafos, listas, tablas
@@ -17,6 +35,7 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
   const s = useStrings();
   const t = s.topicView;
   const { c } = useTheme();
+  const firstHeading = summary.blocks.findIndex((b) => b.type === 'heading');
   const images = new Map(summary.pageImages.map((p) => [p.pageNumber, p.url]));
 
   const pageChip = (pages: readonly number[]) => {
@@ -56,16 +75,18 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
   const render = (block: ApiSummaryBlock, i: number) => {
     switch (block.type) {
       case 'heading':
+        // El título del tema ya está en la barra superior: no se repite.
+        if (i === firstHeading && sameTitle(block.text, summary.topic.title)) return null;
         return (
-          <Text key={i} variant="subheading" accessibilityRole="header">
-            {block.text}
+          <Text key={i} variant="subheading" accessibilityRole="header" style={styles.heading}>
+            {tidyText(block.text)}
           </Text>
         );
       case 'paragraph':
         return (
           <View key={i} style={styles.block}>
             <Text variant="body" selectable>
-              {block.text}
+              {tidyText(block.text)}
             </Text>
             {unverifiedNote(block)}
             {pageChip(block.unverified === true ? [] : block.pages)}
@@ -77,9 +98,7 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
             {block.items.map((item, n) => (
               <View key={n} style={styles.item}>
                 <View style={[styles.bullet, { backgroundColor: c.primary }]} />
-                <Text variant="body" selectable style={styles.flex}>
-                  {item}
-                </Text>
+                <ListText text={tidyText(item)} />
               </View>
             ))}
             {unverifiedNote(block)}
@@ -97,7 +116,7 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
                     style={[
                       styles.row,
                       { borderColor: c.border },
-                      r === 0 && { backgroundColor: c.primarySoft },
+                      r === 0 && { backgroundColor: c.surfaceAlt },
                     ]}
                   >
                     {row.map((cell, k) => (
@@ -146,7 +165,7 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
             </View>
             {block.caption ? (
               <Text variant="caption" color="textMuted">
-                {block.caption}
+                {tidyText(block.caption)}
               </Text>
             ) : null}
             {pageChip([block.page])}
@@ -160,11 +179,13 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
 
 const styles = StyleSheet.create({
   list: { gap: space.lg },
+  // Más aire sobre un subtítulo que debajo: queda unido a lo que presenta.
+  heading: { marginTop: space.lg, marginBottom: -space.xs },
   block: { gap: space.sm },
   flex: { flex: 1 },
   chip: { alignSelf: 'flex-start' },
   item: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
-  bullet: { width: 6, height: 6, borderRadius: 3, marginTop: 9 },
+  bullet: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
   table: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.sm, overflow: 'hidden' },
   row: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   cell: {

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { layout, space } from '@/theme';
+import { layout, space, typeScale } from '@/theme';
 import { useStrings } from '@/i18n/es';
 import { entryRoute, useStore } from '@/store/store';
 import { IconButton } from './IconButton';
@@ -57,10 +57,22 @@ const styles = StyleSheet.create({
   // El título queda junto al botón de volver; el área táctil del botón sobresale del margen.
   bar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: space.xs,
     minHeight: layout.minTouchTarget + 8,
+    paddingTop: 4,
   },
-  title: { flex: 1, minWidth: 0 },
-  side: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  // La primera línea del título queda a la altura del centro del botón de volver (44 px).
+  title: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: (layout.minTouchTarget - typeScale.subheading.lineHeight) / 2,
+    paddingBottom: 4,
+  },
+  side: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: layout.minTouchTarget,
+  },
 });

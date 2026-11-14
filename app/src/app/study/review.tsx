@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { StudyError, StudyLoading } from '@/components/domain/StudyState';
 import { Button, Card, EmptyState, Icon, ListRow, Screen, Text, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
@@ -9,7 +9,7 @@ import { PREVIEW } from '@/lib/config';
 import { estimateMinutes, reviewByCourse } from '@/lib/study';
 import { previewReview } from '@/lib/study-preview';
 import { useStudyLoad } from '@/lib/use-study-load';
-import { space } from '@/theme';
+import { space, useWide } from '@/theme';
 
 /**
  * Pantallas 32 y 46 · Repaso del día con las tarjetas que el servidor agenda para hoy; sin ellas
@@ -18,6 +18,7 @@ import { space } from '@/theme';
 export default function DailyReview() {
   const s = useStrings();
   const r = s.dailyReview;
+  const wide = useWide();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const fetcher = useCallback(
     async () => (PREVIEW ? previewReview() : (await api.reviewToday()).items),
@@ -59,6 +60,7 @@ export default function DailyReview() {
   const start = () => router.push({ pathname: '/study/flashcards', params: { review: '1' } });
   return (
     <Screen
+      wide
       header={<TopBar title={r.header} />}
       footer={
         <>
@@ -67,41 +69,49 @@ export default function DailyReview() {
         </>
       }
     >
-      <Card tone="primary" style={styles.hero}>
-        <Text variant="display" color="primary" style={styles.big}>
-          {String(items.length)}
-        </Text>
-        <Text variant="bodyStrong">{r.cardsToday}</Text>
-        <Text variant="caption" color="textMuted">
-          {r.minutes(estimateMinutes(items.length))}
-        </Text>
-      </Card>
-      <Text variant="overline" color="textMuted">
-        {r.byCourse}
-      </Text>
-      <Card style={styles.list}>
-        {rows.map((row, i) => (
-          <ListRow
-            key={row.course ?? 'none'}
-            title={row.course ?? s.study.unassignedCourse}
-            detail={r.cards(row.cards)}
-            divider={i < rows.length - 1}
-            onPress={start}
-          />
-        ))}
-      </Card>
-      <Card style={styles.note}>
-        <Icon name="repeat" size={14} color="textMuted" />
-        <Text variant="caption" color="textMuted" style={styles.flex}>
-          {r.spaced}
-        </Text>
-      </Card>
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={[styles.hero, wide && styles.heroWide]}>
+          <Text variant="display" color="primary" style={styles.big}>
+            {String(items.length)}
+          </Text>
+          <Text variant="bodyStrong">{r.cardsToday}</Text>
+          <Text variant="caption" color="textMuted">
+            {r.minutes(estimateMinutes(items.length))}
+          </Text>
+        </View>
+        <View style={styles.rows}>
+          <Text variant="heading" accessibilityRole="header">
+            {r.byCourse}
+          </Text>
+          <Card style={styles.list}>
+            {rows.map((row, i) => (
+              <ListRow
+                key={row.course ?? 'none'}
+                title={row.course ?? s.study.unassignedCourse}
+                detail={r.cards(row.cards)}
+                divider={i < rows.length - 1}
+                onPress={start}
+              />
+            ))}
+          </Card>
+          <Card style={styles.note}>
+            <Icon name="repeat" size={14} color="textMuted" />
+            <Text variant="caption" color="textMuted" style={styles.flex}>
+              {r.spaced}
+            </Text>
+          </Card>
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: space.xs, paddingVertical: space.xl },
+  layout: { gap: space.xl },
+  layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  rows: { flex: 1, minWidth: 0, gap: space.sm },
+  hero: { gap: space.xs },
+  heroWide: { width: 240 },
   big: { fontSize: 48, lineHeight: 54 },
   list: { padding: 0, gap: 0 },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
