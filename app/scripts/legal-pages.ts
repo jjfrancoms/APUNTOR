@@ -58,8 +58,8 @@ const BRAND_LOGO =
   `<g transform="${ISOTIPO_TRANSFORM}"><path fill-rule="evenodd" d="${ISOTIPO_PATH}"/></g>` +
   `<g transform="${LETRAS_TRANSFORM}"><path d="${LETRAS_PATH}"/></g></svg>`;
 
-const CSS = `:root{color-scheme:light dark;--bg:#FAF9F6;--surface:#FFFFFF;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
-@media (prefers-color-scheme:dark){:root{--bg:#121413;--surface:#1C1F1E;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
+const CSS = `:root{color-scheme:light dark;--bg:#FAF9F6;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--bg:#121413;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font-size-adjust:from-font;background:var(--bg);color:var(--text);font:400 1rem/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -74,7 +74,7 @@ a{color:var(--primary)}
 main{max-width:70ch;padding:16px 0 40px}
 h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;letter-spacing:-.4px;margin:16px 0 8px}
 .meta{color:var(--muted);font-size:0.8125rem;line-height:1.125rem;margin:0 0 24px}
-section{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;margin:0 0 16px}
+section{border-top:1px solid var(--border);padding:24px 0}
 h2{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0 0 12px}
 p{margin:0 0 12px;overflow-wrap:anywhere}
 p:last-child{margin-bottom:0}

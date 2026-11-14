@@ -65,67 +65,40 @@ a:focus-visible,.btn:focus-visible{outline:2px solid var(--primary);outline-offs
 .stage{position:relative;width:100%;max-width:380px;aspect-ratio:1;justify-self:center}
 .disc{position:absolute;inset:6% 4% 0;border-radius:50%;background:var(--soft)}
 .illari{position:absolute;left:14%;bottom:2%;width:72%;height:auto}
-.fl{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-weight:700;font-size:0.8125rem;line-height:1;white-space:nowrap}
-.fl svg{flex:none}
-.doc{left:0;top:16%;flex-direction:column;align-items:stretch;gap:7px;width:34%;padding:12px;border-radius:14px;transform:rotate(-6deg)}
-.doc i{display:block;height:6px;border-radius:3px;background:var(--border)}
-.doc i.hl{background:var(--accent)}
-.doc i.s{width:60%}
-.cite{right:0;top:12%;padding:9px 12px;border-radius:999px;color:var(--primary);transform:rotate(4deg)}
-.ok{right:6%;bottom:14%;width:46px;height:46px;justify-content:center;padding:0;border-radius:50%;background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
-.tabs{left:0;bottom:12%;padding:8px 12px;border-radius:12px;color:var(--muted);transform:rotate(3deg)}
-.tabs b{color:var(--primary)}
 .copy{text-align:left;width:100%;max-width:480px}
 h1{font-size:1.875rem;line-height:2.375rem;font-weight:800;letter-spacing:-.4px;margin:0 0 12px}
 .lead{font-size:1.0625rem;line-height:1.6875rem;color:var(--muted);margin:0 0 28px}
 .actions{display:grid;gap:12px;width:100%;max-width:360px}
 .age{font-size:0.875rem;line-height:1.25rem;color:var(--muted);margin:16px 0 0}
-.strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 0}
-.strip .wrap{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.strip p{margin:0;font-size:0.875rem;line-height:1.25rem;font-weight:700;color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
-.chips li{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-weight:700;font-size:0.9375rem}
-.chips svg{color:var(--primary)}
+.strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0}
+.strip .wrap{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.strip p{margin:0;font-size:0.9375rem;line-height:1.5rem;font-weight:700;color:var(--muted)}
+.formats{display:flex;flex-wrap:wrap;gap:0 10px;margin:0;padding:0;list-style:none;font-weight:700;font-size:1rem;line-height:1.5rem}
+.formats li:not(:last-child)::after{content:"·";margin-left:10px;color:var(--muted)}
 h2{font-size:1.5rem;line-height:1.875rem;font-weight:800;letter-spacing:-.2px;margin:0 0 16px}
-.section{padding:48px 0 8px}
-.about{display:grid;gap:28px}
-.about p{margin:0 0 12px;font-size:1.0625rem;line-height:1.6875rem;max-width:56ch}
-/* Respuesta de ejemplo: muestra la cita de página (referencia: Citation de 21st.dev). */
-.mock{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:20px;display:grid;gap:14px;align-content:start}
-.mock .tag{margin:0;font-size:0.8125rem;line-height:1.125rem;font-weight:700;color:var(--muted)}
-.mock .q{justify-self:end;max-width:85%;margin:0;padding:10px 14px;border-radius:14px 14px 4px 14px;background:var(--soft);font-size:0.9375rem;line-height:1.4rem;font-weight:600}
-.mock .a{margin:0;max-width:none;font-size:0.9375rem;line-height:1.5rem;font-weight:500}
-.pill{display:inline-flex;align-items:center;gap:6px;margin-left:6px;padding:2px 10px 2px 4px;border-radius:999px;border:1px solid var(--border);background:var(--alt);color:var(--primary);font-size:0.8125rem;line-height:1.25rem;font-weight:700;white-space:nowrap;vertical-align:baseline}
-.pill b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:0.6875rem}
-.grid{display:grid;gap:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:24px;display:flex;flex-direction:column;gap:6px}
-.card .ico{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-bottom:10px;border-radius:12px;background:var(--soft);color:var(--primary)}
-.card h3{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0}
-.card p{margin:0;color:var(--muted)}
-.card.big{background:var(--soft);border-color:transparent}
-.card.big p{color:var(--text)}
-.card.big .ico{background:var(--surface)}
-.card.big .pill{align-self:flex-start;margin:14px 0 0}
-.steps{counter-reset:paso;list-style:none;margin:0;padding:0;display:grid;gap:24px}
-.steps li{counter-increment:paso;position:relative;padding:2px 0 0 56px;min-height:32px}
-.steps li::before{content:counter(paso);position:absolute;left:0;top:0;z-index:1;width:36px;height:36px;border-radius:50%;background:var(--primary);color:var(--on-primary);font-weight:700;display:flex;align-items:center;justify-content:center}
-.steps li:not(:last-child)::after{content:"";position:absolute;left:17px;top:40px;bottom:-20px;width:2px;background:var(--border)}
-.steps strong{display:block;font-size:1.0625rem;line-height:1.5rem}
+.section{padding:56px 0 8px}
+.about{display:grid;gap:12px}
+.about p{margin:0 0 12px;font-size:1.0625rem;line-height:1.75rem;max-width:60ch}
+.about h2{margin:0}
+.rows{margin:0;padding:0;list-style:none;border-bottom:1px solid var(--border)}
+.rows li{border-top:1px solid var(--border);padding:20px 0;display:grid;gap:6px}
+.rows h3{font-size:1.25rem;line-height:1.75rem;font-weight:800;letter-spacing:-.2px;margin:0}
+.rows p{margin:0;color:var(--muted);max-width:56ch}
+.steps{counter-reset:paso;list-style:none;margin:0;padding:0;display:grid;gap:28px}
+.steps li{counter-increment:paso}
+.steps li::before{content:counter(paso);display:block;font-size:3rem;line-height:1;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:var(--primary);margin-bottom:10px}
+.steps strong{display:block;font-size:1.125rem;line-height:1.5rem}
 .steps span{color:var(--muted)}
-.cta{margin:56px 0;padding:28px 24px;border-radius:24px;background:var(--soft);display:grid;gap:20px}
-.cta h2{margin:0}
+.cta{margin:64px 0 0;padding:40px 0 64px;border-top:1px solid var(--border);display:grid;gap:20px;justify-items:start}
+.cta h2{margin:0;max-width:20ch}
+.cta .btn{width:auto}
 footer{border-top:1px solid var(--border);padding:16px 0 32px;color:var(--muted);font-size:0.875rem;line-height:1.25rem}
 footer .wrap{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
 footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
 footer p{margin:0}
 footer .end{flex-basis:100%;margin-top:4px}
-@media (prefers-reduced-motion:no-preference){
-.fl{animation:pop .5s ease-out both}
-.cite{animation-delay:.1s}.ok{animation-delay:.2s}.tabs{animation-delay:.3s}
-@keyframes pop{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
-}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}.btn:active{transform:none}}
-@media (min-width:480px){h1{font-size:2.125rem;line-height:2.625rem}.fl{font-size:0.875rem}}
+@media (min-width:480px){h1{font-size:2.125rem;line-height:2.625rem}}
 @media (min-width:600px){.actions{display:flex;flex-wrap:wrap;max-width:none}.btn{width:auto}}
 @media (min-width:900px){
 .wrap{padding:0 32px}
@@ -135,17 +108,12 @@ footer .end{flex-basis:100%;margin-top:4px}
 h1{font-size:2.75rem;line-height:3.25rem;letter-spacing:-.8px}
 .lead{font-size:1.1875rem;line-height:1.8125rem}
 h2{font-size:1.875rem;line-height:2.375rem}
-.section{padding:72px 0 8px}
-.strip .wrap{flex-direction:row;align-items:center;gap:24px}
-.about{grid-template-columns:1fr 1fr;gap:56px;align-items:start}
-.grid{grid-template-columns:1.25fr 1fr}
-.card.big{grid-row:span 2;padding:32px}
-.card.big h3{font-size:1.5rem;line-height:2rem}
-.steps{grid-template-columns:repeat(3,1fr);gap:32px}
-.steps li{padding:52px 0 0}
-.steps li:not(:last-child)::after{left:48px;right:-32px;top:17px;bottom:auto;width:auto;height:2px}
-.cta{grid-template-columns:1fr auto;align-items:center;gap:32px;padding:40px 48px;margin:72px 0}
-.cta .actions{flex-wrap:nowrap}
+.section{padding:88px 0 8px}
+.strip .wrap{flex-direction:row;align-items:baseline;gap:20px}
+.about{grid-template-columns:1fr 1.4fr;gap:56px;align-items:start}
+.rows li{grid-template-columns:1fr 1.6fr;gap:56px;padding:28px 0}
+.steps{grid-template-columns:repeat(3,1fr);gap:48px}
+.cta{grid-template-columns:1fr auto;align-items:center;gap:32px;margin-top:96px;padding:48px 0 80px}
 footer .end{flex-basis:auto;margin:0 0 0 auto}
 }
 </style>
@@ -181,14 +149,7 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <ellipse cx="50" cy="48.5" rx="2.6" ry="1.8" fill="#5B3A2E"/>
 <path d="M50 50 V53.5 M44.5 54 Q47.5 57.5 50 53.5 Q52.5 57.5 55.5 54" stroke="#5B3A2E" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="33" y="70" width="34" height="8" rx="4" fill="#1D7568"/>
-<path d="M14 30 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 Z" fill="#F2A93B"/>
-<path d="M86 22 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 Z" fill="#F2A93B"/>
-<path d="M84 62 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1 Z" fill="#F2A93B"/>
 </svg>
-<div class="fl doc" aria-hidden="true"><i></i><i class="hl"></i><i class="s"></i><i></i></div>
-<div class="fl cite" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>pág. 3</div>
-<div class="fl tabs" aria-hidden="true">Tema 2 <b>·</b> Resumen</div>
-<div class="fl ok" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
 </div>
 <div class="copy">
 <h1>Con Apuntor, estudiar con tus apuntes es más simple</h1>
@@ -206,50 +167,41 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <div class="strip">
 <div class="wrap">
 <p>Estudia con tus apuntes en:</p>
-<ul class="chips" aria-label="Tipos de material que acepta Apuntor">
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>PDF</li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>Word</li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>PowerPoint</li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>Texto</li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de tus hojas</li>
+<ul class="formats" aria-label="Tipos de material que acepta Apuntor">
+<li>PDF</li>
+<li>Word</li>
+<li>PowerPoint</li>
+<li>Texto</li>
+<li>Fotos de tus hojas</li>
 </ul>
 </div>
 </div>
 
 <div class="wrap">
 <section class="section about" aria-labelledby="que-es">
-<div>
 <h2 id="que-es">Qué es Apuntor</h2>
+<div>
 <p>Apuntor es una app de estudio. Subes tus propios apuntes y la inteligencia artificial responde solo con lo que está en ellos, indicando en qué página lo encontró. Si la respuesta no está en tu material, te lo dice en vez de inventarla.</p>
 <p>Está pensada para estudiantes universitarios mayores de 18 años que quieren repasar con su propio material y poder comprobar cada respuesta.</p>
-</div>
-<div class="mock" aria-hidden="true">
-<p class="tag">Ejemplo de respuesta</p>
-<p class="q">¿Qué es la fotosíntesis?</p>
-<p class="a">Es el proceso con el que las plantas convierten la luz en energía química, según tus apuntes.<span class="pill"><b>3</b>pág. 3</span></p>
 </div>
 </section>
 
 <section class="section" aria-labelledby="que-hace">
 <h2 id="que-hace">Qué puedes hacer con tus apuntes</h2>
-<div class="grid">
-<article class="card big">
-<span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+<ul class="rows">
+<li>
 <h3>Preguntar y ver la página</h3>
 <p>Haz una pregunta y recibe una respuesta basada en tus apuntes, con la cita de la página para que la revises en el original.</p>
-<span class="pill" aria-hidden="true"><b>3</b>pág. 3</span>
-</article>
-<article class="card">
-<span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+</li>
+<li>
 <h3>Resúmenes por tema</h3>
 <p>Apuntor organiza lo que subiste por temas y te muestra un resumen de cada uno, con las páginas de donde sale.</p>
-</article>
-<article class="card">
-<span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></svg></span>
+</li>
+<li>
 <h3>Quizzes y flashcards</h3>
 <p>Practica con quizzes y tarjetas de repaso creados a partir de tu propio material.</p>
-</article>
-</div>
+</li>
+</ul>
 </section>
 
 <section class="section" aria-labelledby="como-funciona">
@@ -263,10 +215,7 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 
 <section class="cta" aria-labelledby="empezar">
 <h2 id="empezar">Empieza con el material que ya tienes</h2>
-<div class="actions">
 <a class="btn fill" href="/register">Empieza ahora</a>
-<a class="btn line" href="/login">Ya tengo una cuenta</a>
-</div>
 </section>
 </div>
 <footer>

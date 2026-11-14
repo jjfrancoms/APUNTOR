@@ -135,11 +135,14 @@ describe('landing', () => {
     for (const node of data['@graph']) expect(node.name).toBe('Apuntor');
   });
 
-  it('las secciones no se centran: tienen cita de ejemplo, pasos numerados y CTA dividido', () => {
-    expect(html).toContain('class="pill"');
+  it('las secciones son tipográficas y no se centran: filas con filetes, pasos con numerales y CTA simple', () => {
     expect(html).toMatch(/<ol class="steps">/);
+    expect(html).toMatch(/<ul class="rows">/);
     expect(html).toMatch(/<section class="cta"/);
-    expect(html).not.toMatch(/text-align:center;padding/);
+    // Sin adornos genéricos: pegatinas, fichas con ícono, chips, pastillas ni tarjeta de ejemplo.
+    expect(html).not.toMatch(/class="(fl |pill|mock|chips|ico|card)/);
+    expect(html).not.toContain('Ejemplo de respuesta');
+    expect(html).not.toMatch(/border-radius:(20|24)px/);
     expect(html).toMatch(/\.copy\{text-align:left/);
   });
 
