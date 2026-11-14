@@ -51,6 +51,29 @@ fuente)**, **ámbar = avisos y mascota (nunca texto)**, **rojo = errores y accio
 - La mascota usa su propia paleta de ilustración (`mascotPalette` en `tokens.ts`): es parte
   del dibujo, no cambia con el tema y no se usa en la interfaz.
 
+## Logo
+
+El kit vive en `docs/marca/` (`LEEME.txt`, `svg/`, `png/` y la hoja de marca). El isotipo es una
+cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya convertido a trazados.
+
+- **Variantes de color**: `color` (#1D7568, sobre fondo claro) y `oscuro` (#4DB6A6, sobre fondo
+  oscuro) son exactamente `primary` en claro y en oscuro; `negro` (#1C1C1E) es para impresión a una
+  tinta y `blanco` para el verde de marca o fotos. En la app, `BrandLogo` toma el color de `primary`
+  y cambia solo con el tema; en la web el SVG en línea usa `fill: var(--primary)`.
+- **Piezas**: isotipo, logotipo, vertical y horizontal, más el icono de app (1024 cuadrado para las
+  tiendas; los lanzadores redondean solos) y los PNG 512, 180, 48, 32 y 16.
+- **Logo o Illari**: el logo es la marca y va donde la app se presenta (barra lateral, acceso,
+  registro, bienvenida, landing, páginas públicas e iconos). Illari es el personaje y sigue en estados
+  vacíos, chat, cargas y el hero de la landing. Nunca se usan juntos como un solo sello ni se
+  redibuja el logo con rasgos de Illari.
+- **Tamaños mínimos**: isotipo 16 px de alto en pantalla (24 px en la app); logo horizontal 20 px de
+  alto (unos 62 px de ancho); en la app los usos habituales son 28 a 36 px de alto.
+- **Espacio libre**: al menos 1/4 del alto del logo por todos lados (el kit trae 40 px de margen
+  en sus SVG). `BrandLogo` recorta ese margen, así que el aire lo da el contenedor.
+- **Icono Android**: primer plano en blanco dentro del 66 % central, fondo verde de marca
+  (`#1D7568`) y versión monocroma con la silueta.
+- No cambiar proporciones, colores ni la tipografía; no usar el logo como adorno repetido.
+
 ## Tipografía
 
 - Una sola familia: **Plus Jakarta Sans** (400, 500, 600, 700, 800).

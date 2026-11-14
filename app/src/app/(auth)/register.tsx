@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
 import {
+  BrandLogo,
   Button,
   Checkbox,
   DateField,
@@ -45,6 +46,7 @@ export default function Register() {
   return (
     <Screen narrow header={<TopBar title={s.register.header} />}>
       <View style={styles.intro}>
+        <BrandLogo variant="horizontal" size={28} />
         <Text variant="title" accessibilityRole="header">
           {s.register.title}
         </Text>
@@ -155,6 +157,6 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
-  intro: { gap: space.xs },
+  intro: { gap: space.sm },
   inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
 });
