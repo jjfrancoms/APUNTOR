@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Banner, Mascot, Screen, Text, TextLink, TopBar } from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Banner, Text, TextLink, TopBar } from '@/components/ui';
 import { useStrings, type ErrorCode } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
 import { completeAuthCode, entryRoute, getState } from '@/store/store';
-import { space } from '@/theme';
 
 function single(value: string | string[] | undefined): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -49,26 +49,23 @@ export default function AuthCallback() {
   }, [code, flowId, providerError]);
 
   return (
-    <Screen narrow header={<TopBar title={a.header} />}>
-      <View style={styles.center}>
-        <Mascot size={96} mood={error ? 'worried' : 'curious'} />
-      </View>
+    <AuthLayout title={a.header} header={<TopBar />} mood={error ? 'worried' : 'curious'}>
       {error ? (
         <>
           <Banner tone="danger" title={s.errors[error]} />
-          <View style={styles.center}>
+          <View style={styles.start}>
             <TextLink label={a.backToLogin} onPress={() => router.replace('/login')} />
           </View>
         </>
       ) : (
-        <Text variant="small" color="textMuted" align="center" accessibilityRole="alert">
+        <Text variant="small" color="textMuted" accessibilityRole="alert">
           {a.opening}
         </Text>
       )}
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', gap: space.sm },
+  start: { alignItems: 'flex-start' },
 });

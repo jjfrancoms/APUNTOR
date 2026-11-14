@@ -175,7 +175,7 @@ export const en: Strings = {
     },
     minorTitle: 'Are you under 18?',
     minorBody:
-      "For now APUNTOR is only for people 18 and over. If you're under 18, you can join the waitlist.",
+      "For now Apuntor is only for people 18 and over. If you're under 18, you can join the waitlist.",
     minorAction: "I'm under 18",
     readAndAccept: 'I have read and accept the',
     submit: 'Accept and continue',
@@ -987,7 +987,7 @@ export const en: Strings = {
   confirmAge: {
     header: 'Your age',
     title: 'One last thing',
-    subtitle: 'For now APUNTOR is for people 18 and over. Confirm it with your date of birth.',
+    subtitle: 'For now Apuntor is for people 18 and over. Confirm it with your date of birth.',
     birthDate: 'Date of birth',
     birthPlaceholder: 'DD/MM/YYYY',
     birthNote: "We only store that you're 18 or over, never the date.",

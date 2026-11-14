@@ -1,18 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { AuthLayout } from '@/components/domain/AuthLayout';
 import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
-import {
-  Banner,
-  BrandLogo,
-  Button,
-  Icon,
-  Mascot,
-  Screen,
-  Text,
-  TextField,
-  TextLink,
-} from '@/components/ui';
+import { Banner, Button, Icon, Text, TextField, TextLink } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { backendConfigured } from '@/lib/config';
 import { entryRoute, getState, signIn } from '@/store/store';
@@ -35,17 +26,7 @@ export default function Login() {
     else setError(s.errors[r.error]);
   };
   return (
-    <Screen narrow>
-      <View style={styles.hero}>
-        <BrandLogo variant="horizontal" size={32} />
-        <Mascot size={110} halo />
-        <Text variant="title" align="center" accessibilityRole="header">
-          {s.login.title}
-        </Text>
-        <Text variant="small" color="textMuted" align="center">
-          {s.login.subtitle}
-        </Text>
-      </View>
+    <AuthLayout title={s.login.title} subtitle={s.login.subtitle} mood="happy">
       {backendConfigured ? null : <Banner tone="warning" title={s.live.notConfigured} />}
       <TextField
         label={s.login.email}
@@ -68,7 +49,7 @@ export default function Login() {
         onSubmitEditing={() => void submit()}
         error={error}
       />
-      <View style={styles.right}>
+      <View style={styles.start}>
         <TextLink label={s.login.forgot} onPress={() => router.push('/forgot-password')} />
       </View>
       <View style={styles.actions}>
@@ -92,13 +73,12 @@ export default function Login() {
           {s.login.privacyNote}
         </Text>
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: 'center', gap: space.sm, paddingTop: space.lg },
-  right: { alignItems: 'flex-end', marginTop: -space.sm },
+  start: { alignItems: 'flex-start', marginTop: -space.sm },
   actions: { gap: space.sm },
-  inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
 });

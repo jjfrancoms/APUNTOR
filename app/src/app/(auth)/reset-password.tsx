@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Banner, Button, Mascot, Screen, Text, TextField, TextLink, TopBar } from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Banner, Button, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings, type ErrorCode } from '@/i18n/es';
 import { PREVIEW } from '@/lib/config';
 import {
@@ -11,7 +12,6 @@ import {
   updatePassword,
   type AuthField,
 } from '@/store/store';
-import { space } from '@/theme';
 
 type Phase = 'opening' | 'ready' | 'failed';
 
@@ -62,12 +62,14 @@ export default function ResetPassword() {
   };
 
   return (
-    <Screen narrow header={<TopBar title={r.header} />}>
-      <View style={styles.center}>
-        <Mascot size={96} mood={phase === 'failed' ? 'worried' : 'curious'} />
-      </View>
+    <AuthLayout
+      title={phase === 'ready' ? r.title : r.header}
+      subtitle={phase === 'ready' ? r.subtitle : undefined}
+      header={<TopBar />}
+      mood={phase === 'failed' ? 'worried' : 'curious'}
+    >
       {phase === 'opening' ? (
-        <Text variant="small" color="textMuted" align="center" accessibilityRole="alert">
+        <Text variant="small" color="textMuted" accessibilityRole="alert">
           {r.opening}
         </Text>
       ) : null}
@@ -75,21 +77,13 @@ export default function ResetPassword() {
         <>
           <Banner tone="danger" title={s.errors[linkError]} />
           <Button label={r.requestNew} onPress={() => router.replace('/forgot-password')} />
-          <View style={styles.center}>
+          <View style={styles.start}>
             <TextLink label={s.forgot.backToLogin} onPress={() => router.replace('/login')} />
           </View>
         </>
       ) : null}
       {phase === 'ready' ? (
         <>
-          <View style={styles.intro}>
-            <Text variant="title" accessibilityRole="header">
-              {r.title}
-            </Text>
-            <Text variant="small" color="textMuted">
-              {r.subtitle}
-            </Text>
-          </View>
           <TextField
             label={r.password}
             placeholder={r.passwordPlaceholder}
@@ -123,11 +117,10 @@ export default function ResetPassword() {
           />
         </>
       ) : null}
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center' },
-  intro: { gap: space.xs },
+  start: { alignItems: 'flex-start' },
 });

@@ -180,7 +180,7 @@ export const es = {
     },
     minorTitle: '¿Tienes menos de 18 años?',
     minorBody:
-      'Por ahora APUNTOR es solo para mayores de 18 años. Si eres menor, puedes anotarte en la lista de espera.',
+      'Por ahora Apuntor es solo para mayores de 18 años. Si eres menor, puedes anotarte en la lista de espera.',
     minorAction: 'Soy menor de 18',
     readAndAccept: 'Leí y acepto los',
     submit: 'Aceptar y continuar',
@@ -994,7 +994,7 @@ export const es = {
     header: 'Tu edad',
     title: 'Una última cosa',
     subtitle:
-      'Por ahora APUNTOR es para mayores de 18 años. Confírmalo con tu fecha de nacimiento.',
+      'Por ahora Apuntor es para mayores de 18 años. Confírmalo con tu fecha de nacimiento.',
     birthDate: 'Fecha de nacimiento',
     birthPlaceholder: 'DD/MM/AAAA',
     birthNote: 'Solo guardamos que tienes 18 años o más, nunca la fecha.',

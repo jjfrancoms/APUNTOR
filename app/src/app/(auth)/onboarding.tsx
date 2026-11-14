@@ -1,19 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  BrandLogo,
-  Button,
-  Icon,
-  Mascot,
-  Screen,
-  Text,
-  TextLink,
-  type IconName,
-} from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Button, Icon, Text, TextLink, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { setLevel as saveLevel } from '@/store/store';
-import { layout, radius, space, useTheme } from '@/theme';
+import { layout, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 type Level = 'school' | 'university' | 'other';
@@ -33,28 +25,21 @@ export default function Onboarding() {
     router.replace('/home');
   };
   return (
-    <Screen
-      narrow
+    <AuthLayout
+      title={s.onboarding.greeting}
+      mood="happy"
       footer={
         <>
           <Button label={s.common.continue} onPress={next} />
-          <View style={styles.center}>
+          <View style={styles.start}>
             <TextLink label={s.onboarding.skip} color="textMuted" onPress={next} />
           </View>
         </>
       }
     >
-      <BrandLogo variant="horizontal" size={28} />
-      <View style={styles.bubbleRow}>
-        <Mascot size={64} />
-        <View style={[styles.bubble, { backgroundColor: c.surface, borderColor: c.border }]}>
-          <Text variant="smallStrong" accessibilityRole="header">
-            {s.onboarding.greeting}
-          </Text>
-        </View>
-      </View>
-      <View accessibilityRole="radiogroup" style={styles.options}>
-        {(Object.keys(s.onboarding.levels) as Level[]).map((key) => {
+      {/* Opciones como filas separadas por líneas finas; solo la elegida lleva fondo de marca. */}
+      <View accessibilityRole="radiogroup" style={[styles.options, { borderColor: c.border }]}>
+        {(Object.keys(s.onboarding.levels) as Level[]).map((key, i) => {
           const selected = key === level;
           const item = s.onboarding.levels[key];
           return (
@@ -67,19 +52,13 @@ export default function Onboarding() {
               style={[
                 styles.option,
                 {
-                  backgroundColor: selected ? c.primarySoft : c.surface,
-                  borderColor: selected ? c.primary : c.border,
+                  backgroundColor: selected ? c.primarySoft : 'transparent',
+                  borderTopColor: c.border,
+                  borderTopWidth: i > 0 ? StyleSheet.hairlineWidth : 0,
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.optionIcon,
-                  { backgroundColor: selected ? c.surface : c.surfaceAlt },
-                ]}
-              >
-                <Icon name={LEVEL_ICONS[key]} size={18} color={selected ? 'primary' : 'text'} />
-              </View>
+              <Icon name={LEVEL_ICONS[key]} size={20} color={selected ? 'primary' : 'textMuted'} />
               <View style={styles.flex}>
                 <Text variant="bodyStrong" color={selected ? 'primary' : 'text'}>
                   {item.title}
@@ -88,35 +67,25 @@ export default function Onboarding() {
                   {item.detail}
                 </Text>
               </View>
-              {selected ? <Icon name="check-circle" size={20} color="primary" /> : null}
+              {selected ? <Icon name="check" size={20} color="primary" /> : null}
             </Tap>
           );
         })}
       </View>
-    </Screen>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  bubbleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  bubble: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: space.md },
-  options: { gap: space.md },
+  options: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    minHeight: layout.minTouchTarget + 20,
-  },
-  optionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    minHeight: layout.minTouchTarget + 12,
   },
   flex: { flex: 1 },
-  center: { alignItems: 'center' },
+  start: { alignItems: 'flex-start' },
 });
