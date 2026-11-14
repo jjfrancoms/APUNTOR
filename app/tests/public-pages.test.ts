@@ -29,6 +29,29 @@ describe('páginas legales estáticas', () => {
   });
 });
 
+describe('buenas prácticas web compartidas', () => {
+  const paginas = [
+    'public/landing.html',
+    'public/404.html',
+    'public/legal/privacy.html',
+    'public/legal/terms.html',
+  ];
+
+  it.each(paginas)(
+    '%s declara ambos temas, escala de texto y fuente de reserva estable',
+    (ruta) => {
+      const html = read(ruta);
+      expect(html).toContain('<meta name="color-scheme" content="light dark">');
+      expect(html).toContain('<meta name="text-scale" content="scale">');
+      expect(html).toMatch(/:root\{color-scheme:light dark;/);
+      expect(html).toContain('font-size-adjust:from-font');
+      expect(html).toMatch(/theme-color" content="#121413" media="\(prefers-color-scheme: dark\)"/);
+      // El texto escala con el sistema: nada de tamaños de fuente en px.
+      expect(html).not.toMatch(/font-size:\d+px/);
+    },
+  );
+});
+
 describe('landing', () => {
   const html = read('public/landing.html');
 

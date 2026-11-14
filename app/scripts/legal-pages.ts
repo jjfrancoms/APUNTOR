@@ -58,25 +58,25 @@ const BRAND_LOGO =
   `<g transform="${ISOTIPO_TRANSFORM}"><path fill-rule="evenodd" d="${ISOTIPO_PATH}"/></g>` +
   `<g transform="${LETRAS_TRANSFORM}"><path d="${LETRAS_PATH}"/></g></svg>`;
 
-const CSS = `:root{--bg:#FAF9F6;--surface:#FFFFFF;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
+const CSS = `:root{color-scheme:light dark;--bg:#FAF9F6;--surface:#FFFFFF;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
 @media (prefers-color-scheme:dark){:root{--bg:#121413;--surface:#1C1F1E;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;font-size-adjust:from-font;background:var(--bg);color:var(--text);font:400 1rem/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--primary)}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:720px;margin:0 auto;padding:16px 20px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:18px;text-decoration:none}
+.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:1.125rem;text-decoration:none}
 .brand .logo{display:block;height:26px;width:auto;fill:var(--primary)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .enter{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-weight:700;text-decoration:none}
 main{max-width:720px;margin:0 auto;padding:8px 20px 32px}
-h1{font-size:28px;line-height:34px;font-weight:800;margin:16px 0 8px}
-.meta{color:var(--muted);font-size:13px;line-height:18px;margin:0 0 24px}
+h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;margin:16px 0 8px}
+.meta{color:var(--muted);font-size:0.8125rem;line-height:1.125rem;margin:0 0 24px}
 section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin:0 0 16px}
-h2{font-size:18px;line-height:24px;font-weight:700;margin:0 0 12px}
+h2{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0 0 12px}
 p{margin:0 0 12px;overflow-wrap:anywhere}
 p:last-child{margin-bottom:0}
-footer{max-width:720px;margin:0 auto;padding:16px 20px 40px;color:var(--muted);font-size:13px;line-height:18px;display:flex;flex-wrap:wrap;gap:8px 20px}
+footer{max-width:720px;margin:0 auto;padding:16px 20px 40px;color:var(--muted);font-size:0.8125rem;line-height:1.125rem;display:flex;flex-wrap:wrap;gap:8px 20px}
 footer a{color:var(--muted)}
 a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}`;
 
@@ -95,6 +95,9 @@ export function renderLegalPage(doc: PublicLegalDoc): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Declara ambos temas antes de pintar (evita el destello blanco en modo oscuro) y respeta el tamaño de texto del sistema. -->
+<meta name="color-scheme" content="light dark">
+<meta name="text-scale" content="scale">
 <title>${escapeHtml(title)} · Apuntor</title>
 <meta name="description" content="${escapeHtml(DESCRIPTIONS[doc])}">
 <link rel="canonical" href="${url}">
@@ -102,7 +105,8 @@ export function renderLegalPage(doc: PublicLegalDoc): string {
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#FAF9F6">
+<meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121413" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Apuntor">
 <meta property="og:title" content="${escapeHtml(title)} · Apuntor">
