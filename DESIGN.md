@@ -78,7 +78,9 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 
 - Una sola familia: **Plus Jakarta Sans** (400, 500, 600, 700, 800).
 - Escala (`app/src/theme/index.tsx`): display 28/34 · title 24/30 · heading 18/24 ·
-  subheading 16/22 · body 15/22 · small 13/18 · caption 12/16 · overline 11/14 (+0,6).
+  subheading 16/22 · lead 17/26 · body 15/22 · small 13/18 (`muted` = small en `textMuted`;
+  `label` = small en seminegrita) · caption 12/16 · overline 11/14 (+0,6). Los nombres
+  anteriores siguen valiendo; `lead`, `muted` y `label` son los roles tipográficos nuevos.
 - Overline en mayúsculas solo para encabezados de sección de listas, no sobre cada título ni como
   etiqueta de un campo.
 - Ningún texto incrustado en imágenes; todo texto vive en `app/src/i18n/`.
@@ -86,18 +88,58 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 ## Espacio, forma y tamaño
 
 - Espaciado: 4 · 8 · 12 · 16 · 20 · 24 · 32. Márgenes de pantalla: 20 (móvil), 32 (escritorio).
-- Radios: 8 · 12 (campos y botones) · 16 (tarjetas) · 20 (hojas y diálogos) · píldora.
+- Radios modestos y según el rol: 8 · 10 (botones) · 12 (campos, tarjetas y diálogos) · 16
+  (hoja inferior) · píldora (solo chips con significado y el indicador de pestaña activa). No se
+  usa el mismo radio grande en todo.
 - Área táctil mínima 44 px; botón principal 52 px de alto.
+- Pantalla ancha: desde `layout.breakpoints.tablet` (600 px) los componentes que organizan
+  contenido pasan a su variante ancha; el hook es `useWide()` (`app/src/theme/index.tsx`). No se
+  centra todo: el texto va alineado a la izquierda y solo se centra un ícono dentro de su botón.
 - Ancho de lectura máximo: 720 px (móvil/tablet), 800 px (escritorio), 1120 px en pantallas
   de varias columnas, 480 px en acceso y registro (`Screen narrow`).
 
 ## Componentes y patrones
 
-- Base en `app/src/components/ui/`: Button, TextField, DateField, SelectField, Card, Chip,
-  Banner, ListRow, Sheet, Segmented, Toggle, Checkbox, Mascot, TopBar, Screen.
+- Base en `app/src/components/ui/`. Referencias de 21st.dev aprobadas: se copia el diseño (forma,
+  estados, espacio), no el código web.
+  - **Button**: variantes `primary`, `secondary`, `soft`, `ghost`, `danger`, `dangerOutline`;
+    tamaños `sm` 44 · `md` 52 · `lg` 56 px; `loading` pone un indicador junto a la etiqueta (que
+    se mantiene para lectores de pantalla). Foco de teclado con el anillo `primary` (WebChrome).
+  - **IconButton**: cuadrado de 44 px con fondo al presionar o pasar el puntero; `plain` sin
+    fondo en reposo, `selected` y `disabled`.
+  - **TextLink**: color `primary`, subrayado al pasar el puntero o presionar.
+  - **TopBar**: sin fondo; volver (chevron) a la izquierda, título y subtítulo alineados a la
+    izquierda, acción opcional a la derecha.
+  - **TabBar**: móvil con barra inferior de pestañas con ícono y etiqueta (la activa lleva una
+    píldora `primarySoft`) y el botón "+"; tablet con riel de 88 px; escritorio con barra
+    lateral de 280 px (logo, acción principal, grupo de navegación con el activo en
+    `primarySoft`, y al pie tema y perfil con `Avatar`).
+  - **Card**: superficie con borde fino de 1 px y radio 12; tonos `default`, `primary`,
+    `external`, `accent`, `danger` (el color solo donde significa algo); ranuras opcionales
+    `header` y `footer`.
+  - **ListRow**: ícono plano (sin recuadro de color) o `media` propio, título, descripción y
+    chevron; el fondo se tiñe al presionar.
+  - **TextField / SelectField / DateField**: marco común (`Field`): etiqueta arriba, borde
+    `primary` y halo suave al enfocar, `error` con ícono, `helper`, bloqueado.
+  - **Checkbox**: marcada, indeterminada, inválida, bloqueada, con descripción.
+  - **Toggle**: pista y pulgar propios (apagado con borde y pulgar `textMuted`, contraste ≥ 3:1),
+    con `title` y `description` opcionales.
+  - **Segmented**: pulgar deslizante; sin animación con "reducir movimiento".
+  - **Chip / CitationChip**: solo donde significa algo (cita "pág. N", estado). Con `onPress` se
+    lee como tocable: borde del tono, flecha y área táctil ampliada.
+  - **FilterChips**: el seleccionado lleva fondo `primarySoft`, borde `primary` y una marca.
+  - **Banner**: ícono a la izquierda, título y texto; tonos `info`, `success`, `warning`,
+    `danger`, `external`; `action` y `onClose` opcionales.
+  - **Sheet**: asa que se arrastra para cerrar, toque en el velo y Escape (web); desde tablet,
+    diálogo de ancho máximo.
+  - **ProgressBar**: `showLabel`, `showValue`, `valueText`, `indeterminate`, tonos `primary`,
+    `accent`, `danger`. **Steps**: lista vertical de pasos con estado (subidas).
+  - **EmptyState**: Illari pequeña, sin halo; texto a la izquierda, una acción principal; en
+    pantalla ancha, Illari al lado del texto.
+  - **Avatar**: foto o iniciales (respaldo).
 - Selectores (curso, tema, hora, clase, fecha) se despliegan **en línea** bajo el campo.
 - Menús de acciones: hoja inferior en móvil; diálogo centrado desde tablet.
-- El foco de los campos se marca con el borde `primary` (sin el anillo del navegador).
+- El foco de los campos se marca con el borde `primary` y un halo suave (sin el anillo del navegador).
 - Cada pantalla define estados cargando / vacío / error / sin conexión (`?demo=<estado>`).
 - Íconos Feather; los que no llevan texto tienen `accessibilityLabel`.
 
@@ -112,3 +154,17 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 - Etiquetas en mayúsculas sobre cada título, emojis como íconos, degradados genéricos.
 - Usar el ámbar como color de texto o el violeta para material propio.
 - Estilos de otras marcas (Linear, Stripe, etc.) o temas prediseñados que cambien esta paleta.
+
+## Qué evitar (estética genérica de IA)
+
+- Íconos dentro de cuadrados o círculos de color suave como adorno de tarjetas o secciones. Un
+  ícono funcional va plano.
+- Rellenos pastel como decoración: las tarjetas son superficie con borde fino; el color de fondo
+  solo aparece cuando significa algo (selección, tono de un aviso).
+- El mismo radio grande y el mismo borde suave en todo, y cajas dentro de cajas. La jerarquía sale
+  de tipografía, peso, espacio y alineación.
+- Micro-etiquetas "eyebrow", degradados, brillos, vidrio esmerilado y destellos.
+- Estado vacío con mascota grande centrada + título + texto + botón: Illari va pequeña, el texto a
+  la izquierda y, en pantalla ancha, a su lado.
+- Chips como adorno: solo para citas, filtros y estados.
+- Centrar todo: el texto va a la izquierda.

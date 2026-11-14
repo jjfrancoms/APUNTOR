@@ -10,14 +10,16 @@ export interface AppTextProps extends TextProps {
   align?: 'left' | 'center' | 'right';
 }
 
-export function Text({ variant = 'body', color = 'text', align, style, ...rest }: AppTextProps) {
+export function Text({ variant = 'body', color, align, style, ...rest }: AppTextProps) {
   const { c } = useTheme();
+  // `muted` es la variante de texto secundario: por defecto va en el color atenuado.
+  const tint = color ?? (variant === 'muted' ? 'textMuted' : 'text');
   return (
     <RNText
       // El overline solo se usa como encabezado de sección de una lista.
       accessibilityRole={variant === 'overline' ? 'header' : undefined}
       {...rest}
-      style={[typeScale[variant], { color: c[color], textAlign: align }, style]}
+      style={[typeScale[variant], { color: c[tint], textAlign: align }, style]}
     />
   );
 }
