@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { layout, radius, space, useTheme } from '@/theme';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
+import { layout, radius, space, useTheme, webTransition } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 
@@ -35,11 +36,20 @@ export function Field({
   ring: string;
   children: ReactNode;
 }) {
+  const reduced = useReducedMotion();
   return (
     <View style={styles.wrap}>
       {label ? <Text variant="label">{label}</Text> : null}
       {/* El halo ocupa espacio propio y se compensa con margen negativo: no mueve el diseño. */}
-      <View style={[styles.ring, { backgroundColor: ring }]}>{children}</View>
+      <View
+        style={[
+          styles.ring,
+          webTransition(reduced, ['background-color'], 'base'),
+          { backgroundColor: ring },
+        ]}
+      >
+        {children}
+      </View>
       {error ? (
         <View style={styles.message} accessibilityLiveRegion="polite">
           <Icon name="alert-circle" size={14} color="danger" />

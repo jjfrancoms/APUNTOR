@@ -4,12 +4,14 @@ import {
   colors,
   layout,
   mascotPalette,
+  motion,
   navigationLayoutFor,
   type ColorMode,
   type ColorTokens,
 } from './tokens';
 
-export { layout, mascotPalette, navigationLayoutFor };
+export { layout, mascotPalette, motion, navigationLayoutFor };
+export { cssEasing, ease, webTransition } from './motion';
 /** Paletas completas, para superficies que no cambian con el tema (p. ej. el visor de cámara). */
 export { colors as palettes };
 export type { ColorTokens };

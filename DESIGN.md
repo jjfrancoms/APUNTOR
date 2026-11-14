@@ -106,7 +106,9 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
     tamaños `sm` 44 · `md` 52 · `lg` 56 px; `loading` pone un indicador junto a la etiqueta (que
     se mantiene para lectores de pantalla). Foco de teclado con el anillo `primary` (WebChrome).
   - **IconButton**: cuadrado de 44 px con fondo al presionar o pasar el puntero; `plain` sin
-    fondo en reposo, `selected` y `disabled`.
+    fondo ni borde en reposo (la forma por defecto de una acción secundaria: solo el ícono, con
+    `label` para lectores de pantalla), `selected` y `disabled`. `Button` `ghost` hace lo mismo
+    con ícono y etiqueta corta: sin borde ni fondo salvo un tinte al pasar el puntero o presionar.
   - **TextLink**: color `primary`, subrayado al pasar el puntero o presionar.
   - **TopBar**: sin fondo; volver (chevron) a la izquierda, título y subtítulo alineados a la
     izquierda, acción opcional a la derecha.
@@ -124,7 +126,8 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
   - **Checkbox**: marcada, indeterminada, inválida, bloqueada, con descripción.
   - **Toggle**: pista y pulgar propios (apagado con borde y pulgar `textMuted`, contraste ≥ 3:1),
     con `title` y `description` opcionales.
-  - **Segmented**: pulgar deslizante; sin animación con "reducir movimiento".
+  - **Segmented**: pulgar deslizante (`motion.duration.base`); sin animación con "reducir
+    movimiento".
   - **Chip / CitationChip**: solo donde significa algo (cita "pág. N", estado). Con `onPress` se
     lee como tocable: borde del tono, flecha y área táctil ampliada.
   - **FilterChips**: el seleccionado lleva fondo `primarySoft`, borde `primary` y una marca.
@@ -145,8 +148,32 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 
 ## Movimiento
 
-- Discreto y funcional: aparición de hojas (slide en móvil, fade en diálogos) y cambios de
-  estado. Sin animaciones decorativas en bucle. Respeta “reducir movimiento” del sistema.
+- Discreto y funcional: respuesta al toque, cambios de estado y aparición de hojas. Sin
+  animaciones decorativas en bucle, sin rebote ni sobreimpulso, sin brillos. Respeta “reducir
+  movimiento” del sistema: con él activo todo cambia al instante.
+- Los valores salen de `motion` en `app/src/theme/tokens.ts` (un test comprueba que esta tabla
+  coincida). Las curvas son cúbicas `[x1, y1, x2, y2]`.
+
+| Token                    | Valor             | Uso                                                     |
+| ------------------------ | ----------------- | ------------------------------------------------------- |
+| `motion.duration.fast`   | 120 ms            | respuesta al toque: escala y tinte al pasar el puntero  |
+| `motion.duration.base`   | 180 ms            | cambios de estado: interruptor, segmentado, foco, aviso |
+| `motion.duration.slow`   | 240 ms            | entrada de hojas y diálogos                             |
+| `motion.duration.reveal` | 400 ms            | revelado circular del tema (solo web)                   |
+| `motion.easing.out`      | 0.23, 1, 0.32, 1  | entradas y respuesta al toque                           |
+| `motion.easing.inOut`    | 0.77, 0, 0.175, 1 | cambios de estado y salidas                             |
+| `motion.pressScale`      | 0.97              | escala al presionar `Button`, `IconButton`, `Chip`      |
+
+- **Qué se anima**: `Button`, `IconButton`, `Chip` y el botón "+" (escala al presionar, tinte al
+  pasar el puntero en web); `Toggle` y `Segmented` (pulgar); `Checkbox` (marca); `Field` /
+  `TextField` (borde y halo de foco, en web); `Banner` (entra y sale con fundido); `Sheet` (sube
+  desde abajo en móvil, aparece con fundido en diálogos; se cierra más rápido de lo que abre).
+- **Cambio de tema (web)**: el tema nuevo se revela en círculo desde el control tocado (View
+  Transitions, `revealThemeChange` en `app/src/lib/theme-transition.ts`). En nativo, en
+  navegadores sin la API o con “reducir movimiento”, el cambio es inmediato.
+- **Landing**: las secciones bajo el hero aparecen al entrar en pantalla (12 px y fundido, con
+  `animation-timeline: view()` y respaldo con `IntersectionObserver`). El contenido es visible sin
+  JavaScript y con “reducir movimiento”. La app no usa revelado al hacer scroll.
 
 ## Qué evitar
 
@@ -168,3 +195,4 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
   la izquierda y, en pantalla ancha, a su lado.
 - Chips como adorno: solo para citas, filtros y estados.
 - Centrar todo: el texto va a la izquierda.
+- No todo va en una caja: una acción puede ser solo su ícono (con etiqueta corta si hace falta), sin borde ni fondo; las cajas solo cuando agrupar lo necesita.

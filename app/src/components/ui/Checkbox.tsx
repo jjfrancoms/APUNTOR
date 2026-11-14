@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { layout, radius, space, useTheme } from '@/theme';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
+import { ease, layout, motion, radius, space, useTheme, webTransition } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 import { Tap, type TapState } from './Tap';
@@ -33,6 +34,22 @@ export function Checkbox({
 }) {
   const { c } = useTheme();
   const on = checked || indeterminate;
+  const reduced = useReducedMotion();
+  // Marca: aparece con un fundido y un leve crecimiento (sin rebote); con «reducir movimiento», al instante.
+  const mark = useRef(new Animated.Value(on ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduced) {
+      mark.setValue(on ? 1 : 0);
+      return;
+    }
+    Animated.timing(mark, {
+      toValue: on ? 1 : 0,
+      duration: motion.duration.fast,
+      easing: ease.out,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [on, reduced, mark]);
+  const markScale = mark.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] });
   return (
     <Tap
       accessibilityRole="checkbox"
@@ -49,17 +66,16 @@ export function Checkbox({
       <View
         style={[
           styles.box,
+          webTransition(reduced, ['background-color', 'border-color'], 'fast'),
           {
             borderColor: invalid ? c.danger : on ? c.primary : c.textMuted,
             backgroundColor: on ? c.primary : c.surface,
           },
         ]}
       >
-        {indeterminate ? (
-          <Icon name="minus" size={14} color="onPrimary" />
-        ) : checked ? (
-          <Icon name="check" size={14} color="onPrimary" />
-        ) : null}
+        <Animated.View style={{ opacity: mark, transform: [{ scale: markScale }] }}>
+          <Icon name={indeterminate ? 'minus' : 'check'} size={14} color="onPrimary" />
+        </Animated.View>
       </View>
       <View style={styles.label}>
         {children ?? <Text variant="body">{label}</Text>}

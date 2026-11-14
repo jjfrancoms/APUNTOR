@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
-import { layout, space, useTheme } from '@/theme';
+import { ease, layout, motion, space, useTheme, webTransition } from '@/theme';
 import { Tap } from './Tap';
 import { Text } from './Text';
 
@@ -41,7 +41,8 @@ export function Toggle({
     }
     Animated.timing(x, {
       toValue: value ? 1 : 0,
-      duration: 160,
+      duration: motion.duration.base,
+      easing: ease.out,
       useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [value, reduced, x]);
@@ -49,11 +50,13 @@ export function Toggle({
     inputRange: [0, 1],
     outputRange: [0, TRACK_W - BORDER * 2 - THUMB - PAD * 2],
   });
+  const colorFade = webTransition(reduced, ['background-color', 'border-color'], 'base');
   const control = (
     <View style={styles.hit}>
       <View
         style={[
           styles.track,
+          colorFade,
           // Apagado: borde y pulgar atenuados (contraste ≥ 3:1 con el fondo); encendido: marca.
           {
             backgroundColor: value ? c.primary : c.surfaceAlt,
@@ -65,6 +68,7 @@ export function Toggle({
           style={[
             styles.thumb,
             { backgroundColor: value ? c.surface : c.textMuted, transform: [{ translateX }] },
+            colorFade,
           ]}
         />
       </View>

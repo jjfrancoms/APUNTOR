@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { layout, radius, space, useTheme } from '@/theme';
+import { layout, motion, radius, space, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Tap, type TapState } from './Tap';
 
@@ -40,6 +40,7 @@ export function IconButton({
       accessibilityState={{ disabled, selected }}
       disabled={disabled}
       hitSlop={4}
+      pressScale={motion.pressScale}
       onPress={onPress}
       style={({ pressed, hovered }: TapState) => [
         styles.base,

@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { layout, radius, space, useTheme, type ColorTokens } from '@/theme';
+import { layout, motion, radius, space, useTheme, type ColorTokens } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 import { Tap, type TapState } from './Tap';
@@ -45,6 +45,8 @@ export function Button({
   size,
 }: ButtonProps) {
   const { c } = useTheme();
+  const ghostTint = (v: ButtonVariant, active: boolean): string | undefined =>
+    v === 'ghost' && active && disabled !== true ? c.primarySoft : undefined;
   const palette: Record<ButtonVariant, { bg: string; fg: FgToken; border: string }> = {
     primary: { bg: c.primary, fg: 'onPrimary', border: c.primary },
     secondary: { bg: c.surface, fg: 'text', border: c.border },
@@ -65,14 +67,26 @@ export function Button({
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
+      pressScale={motion.pressScale}
       style={({ pressed, hovered }: TapState) => [
         styles.base,
         {
           minHeight: HEIGHT[resolved],
-          backgroundColor: p.bg,
-          borderColor: p.border,
+          // `ghost` es la acción sin caja (ícono y etiqueta, sin borde ni fondo en reposo): solo
+          // al pasar el puntero o presionar aparece un tinte suave.
+          backgroundColor: ghostTint(variant, pressed || hovered === true) ?? p.bg,
+          borderColor: ghostTint(variant, pressed || hovered === true) ?? p.border,
           // Cargando se ve activo (el botón sigue siendo el mismo); solo "disabled" se apaga.
-          opacity: disabled === true ? 0.5 : pressed ? 0.85 : hovered === true ? 0.92 : 1,
+          opacity:
+            disabled === true
+              ? 0.5
+              : variant === 'ghost'
+                ? 1
+                : pressed
+                  ? 0.85
+                  : hovered === true
+                    ? 0.92
+                    : 1,
           paddingHorizontal: small ? space.md : space.lg,
         },
       ]}

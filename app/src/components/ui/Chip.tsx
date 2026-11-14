@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { radius, space, useTheme, type ColorTokens } from '@/theme';
+import { motion, radius, space, useTheme, type ColorTokens } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 import { Tap, type TapState } from './Tap';
@@ -61,6 +61,7 @@ export function Chip({
       onPress={onPress}
       // El chip mide ~26 px de alto: el área táctil llega a 44 px con este margen.
       hitSlop={10}
+      pressScale={motion.pressScale}
       style={({ pressed, hovered }: TapState) => [
         styles.chip,
         { backgroundColor: t.bg, borderColor: pressed || hovered === true ? t.bg : c[t.fg] },

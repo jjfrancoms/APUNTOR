@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
-import { layout, radius, useTheme } from '@/theme';
+import { ease, layout, motion, radius, useTheme } from '@/theme';
 import { Text } from './Text';
 import { Tap } from './Tap';
 
@@ -38,7 +38,8 @@ export function Segmented<T extends string>({
     }
     Animated.timing(x, {
       toValue: target,
-      duration: 180,
+      duration: motion.duration.base,
+      easing: ease.out,
       useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [index, itemWidth, reduced, width, x]);

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
-import { fonts, layout, radius, space } from '@/theme';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
+import { fonts, layout, radius, space, webTransition } from '@/theme';
 import { Field, FIELD_HEIGHT, useFieldColors } from './Field';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
@@ -29,6 +30,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   const disabled = editable === false;
   const colors = useFieldColors({ focused, error, disabled });
+  const reduced = useReducedMotion();
   return (
     <Field label={label} helper={helper} error={error} ring={colors.ring}>
       <View>
@@ -48,6 +50,7 @@ export function TextField({
           }}
           style={[
             styles.input,
+            webTransition(reduced, ['border-color', 'background-color'], 'base'),
             {
               color: colors.text,
               backgroundColor: colors.background,

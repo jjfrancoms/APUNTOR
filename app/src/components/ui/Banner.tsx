@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { useStrings } from '@/i18n/es';
-import { radius, space, useTheme, type ColorTokens } from '@/theme';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
+import { ease, motion, radius, space, useTheme, type ColorTokens } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { IconButton } from './IconButton';
 import { Text } from './Text';
@@ -9,10 +10,14 @@ import { TextLink } from './TextLink';
 
 export type BannerTone = 'warning' | 'danger' | 'info' | 'external' | 'success';
 
+/** Cuánto sube (px) el aviso al entrar y baja al salir: corto, solo para dar dirección. */
+const SHIFT = 6;
+
 /**
  * Aviso (referencia: HeroUI Alert): ícono a la izquierda, título y texto alineados a la izquierda,
  * acción opcional y botón de cerrar opcional. Nunca solo color: siempre ícono + texto. El ámbar
- * es fondo; el texto usa el color principal.
+ * es fondo; el texto usa el color principal. Entra con un fundido corto y, al cerrarlo con
+ * `onClose`, sale con otro antes de avisar (sin animar con «reducir movimiento»).
  */
 export function Banner({
   tone,
@@ -51,10 +56,35 @@ export function Banner({
     external: { bg: c.externalSoft, border: c.external, fg: 'external', icon: 'globe' },
   };
   const t = tones[tone];
+  const reduced = useReducedMotion();
+  const shown = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const animate = (to: number, duration: number, done?: () => void) => {
+    Animated.timing(shown, {
+      toValue: to,
+      duration,
+      easing: to === 1 ? ease.out : ease.inOut,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(({ finished }) => {
+      if (finished) done?.();
+    });
+  };
+  useEffect(() => {
+    if (reduced) shown.setValue(1);
+    else animate(1, motion.duration.base);
+    // Solo al montar (o si cambia la preferencia): el aviso no se anima en cada render.
+  }, [reduced]);
+  const close = onClose
+    ? () => (reduced ? onClose() : animate(0, motion.duration.fast, onClose))
+    : undefined;
+  const translateY = shown.interpolate({ inputRange: [0, 1], outputRange: [-SHIFT, 0] });
   return (
-    <View
+    <Animated.View
       accessibilityRole="alert"
-      style={[styles.box, { backgroundColor: t.bg, borderColor: t.border }]}
+      style={[
+        styles.box,
+        { backgroundColor: t.bg, borderColor: t.border },
+        { opacity: shown, transform: [{ translateY }] },
+      ]}
     >
       <View style={styles.icon}>
         <Icon name={icon ?? t.icon} size={18} color={t.fg} />
@@ -71,10 +101,10 @@ export function Banner({
           </View>
         ) : null}
       </View>
-      {onClose ? (
-        <IconButton plain edge="end" icon="x" label={s.common.close} onPress={onClose} />
+      {close ? (
+        <IconButton plain edge="end" icon="x" label={s.common.close} onPress={close} />
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
