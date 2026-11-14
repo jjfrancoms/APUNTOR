@@ -55,14 +55,13 @@ export function ShareSheets({
   return (
     <>
       <Sheet visible={step === 'create'} onClose={close} title={sh.header}>
-        <Card style={{ backgroundColor: c.bg }}>
-          <Chip label={sh.aiBadge} tone="primary" icon="star" />
+        <Card>
           <Text variant="bodyStrong">{sharedSummary.title}</Text>
           <Text variant="caption" color="textMuted" numberOfLines={2}>
             {sharedSummary.excerpt}
           </Text>
         </Card>
-        <Text variant="smallStrong" align="center" accessibilityRole="header">
+        <Text variant="smallStrong" accessibilityRole="header">
           {sh.expiresIn}
         </Text>
         <Segmented
@@ -137,7 +136,7 @@ export function ShareSheets({
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center' },
+  center: { alignItems: 'flex-start' },
   link: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,7 +150,6 @@ const styles = StyleSheet.create({
   stop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: space.xs,
     minHeight: 44,
   },

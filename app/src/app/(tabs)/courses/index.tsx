@@ -1,15 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CourseBadge } from '@/components/domain/CourseBadge';
 import { OfflineBanner } from '@/components/domain/OfflineBanner';
 import { checkConnection, useOnline } from '@/lib/online';
-import { Button, Card, Chip, EmptyState, Icon, Mascot, Screen, Text } from '@/components/ui';
+import { Banner, Chip, EmptyState, Icon, Screen, Text } from '@/components/ui';
 import type { Course } from '@/data/mock';
 import { TopicOutline } from '@/components/domain/TopicOutline';
 import { loadDocumentTopics, pendingReview, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
-import { layout, radius, space, useTheme } from '@/theme';
+import { layout, radius, space, useTheme, useWide } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /** Pantalla 3 · Cursos y temas, con su estado vacío (pantalla 8). `?demo=empty` muestra el vacío. */
@@ -24,6 +24,7 @@ export default function Courses() {
   const courses = demo === 'empty' ? [] : allCourses;
   const [expanded, setExpanded] = useState<string | null>(allCourses[0]?.id ?? null);
   const online = useOnline();
+  const wide = useWide();
 
   if (demo === 'offline') {
     return (
@@ -65,32 +66,65 @@ export default function Courses() {
         <Text variant="display" accessibilityRole="header">
           {s.courses.title}
         </Text>
-        <View style={styles.empty}>
-          <Mascot size={110} halo />
-          <Text variant="heading" align="center">
-            {s.courses.emptyTitle}
-          </Text>
-          <Text variant="small" color="textMuted" align="center">
-            {s.courses.emptyBody}
-          </Text>
-          <View style={styles.emptyActions}>
-            <Button label={s.courses.emptyUpload} onPress={() => router.push('/upload')} />
-            <Button
-              label={s.courses.howItWorks}
-              variant="secondary"
-              onPress={() => router.push('/profile/help')}
-            />
-          </View>
-        </View>
+        <EmptyState
+          title={s.courses.emptyTitle}
+          body={s.courses.emptyBody}
+          primary={{ label: s.courses.emptyUpload, onPress: () => router.push('/upload') }}
+          secondary={{ label: s.courses.howItWorks, onPress: () => router.push('/profile/help') }}
+        />
       </Screen>
     );
   }
 
-  return (
-    <Screen>
-      <Text variant="display" accessibilityRole="header">
-        {s.courses.title}
-      </Text>
+  const selected = courses.find((k) => k.id === expanded) ?? courses[0];
+  const list = (
+    <View>
+      {courses.map((course) => (
+        <CourseHead
+          key={course.id}
+          course={course}
+          open={wide ? selected?.id === course.id : expanded === course.id}
+          wide={wide}
+          onPress={() => setExpanded(!wide && expanded === course.id ? null : course.id)}
+        >
+          {!wide && expanded === course.id ? <CourseBody course={course} /> : null}
+        </CourseHead>
+      ))}
+    </View>
+  );
+  const unassignedList =
+    unassigned.length > 0 ? (
+      <View style={styles.unassigned}>
+        <Text variant="heading" accessibilityRole="header">
+          {s.live.unassignedTitle}
+        </Text>
+        <View>
+          {unassigned.map((doc) => (
+            <Tap
+              key={doc.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${doc.name}, ${s.live.status[doc.status]}`}
+              onPress={() => router.push(`/documents/${doc.id}`)}
+              style={[
+                styles.klassHead,
+                { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+              ]}
+            >
+              <Icon name="file-text" size={16} color="textMuted" />
+              <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
+                {doc.name}
+              </Text>
+              <Chip
+                label={s.live.status[doc.status]}
+                tone={doc.status === 'failed' ? 'danger' : 'neutral'}
+              />
+            </Tap>
+          ))}
+        </View>
+      </View>
+    ) : null;
+  const top = (
+    <>
       <OfflineBanner title={s.connection.courses} />
       <Tap
         accessibilityRole="search"
@@ -104,66 +138,89 @@ export default function Courses() {
         </Text>
       </Tap>
       {pendingReviewCount > 0 ? (
-        <Tap
-          accessibilityRole="button"
-          onPress={() => router.push('/upload/review')}
-          style={[styles.banner, { backgroundColor: c.accentSoft }]}
-        >
-          <Icon name="star" size={16} />
-          <Text variant="smallStrong" style={styles.flex}>
-            {s.courses.pendingReview(pendingReviewCount)}
-          </Text>
-          <Icon name="chevron-right" size={16} />
-        </Tap>
-      ) : null}
-      {courses.map((course) => (
-        <CourseCard
-          key={course.id}
-          course={course}
-          open={expanded === course.id}
-          onToggle={() => setExpanded(expanded === course.id ? null : course.id)}
+        <Banner
+          tone="warning"
+          icon="star"
+          title={s.courses.pendingReview(pendingReviewCount)}
+          action={{ label: s.courses.reviewNow, onPress: () => router.push('/upload/review') }}
         />
-      ))}
-      {unassigned.length > 0 ? (
-        <>
-          <Text variant="heading" accessibilityRole="header">
-            {s.live.unassignedTitle}
-          </Text>
-          <Card style={styles.course}>
-            {unassigned.map((doc) => (
-              <Tap
-                key={doc.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${doc.name}, ${s.live.status[doc.status]}`}
-                onPress={() => router.push(`/documents/${doc.id}`)}
-                style={styles.klassHead}
-              >
-                <Icon name="file-text" size={16} color="textMuted" />
-                <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
-                  {doc.name}
-                </Text>
-                <Chip
-                  label={s.live.status[doc.status]}
-                  tone={doc.status === 'failed' ? 'danger' : 'neutral'}
-                />
-              </Tap>
-            ))}
-          </Card>
-        </>
       ) : null}
+    </>
+  );
+
+  // En pantalla ancha: la lista de cursos a la izquierda y la clase elegida a la derecha.
+  if (wide && selected) {
+    return (
+      <Screen wide>
+        <Text variant="display" accessibilityRole="header">
+          {s.courses.title}
+        </Text>
+        <View style={styles.columns}>
+          <View style={styles.sideCol}>
+            {top}
+            {list}
+            {unassignedList}
+          </View>
+          <View style={styles.mainCol}>
+            <CourseBody key={selected.id} course={selected} heading />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <Text variant="display" accessibilityRole="header">
+        {s.courses.title}
+      </Text>
+      {top}
+      {list}
+      {unassignedList}
     </Screen>
   );
 }
 
-function CourseCard({
+/** Fila de curso: título, conteo y chevron; sin recuadro, separada por una línea fina. */
+function CourseHead({
   course,
   open,
-  onToggle,
+  wide,
+  onPress,
+  children,
 }: {
   course: Course;
   open: boolean;
-  onToggle: () => void;
+  wide: boolean;
+  onPress: () => void;
+  children?: ReactNode;
 }) {
+  const s = useStrings();
+  const { c } = useTheme();
+  return (
+    <View style={{ borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth }}>
+      <Tap
+        accessibilityRole="button"
+        accessibilityState={wide ? { selected: open } : { expanded: open }}
+        accessibilityLabel={course.title}
+        onPress={onPress}
+        style={[styles.courseHead, wide && open && { backgroundColor: c.primarySoft }]}
+      >
+        <CourseBadge course={course} />
+        <View style={styles.flex}>
+          <Text variant="subheading">{course.title}</Text>
+          <Text variant="caption" color="textMuted">
+            {s.courses.classesTopics(course.classes.length, course.topicCount)}
+          </Text>
+        </View>
+        <Icon name={open && !wide ? 'chevron-down' : 'chevron-right'} color="textMuted" />
+      </Tap>
+      {children}
+    </View>
+  );
+}
+
+function CourseBody({ course, heading = false }: { course: Course; heading?: boolean }) {
   const s = useStrings();
   const { c } = useTheme();
   const items = useStore((st) => st.items);
@@ -173,150 +230,140 @@ function CourseCard({
     course.classes.find((k) => k.progress < 1)?.id ?? null,
   );
   // Hasta la fase 2 cada documento es una clase: sus temas se piden al abrirla.
-  const openDoc = open ? documents.find((d) => d.id === openClass) : undefined;
+  const openDoc = documents.find((d) => d.id === openClass);
   const needsTopics = openDoc?.status === 'completed' && openDoc.outline === undefined;
   useEffect(() => {
     if (needsTopics && openClass) void loadDocumentTopics(openClass);
   }, [needsTopics, openClass]);
   return (
-    <Card style={styles.course}>
-      <Tap
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        accessibilityLabel={course.title}
-        onPress={onToggle}
-        style={styles.courseHead}
-      >
-        <CourseBadge course={course} />
-        <View style={styles.flex}>
-          <Text variant="subheading">{course.title}</Text>
-          <Text variant="caption" color="textMuted">
+    <View style={styles.body}>
+      {heading ? (
+        <View style={styles.bodyHead}>
+          <Text variant="title" accessibilityRole="header">
+            {course.title}
+          </Text>
+          <Text variant="muted">
             {s.courses.classesTopics(course.classes.length, course.topicCount)}
           </Text>
         </View>
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} color="textMuted" />
-      </Tap>
-      {open
-        ? course.classes.map((klass) => {
-            const classItems = items.filter((i) => i.classId === klass.id);
-            const sections = [
-              { title: s.classView.theory, list: classItems.filter((i) => i.kind !== 'ejercicio') },
-              {
-                title: s.classView.exercises,
-                list: classItems.filter((i) => i.kind === 'ejercicio'),
-              },
-            ].filter((sec) => sec.list.length > 0);
-            const expanded = openClass === klass.id;
-            const doc = documents.find((d) => d.id === klass.id);
-            const roots = doc?.outline?.filter((t) => t.depth === 1).length;
-            const countLabel =
-              sections.length > 0
-                ? s.courses.sections(sections.length)
-                : roots !== undefined && roots > 0
-                  ? s.courses.sections(roots)
-                  : s.courses.topicsCount(klass.topicCount);
-            return (
-              <View key={klass.id} style={styles.klass}>
-                <Tap
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded }}
-                  accessibilityLabel={klass.title}
-                  onPress={() => setOpenClass(expanded ? null : klass.id)}
-                  style={styles.klassHead}
-                >
-                  <Icon
-                    name={expanded ? 'chevron-down' : 'chevron-right'}
-                    size={16}
-                    color="textMuted"
-                  />
-                  <Text variant="smallStrong" style={styles.flex}>
-                    {klass.title}
-                  </Text>
-                  <Text variant="caption" color="textMuted">
-                    {countLabel}
-                  </Text>
-                </Tap>
-                {expanded ? (
-                  <>
-                    {sections.length === 0 && doc ? (
-                      <View style={styles.section}>
-                        {doc.status !== 'completed' ? (
-                          <Text variant="small" color="textMuted">
-                            {s.live.status[doc.status]}
-                          </Text>
-                        ) : doc.outline === undefined ? (
-                          <Text variant="small" color="textMuted">
-                            {s.courses.loadingTopics}
-                          </Text>
-                        ) : doc.outline.length === 0 ? (
-                          <Text variant="small" color="textMuted">
-                            {s.courses.noTopics}
-                          </Text>
-                        ) : (
-                          <TopicOutline documentId={doc.id} outline={doc.outline} />
-                        )}
-                      </View>
-                    ) : null}
-                    {sections.map((section) => (
-                      <View key={section.title} style={styles.section}>
-                        <Text variant="overline" color="textMuted">
-                          {section.title}
-                        </Text>
-                        {section.list.map((topic, t) => {
-                          const active = t === 0 && section === sections[0];
-                          return (
-                            <Tap
-                              key={topic.id}
-                              accessibilityRole="link"
-                              accessibilityLabel={topic.title}
-                              onPress={() => router.push(`/courses/topics/${topic.id}`)}
-                              style={[styles.topic, active && { backgroundColor: c.primarySoft }]}
-                            >
-                              <View
-                                style={[
-                                  styles.dot,
-                                  { backgroundColor: active ? c.primary : c.textMuted },
-                                ]}
-                              />
-                              <Text variant="small" color={active ? 'primary' : 'text'}>
-                                {topic.title}
-                              </Text>
-                            </Tap>
-                          );
-                        })}
-                      </View>
-                    ))}
-                    <View style={styles.section}>
-                      <Tap
-                        accessibilityRole="link"
-                        onPress={() => router.push(`/documents/${klass.id}`)}
-                        style={styles.openClass}
-                      >
-                        <Text variant="smallStrong" color="primary">
-                          {s.classView.open}
-                        </Text>
-                        <Icon name="arrow-right" size={14} color="primary" />
-                      </Tap>
-                    </View>
-                  </>
+      ) : null}
+      {course.classes.map((klass) => {
+        const classItems = items.filter((i) => i.classId === klass.id);
+        const sections = [
+          { title: s.classView.theory, list: classItems.filter((i) => i.kind !== 'ejercicio') },
+          {
+            title: s.classView.exercises,
+            list: classItems.filter((i) => i.kind === 'ejercicio'),
+          },
+        ].filter((sec) => sec.list.length > 0);
+        const expanded = openClass === klass.id;
+        const doc = documents.find((d) => d.id === klass.id);
+        const roots = doc?.outline?.filter((t) => t.depth === 1).length;
+        const countLabel =
+          sections.length > 0
+            ? s.courses.sections(sections.length)
+            : roots !== undefined && roots > 0
+              ? s.courses.sections(roots)
+              : s.courses.topicsCount(klass.topicCount);
+        return (
+          <View key={klass.id} style={styles.klass}>
+            <Tap
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              accessibilityLabel={klass.title}
+              onPress={() => setOpenClass(expanded ? null : klass.id)}
+              style={styles.klassHead}
+            >
+              <Icon
+                name={expanded ? 'chevron-down' : 'chevron-right'}
+                size={16}
+                color="textMuted"
+              />
+              <Text variant="smallStrong" style={styles.flex}>
+                {klass.title}
+              </Text>
+              <Text variant="caption" color="textMuted">
+                {countLabel}
+              </Text>
+            </Tap>
+            {expanded ? (
+              <>
+                {sections.length === 0 && doc ? (
+                  <View style={styles.section}>
+                    {doc.status !== 'completed' ? (
+                      <Text variant="small" color="textMuted">
+                        {s.live.status[doc.status]}
+                      </Text>
+                    ) : doc.outline === undefined ? (
+                      <Text variant="small" color="textMuted">
+                        {s.courses.loadingTopics}
+                      </Text>
+                    ) : doc.outline.length === 0 ? (
+                      <Text variant="small" color="textMuted">
+                        {s.courses.noTopics}
+                      </Text>
+                    ) : (
+                      <TopicOutline documentId={doc.id} outline={doc.outline} />
+                    )}
+                  </View>
                 ) : null}
-              </View>
-            );
-          })
-        : null}
-    </Card>
+                {sections.map((section) => (
+                  <View key={section.title} style={styles.section}>
+                    <Text variant="label" color="textMuted">
+                      {section.title}
+                    </Text>
+                    {section.list.map((topic, t) => {
+                      const active = t === 0 && section === sections[0];
+                      return (
+                        <Tap
+                          key={topic.id}
+                          accessibilityRole="link"
+                          accessibilityLabel={topic.title}
+                          onPress={() => router.push(`/courses/topics/${topic.id}`)}
+                          style={[styles.topic, active && { backgroundColor: c.primarySoft }]}
+                        >
+                          <View
+                            style={[
+                              styles.dot,
+                              { backgroundColor: active ? c.primary : c.textMuted },
+                            ]}
+                          />
+                          <Text variant="small" color={active ? 'primary' : 'text'}>
+                            {topic.title}
+                          </Text>
+                        </Tap>
+                      );
+                    })}
+                  </View>
+                ))}
+                <View style={styles.section}>
+                  <Tap
+                    accessibilityRole="link"
+                    onPress={() => router.push(`/documents/${klass.id}`)}
+                    style={styles.openClass}
+                  >
+                    <Text variant="smallStrong" color="primary">
+                      {s.classView.open}
+                    </Text>
+                    <Icon name="arrow-right" size={14} color="primary" />
+                  </Tap>
+                </View>
+              </>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.md,
-    paddingVertical: space.xxxl,
-  },
-  emptyActions: { alignSelf: 'stretch', gap: space.sm, marginTop: space.md },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
+  sideCol: { width: 340, gap: space.md },
+  mainCol: { flex: 1, minWidth: 0 },
+  unassigned: { gap: space.sm, marginTop: space.lg },
+  body: { gap: space.xs },
+  bodyHead: { gap: space.xs, marginBottom: space.md },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,20 +373,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     minHeight: layout.minTouchTarget + 4,
   },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.md,
-    minHeight: layout.minTouchTarget,
-  },
-  course: { gap: space.md },
   courseHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     minHeight: layout.minTouchTarget,
+    paddingVertical: space.xs,
   },
   klass: { gap: space.xs },
   klassHead: {

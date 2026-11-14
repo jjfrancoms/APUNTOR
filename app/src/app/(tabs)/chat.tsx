@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { normalize } from '@/lib/text-search';
-import { Button, Card, Chip, Icon, Screen, Sheet, Text } from '@/components/ui';
+import { Button, Icon, Screen, Sheet, Text } from '@/components/ui';
 import { deleteConversation, refreshConversations, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { useLanguage } from '@/i18n/language';
@@ -79,20 +79,26 @@ export default function Conversations() {
       </View>
       {groups.map((g) => (
         <View key={g.key} style={styles.group}>
-          <Text variant="overline" color="textMuted">
+          <Text variant="label" color="textMuted">
             {g.label}
           </Text>
           {conversations
             .filter((cv) => cv.group === g.key)
             .map((cv) => (
-              <View key={cv.id} style={styles.item}>
+              <View
+                key={cv.id}
+                style={[
+                  styles.item,
+                  { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+                ]}
+              >
                 <Tap
                   accessibilityRole="button"
                   accessibilityLabel={`${cv.title}, ${cv.time}`}
                   onPress={() => router.push({ pathname: '/conversation', params: { id: cv.id } })}
                   style={styles.flex}
                 >
-                  <Card>
+                  <View style={styles.card}>
                     <View style={styles.row}>
                       <Text variant="bodyStrong" style={styles.flex} numberOfLines={1}>
                         {cv.title}
@@ -104,8 +110,10 @@ export default function Conversations() {
                     <Text variant="caption" color="textMuted" numberOfLines={1}>
                       {cv.preview}
                     </Text>
-                    <Chip label={cv.course || s.tabs.chat} tone="primary" />
-                  </Card>
+                    <Text variant="caption" color="primary" numberOfLines={1}>
+                      {cv.course || s.tabs.chat}
+                    </Text>
+                  </View>
                 </Tap>
                 <Tap
                   accessibilityRole="button"
@@ -142,7 +150,8 @@ export default function Conversations() {
 }
 
 const styles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.xs },
+  card: { gap: space.xs, paddingVertical: space.sm },
   delete: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   head: { flexDirection: 'row', alignItems: 'center' },
   add: {
@@ -161,7 +170,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     minHeight: layout.minTouchTarget + 4,
   },
-  group: { gap: space.sm },
+  group: { gap: space.xs },
   input: {
     flex: 1,
     fontFamily: fonts.regular,
