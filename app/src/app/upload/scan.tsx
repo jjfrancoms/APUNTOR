@@ -18,7 +18,7 @@ import {
   setCameraDenied,
   useScanSession,
 } from '@/lib/scan-session';
-import { palettes, radius, space, useTheme } from '@/theme';
+import { palettes, radius, space, useTheme, useWide } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
 /**
@@ -28,6 +28,7 @@ import { Tap } from '@/components/ui/Tap';
 export default function Scan() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const { pages, cameraDenied } = useScanSession();
   const [notice, setNotice] = useState<'failed' | 'limit' | null>(null);
@@ -131,48 +132,54 @@ export default function Scan() {
       {notice === 'limit' ? (
         <Banner tone="warning" title={s.scanner.limit(MAX_SCAN_PAGES)} />
       ) : null}
-      {last ? (
-        <Image
-          source={{ uri: last.uri }}
-          accessibilityLabel={s.scanner.lastPhoto}
-          resizeMode="contain"
-          style={styles.viewfinder}
-        />
-      ) : (
-        <View style={styles.viewfinder} accessibilityLabel={s.scanner.frame}>
-          <View style={[styles.frameTag, { backgroundColor: c.surface }]}>
-            <Icon name="camera" size={12} />
-            <Text variant="caption">{s.scanner.frame}</Text>
-          </View>
-          <View style={styles.sheet}>
-            {[0.8, 0.6, 0.7, 0.5, 0.75, 0.55].map((w, i) => (
-              <View key={i} style={[styles.line, { width: `${w * 100}%` }]} />
-            ))}
-          </View>
+      <View style={[styles.layout, wide && styles.layoutWide]}>
+        <View style={wide ? styles.viewCol : null}>
+          {last ? (
+            <Image
+              source={{ uri: last.uri }}
+              accessibilityLabel={s.scanner.lastPhoto}
+              resizeMode="contain"
+              style={styles.viewfinder}
+            />
+          ) : (
+            <View style={styles.viewfinder} accessibilityLabel={s.scanner.frame}>
+              <View style={[styles.frameTag, { backgroundColor: c.surface }]}>
+                <Icon name="camera" size={12} />
+                <Text variant="caption">{s.scanner.frame}</Text>
+              </View>
+              <View style={styles.sheet}>
+                {[0.8, 0.6, 0.7, 0.5, 0.75, 0.55].map((w, i) => (
+                  <View key={i} style={[styles.line, { width: `${w * 100}%` }]} />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
-      )}
-      <View style={styles.controls}>
-        <IconButton icon="image" label={s.scanner.gallery} onPress={fromGallery} />
-        <Tap
-          accessibilityRole="button"
-          accessibilityLabel={s.scanner.shutter}
-          accessibilityState={{ disabled: room <= 0 }}
-          onPress={shoot}
-          style={[styles.shutter, { borderColor: c.primary, opacity: room <= 0 ? 0.5 : 1 }]}
-        >
-          <View style={[styles.shutterInner, { backgroundColor: c.primary }]} />
-        </Tap>
-        {/* Ocupa el lugar del tercer control para que el disparador quede centrado. */}
-        <View style={styles.balance} />
+        <View style={[styles.controlsCol, wide && styles.controlsColWide]}>
+          <View style={styles.controls}>
+            <IconButton icon="image" label={s.scanner.gallery} onPress={fromGallery} />
+            <Tap
+              accessibilityRole="button"
+              accessibilityLabel={s.scanner.shutter}
+              accessibilityState={{ disabled: room <= 0 }}
+              onPress={shoot}
+              style={[styles.shutter, { borderColor: c.primary, opacity: room <= 0 ? 0.5 : 1 }]}
+            >
+              <View style={[styles.shutterInner, { backgroundColor: c.primary }]} />
+            </Tap>
+            {/* Ocupa el lugar del tercer control para que el disparador quede centrado. */}
+            <View style={styles.balance} />
+          </View>
+          <Text variant="caption" color="textMuted">
+            {s.scanner.hint}
+          </Text>
+          {pages.length > 0 ? (
+            <View style={styles.chips}>
+              <Chip label={s.scanner.pages(pages.length)} tone="primary" icon="file-text" />
+            </View>
+          ) : null}
+        </View>
       </View>
-      <Text variant="caption" color="textMuted" align="center">
-        {s.scanner.hint}
-      </Text>
-      {pages.length > 0 ? (
-        <View style={styles.chips}>
-          <Chip label={s.scanner.pages(pages.length)} tone="primary" icon="file-text" />
-        </View>
-      ) : null}
     </Screen>
   );
 }
@@ -208,6 +215,11 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-2deg' }],
   },
   line: { height: 6, borderRadius: 3, backgroundColor: palettes.light.border },
+  layout: { gap: space.lg },
+  layoutWide: { flexDirection: 'row', alignItems: 'center', gap: space.xxl },
+  viewCol: { flex: 1, maxWidth: 440 },
+  controlsCol: { gap: space.lg },
+  controlsColWide: { flex: 1 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   shutter: {
     width: 68,
@@ -219,5 +231,5 @@ const styles = StyleSheet.create({
   },
   shutterInner: { width: 54, height: 54, borderRadius: 27 },
   balance: { width: 44, height: 44 },
-  chips: { flexDirection: 'row', justifyContent: 'center', gap: space.sm },
+  chips: { flexDirection: 'row', gap: space.sm },
 });

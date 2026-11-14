@@ -24,7 +24,7 @@ import {
   useScanSession,
 } from '@/lib/scan-session';
 import { enqueueUploads, fileFromPicker } from '@/store/store';
-import { radius, space, useTheme } from '@/theme';
+import { radius, space, useTheme, useWide } from '@/theme';
 
 /** Página de ejemplo para ver el aviso con `?demo=unclear` (sin foto real). */
 const DEMO_PAGE: ScanPage = {
@@ -44,6 +44,7 @@ const DEMO_PAGE: ScanPage = {
 export default function ScanReview() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const r = s.scanReview;
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const session = useScanSession();
@@ -85,6 +86,7 @@ export default function ScanReview() {
 
   return (
     <Screen
+      wide
       header={<TopBar title={r.header} />}
       footer={
         <>
@@ -99,41 +101,50 @@ export default function ScanReview() {
       {pages.some(isUnclear) ? (
         <Banner tone="warning" title={r.unclearTitle} body={r.unclearBody} />
       ) : null}
-      {pages.map((page, i) => (
-        <Card key={page.id}>
-          <View style={styles.row}>
-            {page.uri ? (
-              <Image
-                source={{ uri: page.uri }}
-                accessibilityLabel={r.thumb(i + 1)}
-                resizeMode="cover"
-                style={[styles.thumb, { backgroundColor: c.surfaceAlt }]}
-              />
-            ) : (
-              <View style={[styles.thumb, styles.empty, { backgroundColor: c.surfaceAlt }]}>
-                <Icon name="image" size={20} color="textMuted" />
-              </View>
-            )}
-            <View style={styles.body}>
-              <Text variant="smallStrong">{r.page(i + 1)}</Text>
-              {isUnclear(page) ? (
-                <View style={styles.chip}>
-                  <Chip label={r.unclearChip} tone="warning" icon="alert-triangle" />
+      <View style={[styles.grid, wide && styles.gridWide]}>
+        {pages.map((page, i) => (
+          <Card key={page.id} style={wide && styles.cell}>
+            <View style={styles.row}>
+              {page.uri ? (
+                <Image
+                  source={{ uri: page.uri }}
+                  accessibilityLabel={r.thumb(i + 1)}
+                  resizeMode="cover"
+                  style={[styles.thumb, { backgroundColor: c.surfaceAlt }]}
+                />
+              ) : (
+                <View style={[styles.thumb, styles.empty, { backgroundColor: c.surfaceAlt }]}>
+                  <Icon name="image" size={20} color="textMuted" />
                 </View>
-              ) : null}
-              <View style={styles.actions}>
-                <TextLink label={r.retake} onPress={() => retake(page)} />
-                <TextLink label={r.remove} color="danger" onPress={() => removeScanPage(page.id)} />
+              )}
+              <View style={styles.body}>
+                <Text variant="smallStrong">{r.page(i + 1)}</Text>
+                {isUnclear(page) ? (
+                  <View style={styles.chip}>
+                    <Chip label={r.unclearChip} tone="warning" icon="alert-triangle" />
+                  </View>
+                ) : null}
+                <View style={styles.actions}>
+                  <TextLink label={r.retake} onPress={() => retake(page)} />
+                  <TextLink
+                    label={r.remove}
+                    color="danger"
+                    onPress={() => removeScanPage(page.id)}
+                  />
+                </View>
               </View>
             </View>
-          </View>
-        </Card>
-      ))}
+          </Card>
+        ))}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  grid: { gap: space.md },
+  gridWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: '48%', flexGrow: 1 },
   row: { flexDirection: 'row', gap: space.md },
   thumb: { width: 72, height: 96, borderRadius: radius.sm },
   empty: { alignItems: 'center', justifyContent: 'center' },
