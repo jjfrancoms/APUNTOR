@@ -12,6 +12,13 @@ import {
   LEGAL_VERSION,
   type LegalDoc,
 } from '../src/i18n/legal';
+import {
+  HORIZONTAL_VIEWBOX as VB,
+  ISOTIPO_PATH,
+  ISOTIPO_TRANSFORM,
+  LETRAS_PATH,
+  LETRAS_TRANSFORM,
+} from '../src/components/ui/brandLogoPaths';
 
 export const SITE_URL = 'https://apuntor.com';
 
@@ -45,6 +52,12 @@ function escapeHtml(text: string): string {
 }
 
 // Paleta de DESIGN.md (claro y oscuro). Sin JavaScript ni recursos externos.
+/** Logo horizontal en línea (el color sale de `fill` en CSS, según el tema claro u oscuro). */
+const BRAND_LOGO =
+  `<svg class="logo" viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" aria-hidden="true" focusable="false"><title>Apuntor</title>` +
+  `<g transform="${ISOTIPO_TRANSFORM}"><path fill-rule="evenodd" d="${ISOTIPO_PATH}"/></g>` +
+  `<g transform="${LETRAS_TRANSFORM}"><path d="${LETRAS_PATH}"/></g></svg>`;
+
 const CSS = `:root{--bg:#FAF9F6;--surface:#FFFFFF;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
 @media (prefers-color-scheme:dark){:root{--bg:#121413;--surface:#1C1F1E;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
 *{box-sizing:border-box}
@@ -53,7 +66,8 @@ body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.6 "Plus Jak
 a{color:var(--primary)}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:720px;margin:0 auto;padding:16px 20px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:18px;text-decoration:none}
-.brand img{width:32px;height:32px;border-radius:8px}
+.brand .logo{display:block;height:26px;width:auto;fill:var(--primary)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .enter{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-weight:700;text-decoration:none}
 main{max-width:720px;margin:0 auto;padding:8px 20px 32px}
 h1{font-size:28px;line-height:34px;font-weight:800;margin:16px 0 8px}
@@ -85,6 +99,9 @@ export function renderLegalPage(doc: PublicLegalDoc): string {
 <meta name="description" content="${escapeHtml(DESCRIPTIONS[doc])}">
 <link rel="canonical" href="${url}">
 <link rel="icon" href="/favicon.png" type="image/png">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#FAF9F6">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Apuntor">
@@ -99,7 +116,7 @@ ${CSS}
 </head>
 <body>
 <header class="bar">
-<a class="brand" href="/"><img src="/apuntor-icon-192.png" alt="" width="32" height="32">Apuntor</a>
+<a class="brand" href="/">${BRAND_LOGO}<span class="sr">Apuntor</span></a>
 <a class="enter" href="/login">Entrar</a>
 </header>
 <main>

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Icon, Mascot, Text, type IconName } from '@/components/ui';
+import { BrandLogo, Icon, Text, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings, useStore } from '@/store/store';
 import { layout, radius, space, useTheme, navigationLayoutFor } from '@/theme';
@@ -141,16 +141,13 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
     >
       {sidebar ? (
         <View style={styles.brand}>
-          <Mascot size={40} />
-          <View>
-            <Text variant="heading">{s.tabs.brand}</Text>
-            <Text variant="caption" color="textMuted">
-              {s.tabs.tagline}
-            </Text>
-          </View>
+          <BrandLogo variant="horizontal" size={28} />
+          <Text variant="caption" color="textMuted">
+            {s.tabs.tagline}
+          </Text>
         </View>
       ) : (
-        <Mascot size={40} />
+        <BrandLogo variant="isotipo" size={36} />
       )}
       {upload}
       <View style={[styles.nav, sidebar && styles.navWide]}>{items}</View>
@@ -198,7 +195,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   railWide: { alignItems: 'stretch', paddingHorizontal: space.lg, gap: space.lg },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xs },
+  brand: { gap: space.xs, paddingHorizontal: space.xs },
   nav: { gap: space.md, alignItems: 'center' },
   navWide: { gap: space.xs, alignItems: 'stretch' },
   spacer: { flex: 1 },

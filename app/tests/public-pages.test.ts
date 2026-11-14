@@ -48,7 +48,10 @@ describe('landing', () => {
   });
 
   it('muestra el nombre en la barra, explica el producto y enlaza a los textos legales', () => {
-    expect(html).toMatch(/<a class="brand"[^>]*>[^<]*<img[^>]*>Apuntor<\/a>/);
+    // Logo horizontal en SVG (decorativo) junto al nombre en texto, que es lo que lee Google.
+    expect(html).toMatch(
+      /<a class="brand" href="\/"><svg class="logo"[^>]*aria-hidden="true"[\s\S]*?<title>Apuntor<\/title>[\s\S]*?<\/svg><span class="sr">Apuntor<\/span><\/a>/,
+    );
     for (const piece of ['mayores de 18 años', 'página', 'resumen', 'quizzes', 'flashcards']) {
       expect(html.toLowerCase()).toContain(piece);
     }
@@ -149,5 +152,52 @@ describe('robots.txt y sitemap.xml', () => {
       'https://apuntor.com/legal/privacy',
       'https://apuntor.com/legal/terms',
     ]);
+  });
+});
+
+describe('íconos del kit de marca', () => {
+  /** Lado en px de un PNG cuadrado, leído de su cabecera IHDR. */
+  const pngSide = (file: string): [number, number] => {
+    const buf = readFileSync(path.join(appDir, file));
+    return [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+  };
+
+  it.each([
+    ['public/apuntor-icon.png', 1024],
+    ['public/apuntor-icon-192.png', 192],
+    ['public/apple-touch-icon.png', 180],
+    ['public/favicon.png', 48],
+    ['public/favicon-32.png', 32],
+    ['public/favicon-16.png', 16],
+    ['assets/icon.png', 1024],
+    ['assets/android-icon-foreground.png', 1024],
+    ['assets/android-icon-background.png', 1024],
+    ['assets/android-icon-monochrome.png', 1024],
+    ['assets/splash-icon.png', 1024],
+  ] as const)('%s es un PNG de %i px', (file, side) => {
+    expect(pngSide(file)).toEqual([side, side]);
+  });
+
+  it.each([
+    'public/landing.html',
+    'public/404.html',
+    'public/legal/privacy.html',
+    'public/legal/terms.html',
+  ])('%s declara favicon 32/16 y apple-touch-icon', (file) => {
+    const html = read(file);
+    expect(html).toContain(
+      '<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">',
+    );
+    expect(html).toContain(
+      '<link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">',
+    );
+    expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
+  });
+
+  it('el kit vive en docs/marca y el logo de JSON-LD apunta al ícono nuevo', () => {
+    expect(
+      existsSync(path.join(appDir, '..', 'docs/marca/svg/apuntor-logo-horizontal-color.svg')),
+    ).toBe(true);
+    expect(read('public/landing.html')).toContain('"logo":"https://apuntor.com/apuntor-icon.png"');
   });
 });

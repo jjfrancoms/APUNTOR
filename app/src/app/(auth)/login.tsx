@@ -2,7 +2,17 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
-import { Banner, Button, Icon, Mascot, Screen, Text, TextField, TextLink } from '@/components/ui';
+import {
+  Banner,
+  BrandLogo,
+  Button,
+  Icon,
+  Mascot,
+  Screen,
+  Text,
+  TextField,
+  TextLink,
+} from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { backendConfigured } from '@/lib/config';
 import { entryRoute, getState, signIn } from '@/store/store';
@@ -27,6 +37,7 @@ export default function Login() {
   return (
     <Screen narrow>
       <View style={styles.hero}>
+        <BrandLogo variant="horizontal" size={32} />
         <Mascot size={110} halo />
         <Text variant="title" align="center" accessibilityRole="header">
           {s.login.title}

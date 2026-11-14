@@ -6,6 +6,7 @@ export { Chip, type ChipTone } from './Chip';
 export { Icon, type IconName } from './Icon';
 export { IconButton } from './IconButton';
 export { ListRow } from './ListRow';
+export { BrandLogo, type BrandLogoVariant } from './BrandLogo';
 export { Mascot, type MascotMood } from './Mascot';
 export { ProgressBar } from './ProgressBar';
 export { Screen } from './Screen';

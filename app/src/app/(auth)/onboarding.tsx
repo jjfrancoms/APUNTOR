@@ -1,7 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Icon, Mascot, Screen, Text, TextLink, type IconName } from '@/components/ui';
+import {
+  BrandLogo,
+  Button,
+  Icon,
+  Mascot,
+  Screen,
+  Text,
+  TextLink,
+  type IconName,
+} from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { setLevel as saveLevel } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme';
@@ -35,6 +44,7 @@ export default function Onboarding() {
         </>
       }
     >
+      <BrandLogo variant="horizontal" size={28} />
       <View style={styles.bubbleRow}>
         <Mascot size={64} />
         <View style={[styles.bubble, { backgroundColor: c.surface, borderColor: c.border }]}>
