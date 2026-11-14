@@ -39,13 +39,64 @@ describe('landing', () => {
     expect(html).toContain('<link rel="canonical" href="https://apuntor.com/">');
   });
 
-  it('enlaza a Entrar y a los textos legales, y no trae JavaScript propio', () => {
-    expect(html).toContain('href="/login"');
+  it('tiene los dos botones del hero con las rutas reales de la app', () => {
+    expect(html).toMatch(/<a class="btn fill" href="\/register">Empieza ahora<\/a>/);
+    expect(html).toMatch(/<a class="btn line" href="\/login">Ya tengo una cuenta<\/a>/);
+    expect(APP_ROUTES).toContain('/register');
+    expect(APP_ROUTES).toContain('/login');
+    expect(APP_ROUTES).toContain('/home');
+  });
+
+  it('muestra el nombre en la barra, explica el producto y enlaza a los textos legales', () => {
+    expect(html).toMatch(/<a class="brand"[^>]*>[^<]*<img[^>]*>Apuntor<\/a>/);
+    for (const piece of ['mayores de 18 años', 'página', 'resumen', 'quizzes', 'flashcards']) {
+      expect(html.toLowerCase()).toContain(piece);
+    }
+    for (const kind of ['PDF', 'Word', 'PowerPoint', 'Texto', 'Fotos'])
+      expect(html).toContain(kind);
     expect(html).toContain('href="/legal/privacy"');
     expect(html).toContain('href="/legal/terms"');
-    expect(
-      html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, ''),
-    ).not.toContain('<script');
+    expect(html).toContain('Solo para personas de 18 años o más');
+  });
+
+  it('el único JavaScript es la redirección a /home cuando ya hay sesión, y es seguro', () => {
+    const scripts = [...html.matchAll(/<script(?![^>]*ld\+json)[^>]*>([\s\S]*?)<\/script>/g)];
+    expect(scripts).toHaveLength(1);
+    const code = scripts[0]?.[1] ?? '';
+    expect(code).toContain("location.replace('/home')");
+    // Clave de sesión de Supabase (`sb-<ref>-auth-token`) sin fijar el proyecto.
+    expect(code).toContain('sb-');
+    expect(code).toContain('-auth-token');
+    expect(code).toContain('refresh_token');
+    expect(code).toContain('try{');
+    expect(code).not.toMatch(/eval|innerHTML|document\.write|fetch|XMLHttpRequest|https?:\/\//);
+    expect(html).not.toMatch(/<script[^>]*\ssrc=/);
+  });
+
+  it('la redirección solo actúa con una sesión guardada', () => {
+    const code = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
+    const run = (items: Record<string, string>) => {
+      const replaced: string[] = [];
+      const storage = {
+        length: Object.keys(items).length,
+        key: (i: number) => Object.keys(items)[i] ?? null,
+        getItem: (k: string) => items[k] ?? null,
+      };
+      new Function('window', 'location', code)(
+        { localStorage: storage },
+        {
+          replace: (u: string) => replaced.push(u),
+        },
+      );
+      return replaced;
+    };
+    expect(run({})).toEqual([]);
+    expect(run({ 'sb-abc-auth-token': '{no es json' })).toEqual([]);
+    expect(run({ 'sb-abc-auth-token-code-verifier': 'x' })).toEqual([]);
+    expect(run({ 'sb-abc-auth-token': '{"access_token":"a"}' })).toEqual([]);
+    expect(run({ 'sb-abc-auth-token': '{"access_token":"a","refresh_token":"r"}' })).toEqual([
+      '/home',
+    ]);
   });
 
   it('el JSON-LD es válido y declara Organization y WebSite', () => {
