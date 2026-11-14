@@ -2,7 +2,7 @@ import { previewOnly } from '@/components/domain/PreviewOnly';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Button, Chip, Icon, IconButton, Screen, Segmented, Text } from '@/components/ui';
+import { Button, Chip, Icon, Screen, Segmented, Text, TopBar } from '@/components/ui';
 import { plans } from '@/data/mock';
 import { formatSoles, studentPrice } from '@/lib/pricing';
 import { choosePlan } from '@/store/store';
@@ -95,40 +95,35 @@ function Plans() {
     );
   };
 
+  // Continuar: fijo al pie en el teléfono; en pantalla ancha va tras las tarjetas, con ancho de botón.
+  const cta = (
+    <Button
+      label={p.continueWith(names[plan])}
+      disabled={plan === 'free'}
+      onPress={() => {
+        // Colegio o institución se cotiza a medida: va a soporte.
+        if (plan === 'school') return router.push('/profile/contact');
+        choosePlan('student');
+        router.replace('/profile/subscription');
+      }}
+    />
+  );
+
   return (
-    <Screen
-      wide={columns}
-      footer={
-        <Button
-          label={p.continueWith(names[plan])}
-          disabled={plan === 'free'}
-          onPress={() => {
-            // Colegio o institución se cotiza a medida: va a soporte.
-            if (plan === 'school') return router.push('/profile/contact');
-            choosePlan('student');
-            router.replace('/profile/subscription');
-          }}
+    <Screen wide={columns} header={<TopBar />} footer={columns ? undefined : cta}>
+      <Text variant="display" accessibilityRole="header">
+        {p.title}
+      </Text>
+      <View style={styles.billing}>
+        <Segmented
+          options={[
+            { value: 'monthly', label: p.monthly },
+            { value: 'yearly', label: p.yearly },
+          ]}
+          value={billing}
+          onChange={setBilling}
         />
-      }
-    >
-      <View style={styles.row}>
-        <IconButton
-          icon="arrow-left"
-          label={s.common.back}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))}
-        />
-        <Text variant="title" accessibilityRole="header">
-          {p.title}
-        </Text>
       </View>
-      <Segmented
-        options={[
-          { value: 'monthly', label: p.monthly },
-          { value: 'yearly', label: p.yearly },
-        ]}
-        value={billing}
-        onChange={setBilling}
-      />
       <View accessibilityRole="radiogroup" style={[styles.cards, columns && styles.cardsRow]}>
         {card('free', plans.freePrice, p.forever, p.freeItems)}
         {card('student', formatSoles(student.perMonth), p.perMonth, p.studentItems, p.recommended, {
@@ -143,6 +138,7 @@ function Plans() {
       <Text variant="caption" color="textMuted">
         {p.exampleNote}
       </Text>
+      {columns ? <View style={styles.cta}>{cta}</View> : null}
     </Screen>
   );
 }
@@ -150,12 +146,14 @@ function Plans() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
+  billing: { maxWidth: 420 },
+  cta: { maxWidth: 360 },
   cards: { gap: space.md },
   cardsRow: { flexDirection: 'row', alignItems: 'stretch' },
   column: { flex: 1, minWidth: 0, gap: space.sm },
   strike: { textDecorationLine: 'line-through' },
   start: { alignItems: 'flex-start' },
-  card: { borderWidth: 1.5, borderRadius: radius.lg, padding: space.lg, gap: space.xs + 2 },
+  card: { borderWidth: 1, borderRadius: radius.md, padding: space.lg, gap: space.xs + 2 },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
 });
 

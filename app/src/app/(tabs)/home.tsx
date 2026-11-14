@@ -1,6 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { CourseBadge } from '@/components/domain/CourseBadge';
 import {
   Banner,
   Button,
@@ -79,11 +78,11 @@ export default function Home() {
   }
   const greetingBlock = (
     <>
-      <View>
+      <View style={styles.greeting}>
         <Text variant="display" accessibilityRole="header">
           {s.home.hello(name)}
         </Text>
-        <Text variant="small" color="textMuted">
+        <Text variant="lead" color="textMuted">
           {s.home.subtitle}
         </Text>
       </View>
@@ -110,16 +109,19 @@ export default function Home() {
   const main = (
     <>
       {syncError}
-      <Card tone="primary" style={styles.review}>
-        <Mascot size={desktop ? 112 : 80} />
+      {/* Invitación a preguntar: fila simple, sin recuadro; separada por una línea fina. */}
+      <View style={[styles.ask, { borderBottomColor: c.border }]}>
+        <Mascot size={56} />
         <View style={styles.flex}>
-          <Text variant="bodyStrong">{s.live.askTitle}</Text>
-          <Text variant="caption">{s.live.askBody}</Text>
+          <Text variant="heading">{s.live.askTitle}</Text>
+          <Text variant="body" color="textMuted">
+            {s.live.askBody}
+          </Text>
           <View style={styles.start}>
-            <Button label={s.live.askCta} compact onPress={() => router.push('/conversation')} />
+            <Button label={s.live.askCta} onPress={() => router.push('/conversation')} />
           </View>
         </View>
-      </Card>
+      </View>
       {lastDoc ? (
         <>
           {/* Encabezado de sección (sin etiqueta en mayúsculas sobre el título). */}
@@ -173,7 +175,11 @@ export default function Home() {
               i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
             ]}
           >
-            <CourseBadge course={course} size={32} />
+            <Icon
+              name={course.icon}
+              size={20}
+              color={course.tone === 'primary' ? 'primary' : 'textMuted'}
+            />
             <View style={styles.flex}>
               <View style={styles.row}>
                 <Text variant="smallStrong" style={styles.flex}>
@@ -258,7 +264,14 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  review: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  greeting: { gap: space.xs },
+  ask: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.lg,
+    paddingBottom: space.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   skeleton: { gap: space.md },
   start: { alignItems: 'flex-start', marginTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
