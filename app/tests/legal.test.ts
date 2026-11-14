@@ -11,7 +11,7 @@ const DOCS: readonly LegalDoc[] = ['terms', 'privacy', 'subscription'];
 
 describe('textos legales', () => {
   it('LEGAL_VERSION es una fecha ISO y hay fecha legible por idioma', () => {
-    expect(LEGAL_VERSION).toBe('2026-11-08');
+    expect(LEGAL_VERSION).toBe('2026-11-14');
     expect(LEGAL_UPDATED.es.trim()).not.toBe('');
     expect(LEGAL_UPDATED.en.trim()).not.toBe('');
   });
@@ -42,6 +42,14 @@ describe('textos legales', () => {
       }
     },
   );
+
+  it.each([
+    ['es', ['correo electrónico', 'nombre', 'foto de perfil', 'openid']],
+    ['en', ['email address', 'name', 'profile photo', 'openid']],
+  ] as const)('privacidad (%s) explica los datos de Google y para qué se usan', (lang, terms) => {
+    const text = LEGAL[lang].privacy.flatMap((s) => s.paragraphs).join('\n');
+    for (const term of terms) expect(text).toContain(term);
+  });
 
   it('el aviso de borrador se apoya en los datos por completar entre corchetes', () => {
     expect(hasPlaceholders([{ title: 'Pendiente', paragraphs: ['RUC [RUC]'] }])).toBe(true);

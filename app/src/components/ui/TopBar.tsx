@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { layout } from '@/theme';
 import { useStrings } from '@/i18n/es';
+import { entryRoute, useStore } from '@/store/store';
 import { IconButton } from './IconButton';
 import { Text } from './Text';
 
@@ -20,7 +21,10 @@ export function TopBar({
   onBack?: () => void;
 }) {
   const s = useStrings();
-  const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
+  // Sin historial (recarga o enlace directo) se vuelve al inicio o al acceso según la sesión;
+  // nunca a `/`, que en web es la página pública.
+  const home = useStore(entryRoute);
+  const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace(home)));
   return (
     <View style={styles.bar}>
       <IconButton

@@ -1,10 +1,27 @@
 {
-  // Publica la versión web (`expo export`) como archivos estáticos en Cloudflare Workers.
-  // Las rutas de la app se resuelven en el navegador: cualquier ruta sirve index.html.
+  // Publica la versión web (`expo export`) en Cloudflare Workers.
+  // El Worker (`worker/index.ts`) decide qué se sirve en cada ruta (ver `worker/routing.ts`):
+  // landing y textos legales públicos, la app (SPA) con `noindex` y un 404 real para el resto.
   "name": "apuntor",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    // Sin `html_handling` automático ni caída a la SPA: el Worker resuelve cada ruta.
+    "html_handling": "none",
+    "not_found_handling": "none",
+    // Todo pasa por el Worker salvo los archivos de Expo, que se sirven directo y sin coste.
+    "run_worker_first": [
+      "/*",
+      "!/_expo/*",
+      "!/assets/*",
+      "!/robots.txt",
+      "!/sitemap.xml",
+      "!/favicon.png",
+      "!/favicon.ico",
+      "!/apuntor-icon.png",
+      "!/apuntor-icon-192.png",
+    ],
   },
 }

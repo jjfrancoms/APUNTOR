@@ -10,12 +10,12 @@ import type { Language } from './language';
  * Cambiar el contenido obliga a subir `LEGAL_VERSION` (fecha ISO) y `LEGAL_UPDATED`: la
  * aceptación registrada guarda documento, versión y fecha.
  */
-export const LEGAL_VERSION = '2026-11-08';
+export const LEGAL_VERSION = '2026-11-14';
 
 /** Fecha de la última actualización, legible en cada idioma. */
 export const LEGAL_UPDATED: Readonly<Record<Language, string>> = {
-  es: '8 de noviembre de 2026',
-  en: 'November 8, 2026',
+  es: '14 de noviembre de 2026',
+  en: 'November 14, 2026',
 };
 
 export type LegalDoc = 'terms' | 'privacy' | 'subscription';
@@ -51,7 +51,7 @@ const es: LegalTexts = {
       title: '2. Aceptación y versión',
       paragraphs: [
         'Al crear tu cuenta aceptas estos Términos y condiciones y declaras haber leído la Política de privacidad. Guardamos un registro de tu aceptación con el nombre del documento, su versión y la fecha.',
-        'Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.',
+        'Esta es la versión 2026-11-14, actualizada el 14 de noviembre de 2026. Si no estás de acuerdo con estos términos, no uses APUNTOR.',
       ],
     },
     {
@@ -154,7 +154,8 @@ const es: LegalTexts = {
     {
       title: '2. Qué datos tratamos',
       paragraphs: [
-        'Datos de tu cuenta: correo electrónico, contraseña (que guardamos protegida, nunca en texto legible), identificador interno, fecha de creación y tu confirmación de que eres mayor de 18 años. No guardamos tu fecha de nacimiento. Si entras con Google, recibimos tu correo y, si Google lo comparte, tu nombre.',
+        'Datos de tu cuenta: correo electrónico, contraseña (que guardamos protegida, nunca en texto legible), identificador interno, fecha de creación y tu confirmación de que eres mayor de 18 años. No guardamos tu fecha de nacimiento.',
+        'Datos de Google: si entras con Google, recibimos de Google tu correo electrónico, tu nombre y tu foto de perfil, y solo eso (los permisos que pedimos son únicamente «openid», «email» y «profile»). Usamos el correo para crear y reconocer tu cuenta y para que puedas iniciar sesión; usamos el nombre para saludarte y mostrarlo en tu perfil. La foto de perfil no se muestra en la app ni la usamos para nada más; puede quedar guardada junto a los datos de tu cuenta en Supabase. No accedemos a tus archivos, contactos ni calendario de Google, no vendemos ni compartimos estos datos con terceros para publicidad y los tratamos solo para darte el servicio.',
         'Tu contenido: los documentos que subes, el texto que extraemos de ellos, los fragmentos y representaciones numéricas que permiten buscar en ellos, los temas que detectamos y los cursos que creas.',
         'Tus preguntas: el texto de cada pregunta se procesa en nuestros servidores para generar la respuesta. Hoy el historial de conversaciones se guarda solo en tu dispositivo.',
         'Datos de uso: cuánto espacio y cuántas preguntas usas, para aplicar los límites de tu plan; y el registro de tu aceptación de los términos y de esta política (documento, versión y fecha).',
@@ -233,7 +234,7 @@ const es: LegalTexts = {
     {
       title: '12. Cambios en esta política',
       paragraphs: [
-        'Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.',
+        'Esta es la versión 2026-11-14, actualizada el 14 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.',
       ],
     },
   ],
@@ -255,7 +256,7 @@ const es: LegalTexts = {
     {
       title: '3. Contacto',
       paragraphs: [
-        'Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026.',
+        'Si tienes dudas sobre los planes, escríbenos a soporte@apuntor.com. Esta es la versión 2026-11-14, actualizada el 14 de noviembre de 2026.',
       ],
     },
   ],
@@ -274,7 +275,7 @@ const en: LegalTexts = {
       title: '2. Acceptance and version',
       paragraphs: [
         'By creating your account you accept these Terms and Conditions and confirm you have read the Privacy Policy. We keep a record of your acceptance with the document name, its version and the date.',
-        'This is version 2026-11-08, last updated on November 8, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.',
+        'This is version 2026-11-14, last updated on November 14, 2026. If you do not agree with these terms, do not use APUNTOR. The Spanish version prevails over this translation.',
       ],
     },
     {
@@ -377,7 +378,8 @@ const en: LegalTexts = {
     {
       title: '2. What data we process',
       paragraphs: [
-        'Account data: email address, password (stored protected, never in readable form), internal identifier, creation date and your confirmation that you are 18 or older. We do not store your date of birth. If you sign in with Google, we receive your email and, if Google shares it, your name.',
+        'Account data: email address, password (stored protected, never in readable form), internal identifier, creation date and your confirmation that you are 18 or older. We do not store your date of birth.',
+        'Google data: if you sign in with Google, we receive your email address, your name and your profile photo from Google, and only that (the permissions we request are only “openid”, “email” and “profile”). We use the email to create and recognize your account and so you can sign in; we use the name to greet you and show it in your profile. The profile photo is not shown in the app and we do not use it for anything else; it may be stored with your account data in Supabase. We do not access your Google files, contacts or calendar, we do not sell or share this data with third parties for advertising, and we process it only to provide the service.',
         'Your content: the documents you upload, the text we extract from them, the fragments and numerical representations that make them searchable, the topics we detect and the courses you create.',
         'Your questions: the text of each question is processed on our servers to generate the answer. Today your conversation history is stored only on your device.',
         'Usage data: how much storage and how many questions you use, to apply your plan limits; and the record of your acceptance of the terms and this policy (document, version and date).',
@@ -456,7 +458,7 @@ const en: LegalTexts = {
     {
       title: '12. Changes to this policy',
       paragraphs: [
-        'This is version 2026-11-08, last updated on November 8, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.',
+        'This is version 2026-11-14, last updated on November 14, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.',
       ],
     },
   ],
@@ -478,7 +480,7 @@ const en: LegalTexts = {
     {
       title: '3. Contact',
       paragraphs: [
-        'If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-08, last updated on November 8, 2026.',
+        'If you have questions about plans, write to us at soporte@apuntor.com. This is version 2026-11-14, last updated on November 14, 2026.',
       ],
     },
   ],

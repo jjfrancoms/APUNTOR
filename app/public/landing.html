@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apuntor: estudia con tus propios apuntes</title>
+<meta name="description" content="Apuntor es una app de estudio: subes tus propios apuntes y la IA responde solo con ellos, citando la página. Preguntas, resúmenes por tema, quizzes y flashcards para universitarios mayores de 18 años.">
+<link rel="canonical" href="https://apuntor.com/">
+<link rel="icon" href="/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/apuntor-icon-192.png">
+<meta name="theme-color" content="#FAF9F6">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_PE">
+<meta property="og:site_name" content="Apuntor">
+<meta property="og:title" content="Apuntor: estudia con tus propios apuntes">
+<meta property="og:description" content="Sube tus apuntes y la IA responde solo con ellos, citando la página. Resúmenes por tema, quizzes y flashcards.">
+<meta property="og:url" content="https://apuntor.com/">
+<meta property="og:image" content="https://apuntor.com/apuntor-icon.png">
+<meta property="og:image:width" content="1024">
+<meta property="og:image:height" content="1024">
+<meta property="og:image:alt" content="Ícono de Apuntor">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Apuntor: estudia con tus propios apuntes">
+<meta name="twitter:description" content="Sube tus apuntes y la IA responde solo con ellos, citando la página. Resúmenes por tema, quizzes y flashcards.">
+<meta name="twitter:image" content="https://apuntor.com/apuntor-icon.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://apuntor.com/#organization","name":"Apuntor","url":"https://apuntor.com/","logo":"https://apuntor.com/apuntor-icon.png","email":"soporte@apuntor.com"},{"@type":"WebSite","@id":"https://apuntor.com/#website","name":"Apuntor","url":"https://apuntor.com/","inLanguage":"es","publisher":{"@id":"https://apuntor.com/#organization"}}]}
+</script>
+<style>
+:root{--bg:#FAF9F6;--surface:#FFFFFF;--soft:#E3F1EE;--border:#E7E4DD;--text:#1C1C1E;--muted:#6B6B72;--primary:#1D7568;--on-primary:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--bg:#121413;--surface:#1C1F1E;--soft:#1B3A36;--border:#363B3A;--text:#F2F2F0;--muted:#A9AEAC;--primary:#4DB6A6;--on-primary:#0B1F1C}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--primary)}
+a:focus-visible,.button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0}
+.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:18px;text-decoration:none}
+.brand img{width:36px;height:36px;border-radius:8px}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 28px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-weight:700;font-size:16px;text-decoration:none}
+.button.small{min-height:44px;padding:0 20px}
+.hero{display:grid;gap:32px;align-items:center;padding:32px 0 40px}
+.hero img{width:160px;height:160px;border-radius:32px;border:1px solid var(--border)}
+h1{font-size:36px;line-height:42px;font-weight:800;margin:0 0 16px}
+.lead{font-size:18px;line-height:28px;margin:0 0 16px;max-width:560px}
+.note{color:var(--muted);font-size:14px;line-height:20px;margin:16px 0 0}
+h2{font-size:24px;line-height:30px;font-weight:700;margin:0 0 20px}
+.section{padding:24px 0}
+.grid{display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px}
+.card h3{font-size:18px;line-height:24px;font-weight:700;margin:0 0 8px}
+.card p{margin:0}
+.steps{counter-reset:paso;list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.steps li{counter-increment:paso;background:var(--soft);border-radius:16px;padding:20px 20px 20px 64px;position:relative}
+.steps li::before{content:counter(paso);position:absolute;left:20px;top:20px;width:32px;height:32px;border-radius:16px;background:var(--primary);color:var(--on-primary);font-weight:700;display:flex;align-items:center;justify-content:center}
+.steps strong{display:block}
+.cta{text-align:center;padding:40px 0}
+.cta p{margin:0 0 20px}
+footer{border-top:1px solid var(--border);padding:24px 0 40px;color:var(--muted);font-size:14px;line-height:20px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
+footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
+footer .copy{flex-basis:100%}
+@media (min-width:720px){
+.wrap{padding:0 32px}
+.hero{grid-template-columns:1fr auto;padding:56px 0 56px}
+.hero img{width:240px;height:240px;border-radius:48px;order:2}
+h1{font-size:48px;line-height:54px}
+.grid{grid-template-columns:repeat(3,1fr)}
+.steps{grid-template-columns:repeat(3,1fr)}
+footer .copy{flex-basis:auto;margin-left:auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="bar">
+<a class="brand" href="/"><img src="/apuntor-icon-192.png" alt="" width="36" height="36">Apuntor</a>
+<a class="button small" href="/login">Entrar</a>
+</header>
+<main>
+<section class="hero">
+<div>
+<h1>Apuntor: estudia con tus propios apuntes</h1>
+<p class="lead">Apuntor es una app de estudio. Subes tus apuntes y la inteligencia artificial responde solo con lo que está en ellos, indicando en qué página lo encontró.</p>
+<p class="lead">Está pensada para estudiantes universitarios mayores de 18 años que quieren repasar con su propio material y poder comprobar cada respuesta.</p>
+<a class="button" href="/login">Entrar</a>
+<p class="note">Solo para personas de 18 años o más.</p>
+</div>
+<img src="/apuntor-icon-192.png" alt="Ícono de Apuntor" width="240" height="240">
+</section>
+
+<section class="section" aria-labelledby="que-hace">
+<h2 id="que-hace">Qué puedes hacer con tus apuntes</h2>
+<div class="grid">
+<article class="card">
+<h3>Preguntar y ver la página</h3>
+<p>Haz una pregunta y recibe una respuesta basada en tus apuntes, con la cita de la página para que la revises en el original.</p>
+</article>
+<article class="card">
+<h3>Resúmenes por tema</h3>
+<p>Apuntor organiza lo que subiste por temas y te muestra un resumen de cada uno, con las páginas de donde sale.</p>
+</article>
+<article class="card">
+<h3>Quizzes y flashcards</h3>
+<p>Practica con quizzes y tarjetas de repaso creados a partir de tu propio material.</p>
+</article>
+</div>
+</section>
+
+<section class="section" aria-labelledby="como-funciona">
+<h2 id="como-funciona">Cómo funciona</h2>
+<ol class="steps">
+<li><strong>Subes tus apuntes</strong>PDF, Word, PowerPoint, texto o fotos de tus hojas.</li>
+<li><strong>Preguntas o estudias</strong>Consultas lo que no entiendes o repasas con quizzes y flashcards.</li>
+<li><strong>Compruebas la fuente</strong>Cada respuesta indica la página de tus apuntes de donde sale.</li>
+</ol>
+</section>
+
+<section class="cta">
+<p class="lead" style="margin-left:auto;margin-right:auto">Empieza con el material que ya tienes.</p>
+<a class="button" href="/login">Entrar</a>
+</section>
+</main>
+</div>
+<footer>
+<div class="wrap">
+<a href="/legal/privacy">Política de privacidad</a>
+<a href="/legal/terms">Términos y condiciones</a>
+<a href="mailto:soporte@apuntor.com">soporte@apuntor.com</a>
+<span class="copy">Apuntor</span>
+</div>
+</footer>
+</body>
+</html>
