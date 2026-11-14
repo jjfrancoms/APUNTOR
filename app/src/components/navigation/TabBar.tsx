@@ -4,7 +4,8 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Avatar, BrandLogo, Icon, Text, type IconName } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { updateSettings, useStore } from '@/store/store';
-import { layout, radius, space, useTheme, navigationLayoutFor } from '@/theme';
+import { revealThemeChange } from '@/lib/theme-transition';
+import { layout, motion, radius, space, useTheme, navigationLayoutFor } from '@/theme';
 import { Tap, type TapState } from '@/components/ui/Tap';
 
 export const TAB_ROUTES = ['home', 'courses', 'chat', 'profile'] as const;
@@ -88,6 +89,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       accessibilityRole="button"
       accessibilityLabel={s.tabs.upload}
       onPress={() => router.push('/upload')}
+      pressScale={motion.pressScale}
       style={({ pressed, hovered }: TapState) => [
         sidebar ? [styles.uploadWide, { backgroundColor: c.primary }] : styles.item,
         { opacity: pressed ? 0.85 : hovered === true ? 0.92 : 1 },
@@ -116,7 +118,8 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
       key="theme"
       accessibilityRole="button"
       accessibilityLabel={themeLabel}
-      onPress={() => updateSettings({ theme: nextTheme })}
+      onPress={() => revealThemeChange(() => updateSettings({ theme: nextTheme }))}
+      pressScale={motion.pressScale}
       style={({ hovered }: TapState) => [
         styles.item,
         sidebar && [

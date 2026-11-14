@@ -12,6 +12,7 @@ import {
   TextLink,
   Toggle,
 } from '@/components/ui';
+import { revealThemeChange } from '@/lib/theme-transition';
 import { useDataDownload } from '@/lib/use-data-download';
 import { signOut, updateSettings, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
@@ -124,7 +125,7 @@ export default function Profile() {
             { value: 'dark', label: s.profile.appearance.dark },
           ]}
           value={st.theme}
-          onChange={(theme) => updateSettings({ theme })}
+          onChange={(theme) => revealThemeChange(() => updateSettings({ theme }))}
         />
         <Text variant="caption" color="textMuted">
           {s.profile.appearance.detail}
