@@ -55,7 +55,13 @@ export function Screen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[styles.column, column]}
       >
-        {header ? <View style={[styles.header, pad, limit]}>{header}</View> : null}
+        {/* El relleno lateral va fuera y el ancho máximo dentro: la barra superior y el cuerpo
+            empiezan en el mismo borde izquierdo. */}
+        {header ? (
+          <View style={[styles.header, pad]}>
+            <View style={limit}>{header}</View>
+          </View>
+        ) : null}
         {scroll ? (
           <ScrollView
             ref={scrollRef}
@@ -71,7 +77,11 @@ export function Screen({
         ) : (
           <View style={[styles.scroll, styles.flex, pad]}>{body}</View>
         )}
-        {footer ? <View style={[styles.footer, pad, limit]}>{footer}</View> : null}
+        {footer ? (
+          <View style={[styles.footer, pad]}>
+            <View style={[limit, styles.footerInner]}>{footer}</View>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -89,6 +99,7 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   content: { gap: space.lg, flexGrow: 1 },
+  footerInner: { gap: space.sm },
   footer: {
     paddingHorizontal: space.xl,
     paddingBottom: space.lg,

@@ -85,9 +85,9 @@ describe('landing', () => {
     expect(html).toContain('Solo para personas de 18 años o más');
   });
 
-  it('el único JavaScript es la redirección a /home cuando ya hay sesión, y es seguro', () => {
+  it('solo hay dos scripts: la redirección a /home cuando ya hay sesión y el respaldo del revelado', () => {
     const scripts = [...html.matchAll(/<script(?![^>]*ld\+json)[^>]*>([\s\S]*?)<\/script>/g)];
-    expect(scripts).toHaveLength(1);
+    expect(scripts).toHaveLength(2);
     const code = scripts[0]?.[1] ?? '';
     expect(code).toContain("location.replace('/home')");
     // Clave de sesión de Supabase (`sb-<ref>-auth-token`) sin fijar el proyecto.
@@ -138,7 +138,7 @@ describe('landing', () => {
   it('las secciones son tipográficas y no se centran: filas con filetes, pasos con numerales y CTA simple', () => {
     expect(html).toMatch(/<ol class="steps">/);
     expect(html).toMatch(/<ul class="rows">/);
-    expect(html).toMatch(/<section class="cta"/);
+    expect(html).toMatch(/<section class="cta( reveal)?"/);
     // Sin adornos genéricos: pegatinas, fichas con ícono, chips, pastillas ni tarjeta de ejemplo.
     expect(html).not.toMatch(/class="(fl |pill|mock|chips|ico|card)/);
     expect(html).not.toContain('Ejemplo de respuesta');
@@ -243,5 +243,54 @@ describe('íconos del kit de marca', () => {
       existsSync(path.join(appDir, '..', 'docs/marca/svg/apuntor-logo-horizontal-color.svg')),
     ).toBe(true);
     expect(read('public/landing.html')).toContain('"logo":"https://apuntor.com/apuntor-icon.png"');
+  });
+});
+
+describe('landing: revelado al hacer scroll', () => {
+  const html = read('public/landing.html');
+  const css = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? '';
+  const body = html.slice(html.indexOf('<body>'));
+  const reveal = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
+
+  it('el revelado nativo va tras @supports y solo con movimiento permitido', () => {
+    const block = /@media \(prefers-reduced-motion:no-preference\)\{([\s\S]*?)\n\}\n/.exec(
+      css,
+    )?.[1];
+    expect(block).toBeDefined();
+    expect(block).toContain('@supports (animation-timeline:view())');
+    expect(block).toContain('animation-timeline:view()');
+    // 12 px de desplazamiento, solo opacity y transform.
+    expect(block).toContain('translateY(12px)');
+  });
+
+  it('nada queda oculto por defecto: la clase que oculta solo la añade el JavaScript', () => {
+    expect(body).not.toMatch(/class="[^"]*reveal-js/);
+    // `.reveal` por sí sola nunca fija opacity:0 fuera de la animación nativa.
+    expect(css).not.toMatch(/\.reveal\{[^}]*opacity:0/);
+    // `.reveal-js` (el estado oculto) vive solo dentro del bloque de movimiento permitido.
+    const media = css.indexOf('@media (prefers-reduced-motion:no-preference)');
+    expect(media).toBeGreaterThan(-1);
+    expect(css.indexOf('.reveal-js')).toBeGreaterThan(media);
+  });
+
+  it('el hero no se revela y las secciones de abajo sí', () => {
+    const hero = /<section class="hero">[\s\S]*?<\/section>/.exec(html)?.[0] ?? '';
+    expect(hero).not.toContain('reveal');
+    for (const id of ['que-es', 'que-hace', 'como-funciona', 'empezar']) {
+      expect(html).toMatch(
+        new RegExp(
+          `class="[^"]*\\breveal\\b[^"]*"[^>]*(aria-labelledby="${id}"|id="${id}")|id="${id}"`,
+        ),
+      );
+    }
+    expect(body.match(/class="reveal"/g)?.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('el respaldo no actúa con movimiento reducido ni con soporte nativo, y no usa scroll', () => {
+    expect(reveal).toContain("CSS.supports('animation-timeline','view()')");
+    expect(reveal).toContain('prefers-reduced-motion: reduce');
+    expect(reveal).toContain('IntersectionObserver');
+    expect(reveal).toContain('unobserve');
+    expect(reveal).not.toMatch(/addEventListener\(['"]scroll|eval|innerHTML|fetch|https?:\/\//);
   });
 });
