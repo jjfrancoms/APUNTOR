@@ -1,6 +1,6 @@
 # Política de privacidad
 
-> **Borrador pendiente de revisión legal.** Versión `2026-11-08` · actualizado el 8 de noviembre de 2026.
+> **Borrador pendiente de revisión legal.** Versión `2026-11-14` · actualizado el 14 de noviembre de 2026.
 > Fuente única del texto que ve el usuario: `app/src/i18n/legal.ts` (este archivo lo reproduce;
 > si cambias uno, cambia el otro y sube `LEGAL_VERSION`). Los datos entre corchetes deben
 > completarse antes de publicar. Pendientes y fuentes en [cumplimiento.md](./cumplimiento.md).
@@ -21,7 +21,9 @@ Esta política cumple con el deber de informarte que establece el artículo 18 d
 
 ### 2. Qué datos tratamos
 
-Datos de tu cuenta: correo electrónico, contraseña (que guardamos protegida, nunca en texto legible), identificador interno, fecha de creación y tu confirmación de que eres mayor de 18 años. No guardamos tu fecha de nacimiento. Si entras con Google, recibimos tu correo y, si Google lo comparte, tu nombre.
+Datos de tu cuenta: correo electrónico, contraseña (que guardamos protegida, nunca en texto legible), identificador interno, fecha de creación y tu confirmación de que eres mayor de 18 años. No guardamos tu fecha de nacimiento.
+
+Datos de Google: si entras con Google, recibimos de Google tu correo electrónico, tu nombre y tu foto de perfil, y solo eso (los permisos que pedimos son únicamente «openid», «email» y «profile»). Usamos el correo para crear y reconocer tu cuenta y para que puedas iniciar sesión; usamos el nombre para saludarte y mostrarlo en tu perfil. La foto de perfil no se muestra en la app ni la usamos para nada más; puede quedar guardada junto a los datos de tu cuenta en Supabase. No accedemos a tus archivos, contactos ni calendario de Google, no vendemos ni compartimos estos datos con terceros para publicidad y los tratamos solo para darte el servicio.
 
 Tu contenido: los documentos que subes, el texto que extraemos de ellos, los fragmentos y representaciones numéricas que permiten buscar en ellos, los temas que detectamos y los cursos que creas.
 
@@ -99,7 +101,7 @@ APUNTOR es solo para mayores de 18 años y no recopila a sabiendas datos de meno
 
 ### 12. Cambios en esta política
 
-Esta es la versión 2026-11-08, actualizada el 8 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.
+Esta es la versión 2026-11-14, actualizada el 14 de noviembre de 2026. Si la cambiamos, publicaremos la nueva versión con su fecha y, si el cambio es importante, te avisaremos y te pediremos aceptarla de nuevo. Guardamos el registro de cada aceptación.
 
 ## Privacy Policy (English)
 
@@ -113,7 +115,9 @@ This policy fulfills the duty to inform you set out in article 18 of Law No. 297
 
 ### 2. What data we process
 
-Account data: email address, password (stored protected, never in readable form), internal identifier, creation date and your confirmation that you are 18 or older. We do not store your date of birth. If you sign in with Google, we receive your email and, if Google shares it, your name.
+Account data: email address, password (stored protected, never in readable form), internal identifier, creation date and your confirmation that you are 18 or older. We do not store your date of birth.
+
+Google data: if you sign in with Google, we receive your email address, your name and your profile photo from Google, and only that (the permissions we request are only “openid”, “email” and “profile”). We use the email to create and recognize your account and so you can sign in; we use the name to greet you and show it in your profile. The profile photo is not shown in the app and we do not use it for anything else; it may be stored with your account data in Supabase. We do not access your Google files, contacts or calendar, we do not sell or share this data with third parties for advertising, and we process it only to provide the service.
 
 Your content: the documents you upload, the text we extract from them, the fragments and numerical representations that make them searchable, the topics we detect and the courses you create.
 
@@ -191,4 +195,4 @@ APUNTOR is only for people aged 18 or older and does not knowingly collect data 
 
 ### 12. Changes to this policy
 
-This is version 2026-11-08, last updated on November 8, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.
+This is version 2026-11-14, last updated on November 14, 2026. If we change it, we will publish the new version with its date and, if the change is significant, we will notify you and ask you to accept it again. We keep a record of each acceptance.

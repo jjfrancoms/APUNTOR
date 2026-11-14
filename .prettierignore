@@ -11,3 +11,6 @@ app/AGENTS.md
 app/dist-preview
 # Skills de terceros (se mantienen tal cual vienen de su repositorio)
 .claude/skills
+# Páginas estáticas públicas: la landing y el HTML legal generado por `npm run legal:html`
+app/public
+app/.web-out-check

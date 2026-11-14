@@ -7,3 +7,5 @@ expo-env.d.ts
 ios/
 android/
 dist-preview/
+.web-out-check/
+.wrangler/
