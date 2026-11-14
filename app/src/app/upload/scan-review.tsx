@@ -92,7 +92,7 @@ export default function ScanReview() {
         <>
           <Button label={r.upload(pages.length)} onPress={upload} />
           {pages.length < MAX_SCAN_PAGES ? (
-            <Button label={r.addMore} variant="secondary" icon="camera" onPress={back} />
+            <Button label={r.addMore} variant="ghost" icon="camera" onPress={back} />
           ) : null}
         </>
       }

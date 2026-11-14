@@ -65,7 +65,7 @@ export default function DailyReview() {
       footer={
         <>
           <Button label={r.start} onPress={start} />
-          <Button label={r.later} variant="secondary" onPress={() => router.back()} />
+          <Button label={r.later} variant="ghost" onPress={() => router.back()} />
         </>
       }
     >

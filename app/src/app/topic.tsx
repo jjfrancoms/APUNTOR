@@ -128,7 +128,8 @@ export default function TopicSummaryScreen() {
               <View style={styles.flex}>
                 <Button
                   label={s.study.practice}
-                  variant="secondary"
+                  variant="ghost"
+                  icon="edit-3"
                   size="sm"
                   onPress={() => practice('quiz')}
                 />
@@ -136,7 +137,8 @@ export default function TopicSummaryScreen() {
               <View style={styles.flex}>
                 <Button
                   label={s.study.cards}
-                  variant="secondary"
+                  variant="ghost"
+                  icon="layers"
                   size="sm"
                   onPress={() => practice('cards')}
                 />
@@ -144,7 +146,8 @@ export default function TopicSummaryScreen() {
               <View style={styles.flexWide}>
                 <Button
                   label={t.openDocument}
-                  variant="secondary"
+                  variant="ghost"
+                  icon="file-text"
                   size="sm"
                   onPress={openDocument}
                 />
@@ -190,7 +193,8 @@ export default function TopicSummaryScreen() {
                   <View style={styles.flex}>
                     <Button
                       label={s.study.practice}
-                      variant="secondary"
+                      variant="ghost"
+                      icon="edit-3"
                       size="sm"
                       onPress={() => practice('quiz')}
                     />
@@ -198,13 +202,20 @@ export default function TopicSummaryScreen() {
                   <View style={styles.flex}>
                     <Button
                       label={s.study.cards}
-                      variant="secondary"
+                      variant="ghost"
+                      icon="layers"
                       size="sm"
                       onPress={() => practice('cards')}
                     />
                   </View>
                 </View>
-                <Button label={t.openDocument} variant="ghost" size="sm" onPress={openDocument} />
+                <Button
+                  label={t.openDocument}
+                  variant="ghost"
+                  icon="file-text"
+                  size="sm"
+                  onPress={openDocument}
+                />
               </View>
             </View>
           ) : null}

@@ -179,14 +179,16 @@ function ReviewRow({
         <Button
           label={s.review.chooseOther}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="folder"
           disabled={busy}
           onPress={() => setMode(mode === 'choose' ? 'idle' : 'choose')}
         />
         <Button
           label={s.review.newCourse}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="plus"
           disabled={busy}
           onPress={() => {
             setMode(mode === 'create' ? 'idle' : 'create');
@@ -196,7 +198,8 @@ function ReviewRow({
         <Button
           label={s.review.notNow}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="x"
           disabled={busy}
           onPress={() => void decide({ action: 'dismiss' })}
         />
