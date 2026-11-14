@@ -33,7 +33,6 @@ export function BrandLogo({
       width={width}
       height={size}
       viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
-      accessible
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel}
     >
