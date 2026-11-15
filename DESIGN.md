@@ -126,11 +126,12 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
     `primarySoft`, y al pie tema y perfil con `Avatar`).
   - **Card**: superficie con borde fino de 1 px y radio 12; tonos `default`, `primary`,
     `external`, `accent`, `danger` (el color solo donde significa algo); ranuras opcionales
-    `header` y `footer`.
-  - **ListRow**: ícono plano (sin recuadro de color) o `media` propio, título, descripción y
-    chevron; el fondo se tiñe al presionar.
+    `header` y `footer` (el pie va en fila: acciones o metadatos).
+  - **ListRow**: ícono plano (sin recuadro de color) o `media` propio, título (seminegrita),
+    descripción (13 px, apagada) y chevron; el fondo se tiñe al presionar.
   - **TextField / SelectField / DateField**: marco común (`Field`): etiqueta arriba, borde
-    `primary` y halo suave al enfocar, `error` con ícono, `helper`, bloqueado.
+    `primary` y halo suave al enfocar, `error` con ícono, `helper`, bloqueado. Jerarquía:
+    etiqueta > error (13 px, rojo) > ayuda (12 px, apagada).
   - **Checkbox**: marcada, indeterminada, inválida, bloqueada, con descripción.
   - **Toggle**: pista y pulgar propios (apagado con borde y pulgar `textMuted`, contraste ≥ 3:1),
     con `title` y `description` opcionales.
@@ -143,7 +144,8 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
   - **Banner**: ícono a la izquierda, título y texto; tonos `info`, `success`, `warning`,
     `danger`, `external`; `action` y `onClose` opcionales.
   - **Sheet**: asa que se arrastra para cerrar, toque en el velo y Escape (web); desde tablet,
-    diálogo de ancho máximo.
+    diálogo de ancho máximo. En oscuro usa `surfaceAlt`: la elevación se expresa con una superficie
+    más clara, no con sombra.
   - **ProgressBar**: `showLabel`, `showValue`, `valueText`, `indeterminate`, tonos `primary`,
     `accent`, `danger`. **Steps**: lista vertical de pasos con estado (subidas).
   - **EmptyState**: Illari pequeña, sin halo; texto a la izquierda, una acción principal; en
