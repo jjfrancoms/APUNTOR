@@ -184,6 +184,10 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **`DESIGN.md`** (raíz) es la identidad visual: paleta, tipografía, espacios, patrones y qué
   evitar. Manda sobre cualquier propuesta de una skill. Si cambias `app/src/theme/tokens.ts`,
   actualiza `DESIGN.md` (lo verifica `app/tests/design-md.test.ts`).
+- **`docs/diseno/principios-ux.md`**: reglas de jerarquía, usabilidad, microinteracciones y
+  leyes de UX (de _Refactoring UI_, _Practical UI_, _Don't Make Me Think_, _The Design of
+  Everyday Things_, _Microinteractions_ y _Laws of UX_) con la lista de revisión por pantalla.
+  Úsala al diseñar o revisar cualquier vista.
 - Skills de diseño en `.claude/skills/` (se cargan solas al trabajar en vistas; ver
   `.claude/skills/README.md`):
   - `frontend-design` (Anthropic): planificar el sistema y la dirección antes de codificar.
