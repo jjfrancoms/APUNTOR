@@ -46,6 +46,7 @@ export default function DeleteAccount() {
       footer={
         <>
           <Button
+            icon="trash-2"
             label={deleting ? d.deleting : d.submit}
             variant="danger"
             loading={deleting}

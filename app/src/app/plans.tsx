@@ -98,6 +98,7 @@ function Plans() {
   // Continuar: fijo al pie en el teléfono; en pantalla ancha va tras las tarjetas, con ancho de botón.
   const cta = (
     <Button
+      icon="arrow-right"
       label={p.continueWith(names[plan])}
       disabled={plan === 'free'}
       onPress={() => {

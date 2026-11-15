@@ -64,8 +64,8 @@ export default function DailyReview() {
       header={<TopBar title={r.header} />}
       footer={
         <>
-          <Button label={r.start} onPress={start} />
-          <Button label={r.later} variant="ghost" onPress={() => router.back()} />
+          <Button icon="play" label={r.start} onPress={start} />
+          <Button icon="clock" label={r.later} variant="ghost" onPress={() => router.back()} />
         </>
       }
     >

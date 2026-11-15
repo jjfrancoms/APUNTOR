@@ -16,6 +16,7 @@ function ProcessErrors() {
       header={<TopBar title={s.upload.header} />}
       footer={
         <Button
+          icon="arrow-right"
           label={s.processError.continueWith(ok)}
           onPress={() => router.push('/upload/review')}
         />
@@ -40,11 +41,13 @@ function ProcessErrors() {
         <Text variant="caption">{`• ${s.processError.zip}`}</Text>
         <View style={styles.actions}>
           <Button
+            icon="refresh-cw"
             label={s.uploadProblems.retry}
             compact
             onPress={() => router.push('/upload/scan')}
           />
           <Button
+            icon="x"
             label={s.uploadProblems.dismiss}
             variant="secondary"
             compact

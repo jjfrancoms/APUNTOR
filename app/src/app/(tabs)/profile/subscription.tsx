@@ -64,7 +64,7 @@ function Subscription() {
     return (
       <Screen
         header={<TopBar title={sub.header} />}
-        footer={<Button label={s.demo.upgrade} onPress={() => router.push('/plans')} />}
+        footer={<Button icon="star" label={s.demo.upgrade} onPress={() => router.push('/plans')} />}
       >
         <Card>
           <View style={styles.row}>

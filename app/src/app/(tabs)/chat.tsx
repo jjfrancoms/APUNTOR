@@ -136,6 +136,7 @@ export default function Conversations() {
           {s.conversations.deleteBody}
         </Text>
         <Button
+          icon="trash-2"
           label={s.conversations.deleteConfirm}
           variant="danger"
           onPress={() => {

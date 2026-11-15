@@ -123,8 +123,13 @@ function QuizPlay({
         }
         footer={
           <>
-            <Button label={s.quiz.toFlashcards} onPress={() => router.replace('/study/review')} />
             <Button
+              icon="layers"
+              label={s.quiz.toFlashcards}
+              onPress={() => router.replace('/study/review')}
+            />
+            <Button
+              icon="home"
               label={s.empty.backHome}
               variant="secondary"
               onPress={() => router.replace('/home')}
@@ -162,7 +167,12 @@ function QuizPlay({
         />
       }
       footer={
-        <Button label={last ? s.quiz.finish : s.quiz.next} disabled={!answered} onPress={next} />
+        <Button
+          icon="arrow-right"
+          label={last ? s.quiz.finish : s.quiz.next}
+          disabled={!answered}
+          onPress={next}
+        />
       }
     >
       <View style={[styles.layout, wide && styles.layoutWide]}>

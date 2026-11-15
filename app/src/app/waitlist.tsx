@@ -34,6 +34,7 @@ export default function Waitlist() {
       footer={
         <>
           <Button
+            icon="send"
             label={w.join}
             loading={sending}
             disabled={joined || !consent || !isValidEmail(email)}

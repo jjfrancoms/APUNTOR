@@ -35,7 +35,7 @@ function ChatError() {
           tone="accent"
           label={s.errors.CHAT_DAILY_LIMIT}
         />
-        <Button label={s.chat.seePlans} onPress={() => router.push('/plans')} />
+        <Button icon="star" label={s.chat.seePlans} onPress={() => router.push('/plans')} />
       </Banner>
     </ChatScreen>
   );

@@ -56,10 +56,12 @@ function ClassDetail() {
         items.length > 0 ? (
           <>
             <Button
+              icon="check-square"
               label={cv.practice}
               onPress={() => router.push({ pathname: '/study/quiz-setup', params: { classId } })}
             />
             <Button
+              icon="message-circle"
               label={cv.ask}
               variant="secondary"
               onPress={() =>
@@ -73,7 +75,11 @@ function ClassDetail() {
             />
           </>
         ) : (
-          <Button label={s.course.addDocument} onPress={() => router.push('/upload')} />
+          <Button
+            icon="upload"
+            label={s.course.addDocument}
+            onPress={() => router.push('/upload')}
+          />
         )
       }
     >

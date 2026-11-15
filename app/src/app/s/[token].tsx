@@ -91,7 +91,7 @@ function PublicSummary() {
         <View style={[styles.cta, wide && styles.ctaWide]}>
           <Text variant="heading">{p.ctaTitle}</Text>
           <Text variant="muted">{p.ctaBody}</Text>
-          <Button label={p.ctaButton} onPress={() => router.push('/register')} />
+          <Button icon="arrow-right" label={p.ctaButton} onPress={() => router.push('/register')} />
         </View>
       </View>
     </Screen>

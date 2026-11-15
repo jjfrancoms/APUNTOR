@@ -82,6 +82,7 @@ export default function DocumentDetail() {
       footer={
         <>
           <Button
+            icon="message-circle"
             label={s.document.ask}
             onPress={() => router.push({ pathname: '/conversation', params: { docs: record.id } })}
           />
@@ -90,6 +91,7 @@ export default function DocumentDetail() {
               {(['quiz', 'cards'] as const).map((kind) => (
                 <View key={kind} style={styles.flex}>
                   <Button
+                    icon={kind === 'quiz' ? 'check-square' : 'layers'}
                     label={kind === 'quiz' ? s.study.practice : s.study.cards}
                     variant="secondary"
                     onPress={() =>
@@ -227,6 +229,7 @@ export default function DocumentDetail() {
           autoFocus
         />
         <Button
+          icon="check"
           label={s.documentMenu.save}
           disabled={newName.trim().length === 0}
           onPress={() => {
@@ -272,6 +275,7 @@ export default function DocumentDetail() {
             </Text>
             <View style={styles.sheetActions}>
               <Button
+                icon="trash-2"
                 label={s.document.delete}
                 variant="danger"
                 onPress={() => {

@@ -160,6 +160,7 @@ function ReviewRow({
             autoFocus
           />
           <Button
+            icon="plus"
             label={s.review.newCourse}
             compact
             loading={busy}
@@ -170,6 +171,7 @@ function ReviewRow({
       ) : null}
       <View style={styles.actions}>
         <Button
+          icon="check"
           label={s.review.accept}
           compact
           loading={busy && mode === 'idle'}

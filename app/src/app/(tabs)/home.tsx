@@ -117,7 +117,11 @@ export default function Home() {
             {s.live.askBody}
           </Text>
           <View style={styles.start}>
-            <Button label={s.live.askCta} onPress={() => router.push('/conversation')} />
+            <Button
+              icon="message-circle"
+              label={s.live.askCta}
+              onPress={() => router.push('/conversation')}
+            />
           </View>
         </View>
       </View>

@@ -90,7 +90,7 @@ export default function ScanReview() {
       header={<TopBar title={r.header} />}
       footer={
         <>
-          <Button label={r.upload(pages.length)} onPress={upload} />
+          <Button icon="upload" label={r.upload(pages.length)} onPress={upload} />
           {pages.length < MAX_SCAN_PAGES ? (
             <Button label={r.addMore} variant="ghost" icon="camera" onPress={back} />
           ) : null}

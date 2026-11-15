@@ -51,6 +51,7 @@ export default function Profile() {
         </Text>
       </View>
       <Button
+        icon="edit-2"
         label={s.profile.edit}
         variant="secondary"
         size="sm"

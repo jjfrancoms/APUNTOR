@@ -88,6 +88,7 @@ export default function UploadProblems() {
       header={<TopBar title={p.header} />}
       footer={
         <Button
+          icon="refresh-cw"
           label={p.retryFailed}
           disabled={failed.length === 0}
           onPress={() => {

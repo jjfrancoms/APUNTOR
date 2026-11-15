@@ -74,6 +74,7 @@ export function ShareSheets({
         />
         <Banner tone="info" icon="lock" title={sh.privacy} />
         <Button
+          icon="link"
           label={creating ? sh.creating : sh.create}
           loading={creating}
           onPress={() => {
@@ -109,10 +110,12 @@ export function ShareSheets({
           <Chip label={expiryLabel} icon="clock" />
         </View>
         <Button
+          icon="share-2"
           label={sh.shareLink}
           onPress={() => void NativeShare.share({ message: url, url })}
         />
         <Button
+          icon={copied ? 'check' : 'copy'}
           label={copied ? sh.copied : sh.copy}
           variant="secondary"
           onPress={() => void copy()}

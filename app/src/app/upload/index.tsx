@@ -61,6 +61,7 @@ export default function Upload() {
             onPress={() => router.push('/upload/scan')}
           />
           <Button
+            icon="upload"
             label={s.upload.confirm}
             disabled={jobs.length === 0}
             onPress={() => router.push('/upload/progress')}

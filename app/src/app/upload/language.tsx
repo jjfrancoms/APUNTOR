@@ -30,7 +30,13 @@ function UnsupportedLanguage() {
   return (
     <Screen
       header={<TopBar title={s.uploadProblems.header} />}
-      footer={<Button label={s.language.back} onPress={() => router.replace('/upload')} />}
+      footer={
+        <Button
+          icon="arrow-left"
+          label={s.language.back}
+          onPress={() => router.replace('/upload')}
+        />
+      }
     >
       <FileRow
         tone="danger"

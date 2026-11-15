@@ -269,6 +269,7 @@ function DeleteUserSheet({
         error={wrong ? u.confirmError : undefined}
       />
       <Button
+        icon="trash-2"
         label={busy ? u.deleting : u.confirm}
         variant="danger"
         loading={busy}

@@ -54,6 +54,7 @@ export default function EditProfile() {
       header={<TopBar title={e.header} />}
       footer={
         <Button
+          icon="check"
           label={e.save}
           onPress={() => void save()}
           disabled={fullName.trim().length === 0}
@@ -154,6 +155,7 @@ export default function EditProfile() {
               }
             />
             <Button
+              icon="lock"
               label={e.changePassword}
               variant="secondary"
               disabled={current.length === 0 || next.length === 0 || confirm.length === 0}

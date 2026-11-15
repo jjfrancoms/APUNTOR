@@ -70,15 +70,21 @@ export default function Uploading() {
         <>
           {finished && failed.length > 0 ? (
             <Button
+              icon="alert-circle"
               label={s.demo.seeProblems}
               variant="secondary"
               onPress={() => router.push('/upload/problems')}
             />
           ) : null}
           {finished && ready.length > 0 ? (
-            <Button label={s.demo.reviewNow} onPress={() => router.push('/upload/review')} />
+            <Button
+              icon="check"
+              label={s.demo.reviewNow}
+              onPress={() => router.push('/upload/review')}
+            />
           ) : null}
           <Button
+            icon="plus"
             label={s.uploading.addMore}
             variant="secondary"
             onPress={() => void pickFiles().then((f) => f.length > 0 && enqueueUploads(f))}

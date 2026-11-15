@@ -167,6 +167,7 @@ function DeleteEntrySheet({
       <Banner tone="danger" icon="alert-triangle" title={w.deleteBody(entry.email)} />
       {error ? <Banner tone="danger" title={s.admin.errors[error]} /> : null}
       <Button
+        icon="trash-2"
         label={busy ? w.deleting : w.confirm}
         variant="danger"
         loading={busy}

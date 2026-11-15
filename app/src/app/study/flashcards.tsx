@@ -110,7 +110,9 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
     return (
       <Screen
         header={<TopBar icon="x" title={f.header} onBack={() => router.replace('/home')} />}
-        footer={<Button label={s.empty.backHome} onPress={() => router.replace('/home')} />}
+        footer={
+          <Button icon="home" label={s.empty.backHome} onPress={() => router.replace('/home')} />
+        }
       >
         <View style={[styles.done, wide && styles.doneWide]}>
           <Mascot size={wide ? 96 : 64} mood="sparkle" />

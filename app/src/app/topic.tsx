@@ -123,7 +123,7 @@ export default function TopicSummaryScreen() {
       footer={
         load.state === 'ready' && !wide ? (
           <>
-            <Button label={t.ask} onPress={ask} />
+            <Button icon="message-circle" label={t.ask} onPress={ask} />
             <View style={styles.study}>
               <View style={styles.flex}>
                 <Button
@@ -188,7 +188,7 @@ export default function TopicSummaryScreen() {
             <View style={[styles.aside, stickyTop]}>
               {metaBlock}
               <View style={styles.actions}>
-                <Button label={t.ask} onPress={ask} />
+                <Button icon="message-circle" label={t.ask} onPress={ask} />
                 <View style={styles.actionsRow}>
                   <View style={styles.flex}>
                     <Button

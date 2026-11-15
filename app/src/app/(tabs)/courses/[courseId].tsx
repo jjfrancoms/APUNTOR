@@ -53,8 +53,13 @@ export default function CourseDetail() {
       }
       footer={
         <>
-          <Button label={s.course.studyWithMascot} onPress={() => router.push('/conversation')} />
           <Button
+            icon="book-open"
+            label={s.course.studyWithMascot}
+            onPress={() => router.push('/conversation')}
+          />
+          <Button
+            icon="upload"
             label={s.course.addDocument}
             variant="secondary"
             onPress={() => router.push('/upload')}

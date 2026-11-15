@@ -162,6 +162,7 @@ export default function QuizSetup() {
       header={<TopBar icon="x" title={q.header} />}
       footer={
         <Button
+          icon="zap"
           label={st.generate}
           disabled={!selectedDoc || limitReached || !online}
           onPress={() => void generate()}
