@@ -21,6 +21,7 @@ export function DateField({
   value,
   onChange,
   error,
+  helper,
   /** Mes que se muestra al abrir si aún no hay fecha (por defecto, hace 18 años). */
   initialYearsAgo = 18,
 }: {
@@ -29,6 +30,8 @@ export function DateField({
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  /** Texto de ayuda bajo el campo; se oculta mientras haya un error. */
+  helper?: string;
   initialYearsAgo?: number;
 }) {
   const s = useStrings();
@@ -84,6 +87,7 @@ export function DateField({
         keyboardType="number-pad"
         autoComplete="birthdate-full"
         error={error}
+        helper={helper}
         trailing={
           <Tap
             accessibilityRole="button"

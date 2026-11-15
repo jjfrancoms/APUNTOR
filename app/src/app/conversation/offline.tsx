@@ -3,7 +3,6 @@ import {
   ChatScreen,
   Composer,
   MascotBubble,
-  MascotStage,
   SourceChips,
   UserBubble,
 } from '@/components/chat/Chat';
@@ -21,7 +20,6 @@ function ChatOffline() {
       composer={<Composer placeholder={s.chat.placeholder} />}
     >
       <Banner tone="warning" icon="wifi-off" title={s.chat.offlineBanner} />
-      <MascotStage label={s.chat.lightModel} mood="curious" />
       <UserBubble text={chatOffline.question} />
       <MascotBubble
         sources={<SourceChips page={chatOffline.page} external={s.chat.externalOffline} />}

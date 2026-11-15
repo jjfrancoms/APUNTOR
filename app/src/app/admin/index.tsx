@@ -91,6 +91,7 @@ export default function AdminOverview() {
           <Banner tone="danger" title={a.stats.failedAlert(failed)}>
             <View style={styles.start}>
               <Button
+                icon="alert-circle"
                 label={a.stats.seeFailed}
                 variant="dangerOutline"
                 compact
@@ -200,6 +201,7 @@ function Stat({
       {onPress ? (
         <View style={styles.start}>
           <Button
+            icon="arrow-right"
             label={`${s.admin.stats.goTo} ${label}`}
             variant={danger ? 'dangerOutline' : 'soft'}
             compact

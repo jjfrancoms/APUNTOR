@@ -9,13 +9,13 @@ export function StudyLoading({ title, hint }: { title?: string; hint?: string })
   const s = useStrings();
   return (
     <View style={styles.loading} accessibilityRole="progressbar">
-      <Mascot mood="curious" size={96} />
-      <Text variant="bodyStrong" align="center">
-        {title ?? s.study.loading}
-      </Text>
-      <Text variant="small" color="textMuted" align="center">
-        {hint ?? s.study.loadingHint}
-      </Text>
+      <Mascot mood="curious" size={56} />
+      <View style={styles.text}>
+        <Text variant="bodyStrong">{title ?? s.study.loading}</Text>
+        <Text variant="small" color="textMuted">
+          {hint ?? s.study.loadingHint}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -35,5 +35,11 @@ export function StudyError({ code, onRetry }: { code: StudyErrorCode; onRetry?: 
 }
 
 const styles = StyleSheet.create({
-  loading: { alignItems: 'center', gap: space.md, paddingVertical: space.xxxl },
+  loading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.lg,
+    paddingVertical: space.xxl,
+  },
+  text: { flex: 1, gap: 2 },
 });

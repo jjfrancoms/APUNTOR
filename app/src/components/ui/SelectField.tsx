@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { layout, radius, space, useTheme } from '@/theme';
+import { Field, FIELD_HEIGHT, useFieldColors } from './Field';
 import { Icon } from './Icon';
 import { Text } from './Text';
 import { Tap } from './Tap';
@@ -24,6 +25,9 @@ export function SelectField({
   selected,
   onSelect,
   defaultOpen = false,
+  error,
+  helper,
+  disabled = false,
 }: {
   label?: string;
   value?: string;
@@ -33,29 +37,42 @@ export function SelectField({
   selected?: string;
   onSelect?: (value: string) => void;
   defaultOpen?: boolean;
+  /** Mensaje de error bajo el campo (mismo marco que `TextField`). */
+  error?: string;
+  /** Texto de ayuda bajo el campo; se oculta mientras haya un error. */
+  helper?: string;
+  disabled?: boolean;
 }) {
   const { c } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
   const shown = value ?? options?.find((o) => o.value === selected)?.label;
   const inline = options !== undefined;
+  const colors = useFieldColors({ focused: open, error, disabled });
   return (
     <View style={styles.wrap}>
-      {label ? <Text variant="smallStrong">{label}</Text> : null}
-      <Tap
-        accessibilityRole="combobox"
-        accessibilityState={inline ? { expanded: open } : undefined}
-        accessibilityLabel={`${label ?? ''} ${shown ?? placeholder ?? ''}`.trim()}
-        onPress={inline ? () => setOpen((o) => !o) : onPress}
-        style={[
-          styles.box,
-          { backgroundColor: c.surface, borderColor: open ? c.primary : c.border },
-        ]}
-      >
-        <Text variant="body" color={shown ? 'text' : 'textMuted'} style={styles.flex}>
-          {shown ?? placeholder ?? ''}
-        </Text>
-        <Icon name={open ? 'chevron-up' : 'chevron-down'} color="textMuted" />
-      </Tap>
+      <Field label={label} helper={helper} error={error} ring={colors.ring}>
+        <Tap
+          accessibilityRole="combobox"
+          accessibilityState={{ expanded: inline ? open : undefined, disabled }}
+          accessibilityLabel={`${label ?? ''} ${shown ?? placeholder ?? ''}`.trim()}
+          disabled={disabled}
+          onPress={inline ? () => setOpen((o) => !o) : onPress}
+          style={[
+            styles.box,
+            { backgroundColor: colors.background, borderColor: colors.border },
+            disabled && styles.disabled,
+          ]}
+        >
+          <Text
+            variant="body"
+            color={shown && !disabled ? 'text' : 'textMuted'}
+            style={styles.flex}
+          >
+            {shown ?? placeholder ?? ''}
+          </Text>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} color="textMuted" />
+        </Tap>
+      </Field>
       {inline && open ? (
         <View
           accessibilityRole="list"
@@ -76,7 +93,8 @@ export function SelectField({
                 style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
                   styles.option,
                   i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
-                  (pressed || hovered || active) && { backgroundColor: c.primarySoft },
+                  active && { backgroundColor: c.primarySoft },
+                  !active && (pressed || hovered) && { backgroundColor: c.surfaceAlt },
                 ]}
               >
                 <View style={styles.flex}>
@@ -98,7 +116,7 @@ export function SelectField({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.xs + 2 },
+  wrap: { gap: space.sm },
   box: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,8 +124,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.lg,
-    minHeight: layout.primaryButtonHeight,
+    minHeight: FIELD_HEIGHT,
   },
+  disabled: { opacity: 0.7 },
   list: { borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' },
   option: {
     flexDirection: 'row',

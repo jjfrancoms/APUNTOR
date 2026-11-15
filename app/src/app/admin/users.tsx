@@ -89,7 +89,7 @@ export default function AdminUsers() {
       <Button
         label={u.delete}
         icon="trash-2"
-        variant="dangerOutline"
+        variant="secondary"
         compact
         onPress={() => {
           setDeleted(null);
@@ -269,6 +269,7 @@ function DeleteUserSheet({
         error={wrong ? u.confirmError : undefined}
       />
       <Button
+        icon="trash-2"
         label={busy ? u.deleting : u.confirm}
         variant="danger"
         loading={busy}

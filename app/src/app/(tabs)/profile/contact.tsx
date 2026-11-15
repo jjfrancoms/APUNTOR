@@ -40,6 +40,7 @@ function Contact() {
       header={<TopBar title={s.contact.header} />}
       footer={
         <Button
+          icon="send"
           label={s.contact.send}
           disabled={message.trim().length === 0}
           onPress={() => {

@@ -160,7 +160,8 @@ function ReviewRow({
             autoFocus
           />
           <Button
-            label={s.review.newCourse}
+            icon="plus"
+            label={s.review.createAndMove}
             compact
             loading={busy}
             disabled={courseName.trim().length === 0}
@@ -170,8 +171,10 @@ function ReviewRow({
       ) : null}
       <View style={styles.actions}>
         <Button
+          icon="check"
           label={s.review.accept}
           compact
+          variant={mode === 'idle' ? 'primary' : 'secondary'}
           loading={busy && mode === 'idle'}
           disabled={busy}
           onPress={() => void decide({ action: 'accept' })}
@@ -179,14 +182,16 @@ function ReviewRow({
         <Button
           label={s.review.chooseOther}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="folder"
           disabled={busy}
           onPress={() => setMode(mode === 'choose' ? 'idle' : 'choose')}
         />
         <Button
           label={s.review.newCourse}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="plus"
           disabled={busy}
           onPress={() => {
             setMode(mode === 'create' ? 'idle' : 'create');
@@ -196,7 +201,8 @@ function ReviewRow({
         <Button
           label={s.review.notNow}
           compact
-          variant="secondary"
+          variant="ghost"
+          icon="x"
           disabled={busy}
           onPress={() => void decide({ action: 'dismiss' })}
         />

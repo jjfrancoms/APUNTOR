@@ -114,28 +114,28 @@ Los valores exactos están en la colección de variables "Tokens" (en código:
 Resultado de la ronda de preguntas con el equipo de desarrollo (30 oct 2026). Lo marcado "Por
 confirmar" no está resuelto.
 
-| Área                 | Decisión                                                                                                         | Estado                     |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Plataforma           | Una sola base con Expo/React Native: Android, iOS y web.                                                         | Cerrada                    |
-| Documentos           | PDF, Word, PowerPoint, texto y OCR de fotos y escaneos. Español e inglés. Máximo 50 MB.                          | Cerrada                    |
-| Contexto externo     | Búsqueda web con citas visibles. Siempre en violeta y con fuente.                                                | Cerrada                    |
-| Clasificación        | Compara con tus cursos y propone; si duda, pregunta (16). Aprende de tus correcciones, solo dentro de tu cuenta. | Cerrada                    |
-| Chat                 | Responde solo con tus documentos; si no está, lo dice y ofrece buscar fuera (30).                                | Cerrada                    |
-| Historial y búsqueda | El historial se guarda hasta que lo borres. La búsqueda cubre títulos y contenido (39).                          | Cerrada                    |
-| Quiz y repaso        | Cantidad 5, 10 o 20 con dificultad adaptativa (31). Repetición espaciada (32).                                   | Cerrada                    |
-| Notificaciones       | Documentos procesados, repaso del día y límite renovado (esta última apagada por defecto).                       | Cerrada                    |
-| Compartir            | Enlace de solo lectura a un resumen generado por IA, con caducidad y revocable.                                  | Cerrada · revisión legal   |
-| Login                | Correo y contraseña, Google y Apple.                                                                             | Cerrada                    |
-| Pagos                | Compra dentro de la app (Google Play y App Store).                                                               | Cerrada                    |
-| Offline              | Solo leer lo ya cargado.                                                                                         | Cerrada                    |
-| Borrado de cuenta    | Inmediato y definitivo, con contraseña y confirmación escrita.                                                   | Cerrada · revisión legal   |
-| Analítica            | Eventos anónimos de uso, nunca contenido y sin identificador persistente.                                        | Por confirmar (legal)      |
-| Mascota              | 2D animada (Rive) con 7 estados. El 3D queda para después.                                                       | Cerrada                    |
-| Variantes            | Móvil, tablet, escritorio y modo oscuro.                                                                         | Cerrada                    |
-| Soporte              | Centro de ayuda y correo de contacto.                                                                            | Cerrada                    |
-| Lanzamiento          | Universidad y colegio a la vez; los menores de 18 entran a lista de espera.                                      | Cerrada · bloqueante legal |
-| Precio               | Plan Estudiante a S/ 14 al mes (cifra de ejemplo).                                                               | Por confirmar              |
-| Política de IA       | Proveedor con acuerdo de no entrenar con los datos del usuario.                                                  | Por confirmar (legal)      |
+| Área                 | Decisión                                                                                                          | Estado                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Plataforma           | Una sola base con Expo/React Native: Android, iOS y web.                                                          | Cerrada                    |
+| Documentos           | PDF, Word, PowerPoint, texto y OCR de fotos y escaneos. Español e inglés. Máximo 50 MB.                           | Cerrada                    |
+| Contexto externo     | Búsqueda web con citas visibles. Siempre en violeta y con fuente.                                                 | Cerrada                    |
+| Clasificación        | Compara con tus cursos y propone; si duda, pregunta (16). Aprende de tus correcciones, solo dentro de tu cuenta.  | Cerrada                    |
+| Chat                 | Responde solo con tus documentos; si no está, lo dice y ofrece buscar fuera (30).                                 | Cerrada                    |
+| Historial y búsqueda | El historial se guarda hasta que lo borres. La búsqueda cubre títulos y contenido (39).                           | Cerrada                    |
+| Quiz y repaso        | Cantidad 5, 10 o 20 con dificultad adaptativa (31). Repetición espaciada (32).                                    | Cerrada                    |
+| Notificaciones       | Documentos procesados, repaso del día y límite renovado (esta última apagada por defecto).                        | Cerrada                    |
+| Compartir            | Enlace de solo lectura a un resumen generado por IA, con caducidad y revocable.                                   | Cerrada · revisión legal   |
+| Login                | Correo y contraseña, Google y Apple.                                                                              | Cerrada                    |
+| Pagos                | Compra dentro de la app (Google Play y App Store).                                                                | Cerrada                    |
+| Offline              | Solo leer lo ya cargado.                                                                                          | Cerrada                    |
+| Borrado de cuenta    | Inmediato y definitivo, con contraseña y confirmación escrita.                                                    | Cerrada · revisión legal   |
+| Analítica            | Eventos anónimos de uso, nunca contenido y sin identificador persistente.                                         | Por confirmar (legal)      |
+| Mascota              | 2D animada (Rive) con 7 estados. El 3D queda para después.                                                        | Cerrada                    |
+| Variantes            | Móvil, tablet, escritorio y modo oscuro.                                                                          | Cerrada                    |
+| Soporte              | Centro de ayuda y correo de contacto.                                                                             | Cerrada                    |
+| Lanzamiento          | Universidad y colegio a la vez; los menores de 18 entran a lista de espera.                                       | Cerrada · bloqueante legal |
+| Precio               | Plan Estudiante a S/ 19.90 al mes o S/ 189 al año, y Pase de exámenes a S/ 9.90 por 7 días (soles, IGV incluido). | Por confirmar              |
+| Política de IA       | Proveedor con acuerdo de no entrenar con los datos del usuario.                                                   | Por confirmar (legal)      |
 
 ## 7. Modo oscuro y tablet (tokens de color)
 

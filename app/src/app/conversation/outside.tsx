@@ -41,7 +41,7 @@ function ChatOutside() {
           </Tap>
           <Button
             label={s.chat.uploadMaterial}
-            variant="secondary"
+            variant="ghost"
             icon="upload"
             compact
             onPress={() => router.push('/upload')}

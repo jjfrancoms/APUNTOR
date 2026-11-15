@@ -205,43 +205,43 @@ describe('resumen de un tema', () => {
       };
     }
 
-    it('usa el alto sin tope de razonamiento', async () => {
+    it('usa el medio con su tope de razonamiento', async () => {
       const { storage } = memoryStorage();
       const { calls, models } = scripted([okText]);
       const summary = await createTopicSummarizer({
         models,
-        model: 'alto',
-        fallbackModel: 'medio',
+        model: 'medio',
+        fallbackModel: 'alto',
         storage,
       }).get(input());
-      expect(calls.map((c) => c.model)).toEqual(['alto']);
-      expect(calls[0]?.config).not.toHaveProperty('thinkingConfig');
-      expect(summary.model).toBe('alto');
+      expect(calls.map((c) => c.model)).toEqual(['medio']);
+      expect(calls[0]?.config.thinkingConfig).toEqual({ thinkingBudget: 1024 });
+      expect(summary.model).toBe('medio');
     });
 
-    it('si el alto se satura, reintenta una vez con el medio y cobra una sola vez', async () => {
+    it('si el medio se satura, reintenta una vez con el alto y cobra una sola vez', async () => {
       const { files, storage } = memoryStorage();
       const { calls, models } = scripted([saturated(), okText]);
       const { log, billing: charge } = billing();
       const summary = await createTopicSummarizer({
         models,
-        model: 'alto',
-        fallbackModel: 'medio',
+        model: 'medio',
+        fallbackModel: 'alto',
         storage,
       }).get(input(), charge);
-      expect(calls.map((c) => c.model)).toEqual(['alto', 'medio']);
-      expect(calls[1]?.config.thinkingConfig).toEqual({ thinkingBudget: 1024 });
-      expect(summary.model).toBe('medio');
+      expect(calls.map((c) => c.model)).toEqual(['medio', 'alto']);
+      expect(calls[1]?.config).not.toHaveProperty('thinkingConfig');
+      expect(summary.model).toBe('alto');
       expect(log).toEqual({ reserved: 1, released: 0 });
       expect(files.has(summaryKey('u1/doc.pdf', 't1'))).toBe(true);
     });
 
-    it('si también falla el medio, devuelve el error y devuelve la cuota una vez', async () => {
+    it('si también falla el alto, devuelve el error y devuelve la cuota una vez', async () => {
       const { storage } = memoryStorage();
       const { calls, models } = scripted([saturated(), saturated()]);
       const { log, billing: charge } = billing();
       await expect(
-        createTopicSummarizer({ models, model: 'alto', fallbackModel: 'medio', storage }).get(
+        createTopicSummarizer({ models, model: 'medio', fallbackModel: 'alto', storage }).get(
           input(),
           charge,
         ),
@@ -254,7 +254,7 @@ describe('resumen de un tema', () => {
       const { storage } = memoryStorage();
       const { calls, models } = scripted([new Error('esquema inválido'), okText]);
       await expect(
-        createTopicSummarizer({ models, model: 'alto', fallbackModel: 'medio', storage }).get(
+        createTopicSummarizer({ models, model: 'medio', fallbackModel: 'alto', storage }).get(
           input(),
         ),
       ).rejects.toThrow('esquema');
@@ -265,15 +265,15 @@ describe('resumen de un tema', () => {
       const { storage } = memoryStorage();
       const { calls, models } = scripted([saturated(), okText]);
       await expect(
-        createTopicSummarizer({ models, model: 'alto', storage }).get(input()),
+        createTopicSummarizer({ models, model: 'medio', storage }).get(input()),
       ).rejects.toThrow();
-      expect(calls.map((c) => c.model)).toEqual(['alto']);
+      expect(calls.map((c) => c.model)).toEqual(['medio']);
     });
 
     it('ninguna llamada envía thinkingBudget 0', async () => {
       const { storage } = memoryStorage();
       const { calls, models } = scripted([saturated(), okText]);
-      await createTopicSummarizer({ models, model: 'alto', fallbackModel: 'medio', storage }).get(
+      await createTopicSummarizer({ models, model: 'medio', fallbackModel: 'alto', storage }).get(
         input(),
       );
       for (const call of calls) {

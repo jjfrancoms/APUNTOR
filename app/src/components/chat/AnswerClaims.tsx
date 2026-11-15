@@ -1,9 +1,9 @@
 import { StyleSheet, View } from 'react-native';
-import { Chip, Tap, Text } from '@/components/ui';
+import { Chip, Text } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import { openSourcePage } from '@/lib/source-page';
 import type { AnswerClaim } from '@/store/seed';
-import { radius, space, useTheme } from '@/theme';
+import { space } from '@/theme';
 
 /**
  * Respuesta de Illari con estructura: cada idea con su término y su notación (si el fragmento
@@ -12,7 +12,6 @@ import { radius, space, useTheme } from '@/theme';
  */
 export function AnswerClaims({ claims }: { claims: readonly AnswerClaim[] }) {
   const s = useStrings();
-  const { c } = useTheme();
   return (
     <View style={styles.list}>
       {claims.map((claim, i) => (
@@ -20,33 +19,31 @@ export function AnswerClaims({ claims }: { claims: readonly AnswerClaim[] }) {
           {claim.label || claim.formula ? (
             <View style={styles.head}>
               {claim.label ? (
-                <Text variant="smallStrong" selectable>
+                <Text variant="subheading" selectable>
                   {claim.label}
                 </Text>
               ) : null}
               {claim.formula ? (
-                <View style={[styles.formula, { backgroundColor: c.primarySoft }]}>
-                  <Text variant="smallStrong" color="primary" selectable>
-                    {claim.formula}
-                  </Text>
-                </View>
+                <Text variant="subheading" color="primary" selectable>
+                  {claim.formula}
+                </Text>
               ) : null}
             </View>
           ) : null}
-          <Text variant="small" selectable>
+          <Text variant="body" selectable>
             {claim.text}
           </Text>
           <View style={styles.pages}>
             {claim.pages.map((p) => (
-              <Tap
+              <Chip
                 key={`${p.documentId}-${p.page}`}
+                label={s.chat.ownSource(p.page)}
+                tone="primary"
+                icon="file-text"
                 accessibilityRole="link"
                 accessibilityLabel={s.chat.checkPage(p.page)}
                 onPress={() => void openSourcePage(p.documentId, p.page)}
-                hitSlop={8}
-              >
-                <Chip label={s.chat.ownSource(p.page)} tone="primary" icon="file-text" />
-              </Tap>
+              />
             ))}
           </View>
         </View>
@@ -56,9 +53,8 @@ export function AnswerClaims({ claims }: { claims: readonly AnswerClaim[] }) {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: space.md },
+  list: { gap: space.lg },
   claim: { gap: space.xs },
   head: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
-  formula: { paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.sm },
   pages: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
 });

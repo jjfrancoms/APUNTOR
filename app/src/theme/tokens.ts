@@ -86,6 +86,101 @@ export const mascotPalette = {
   sleep: '#B5ADA2',
 } as const;
 
+/**
+ * Paleta de las pantallas de acceso (inicio de sesión, registro, recuperación, privacidad…).
+ * Es fija: se ve igual con el tema claro y con el oscuro del sistema. Teal profundo, "ni tan claro
+ * ni tan oscuro". Solo la usan `AuthTheme` y los componentes de acceso; el resto de la app sigue
+ * con `colors`. Los valores se documentan en DESIGN.md (sección «Pantallas de acceso») y un test
+ * comprueba que ambos coincidan.
+ */
+export const auth = {
+  /** Fondo base de la pantalla. */
+  bg: '#0D2427',
+  /** Fondo más profundo, para las esquinas y las curvas. */
+  bgDeep: '#08191B',
+  /** Superficie de la tarjeta del formulario. */
+  card: '#0F292C',
+  /** Relleno de los campos y de los botones secundarios. */
+  field: '#0A1D20',
+  /** Borde fino de campos, botones secundarios y líneas divisorias. */
+  fieldBorder: '#2F5254',
+  /** Borde brillante de la tarjeta (teal con transparencia). */
+  cardBorder: '#4DB6A68C',
+  /** Texto principal. */
+  text: '#F2F7F6',
+  /** Texto secundario (gris verdoso). */
+  textMuted: '#9DB8B5',
+  /** Acento: enlaces, palabra destacada, anillo de foco, íconos de marca. */
+  accent: '#3FD0B5',
+  /** Halo del anillo de foco de los campos (acento con transparencia). */
+  accentRing: '#3FD0B538',
+  /** Extremo claro (arriba) del degradado del botón principal. */
+  accentTop: '#5BE6CC',
+  /** Extremo oscuro (abajo) del degradado del botón principal. */
+  accentBottom: '#2FB39D',
+  /** Texto sobre el botón principal. */
+  onAccent: '#04211D',
+  /** Resplandor del borde de la tarjeta (teal con transparencia). */
+  cardGlow: '#4DB6A640',
+  /** Brillo grande de fondo (verde de marca). */
+  glow: '#1D7568',
+  /** Brillo suave y trazo de las curvas de fondo (teal claro). */
+  glowSoft: '#4DB6A6',
+  /** Errores sobre fondo oscuro. */
+  danger: '#F28B80',
+  dangerSoft: '#3D1F1C',
+} as const;
+
+/**
+ * Colores de la marca «G» de Google. Excepción documentada: es la marca de un tercero y sus
+ * pautas exigen estos colores; solo la usa `GoogleSignIn`. No son tokens de interfaz.
+ */
+export const googleMark = {
+  yellow: '#FFC107',
+  red: '#FF3D00',
+  green: '#4CAF50',
+  blue: '#1976D2',
+} as const;
+
+export type AuthTokens = typeof auth;
+
+/** La paleta de acceso con la forma de `ColorTokens`: así Text, TextField, Button… la usan sin cambios. */
+export const authColors: Readonly<ColorTokens> = {
+  bg: auth.bg,
+  surface: auth.field,
+  surfaceAlt: auth.card,
+  border: auth.fieldBorder,
+  text: auth.text,
+  textMuted: auth.textMuted,
+  primary: auth.accent,
+  onPrimary: auth.onAccent,
+  primarySoft: auth.accentRing,
+  external: colors.dark.external,
+  externalSoft: colors.dark.externalSoft,
+  danger: auth.danger,
+  dangerSoft: auth.dangerSoft,
+  accent: colors.dark.accent,
+  accentSoft: colors.dark.accentSoft,
+  scrim: colors.dark.scrim,
+};
+
+/** Pares texto/fondo de las pantallas de acceso; todos deben cumplir AA (≥ 4,5:1). */
+export const AUTH_TEXT_PAIRS: readonly (readonly [string, string])[] = [
+  [auth.text, auth.bg],
+  [auth.text, auth.card],
+  [auth.text, auth.field],
+  [auth.textMuted, auth.bg],
+  [auth.textMuted, auth.card],
+  [auth.textMuted, auth.field],
+  [auth.accent, auth.bg],
+  [auth.accent, auth.card],
+  [auth.accent, auth.field],
+  [auth.onAccent, auth.accentTop],
+  [auth.onAccent, auth.accentBottom],
+  [auth.danger, auth.card],
+  [auth.danger, auth.field],
+];
+
 export const layout = {
   /** Área táctil mínima (px). */
   minTouchTarget: 44,
@@ -98,6 +193,31 @@ export const layout = {
     desktop: 1024,
   },
   sidebarWidth: { tablet: 88, desktop: 280 },
+} as const;
+
+/**
+ * Movimiento: duraciones (ms) y curvas compartidas. Discreto y funcional: sin rebote, sin
+ * sobreimpulso. Los valores se documentan en DESIGN.md (sección «Movimiento») y un test
+ * comprueba que ambos coincidan.
+ */
+export const motion = {
+  duration: {
+    /** Respuesta al toque (escala, tinte al pasar el puntero). */
+    fast: 120,
+    /** Cambios de estado (interruptor, segmentado, foco, marca, aviso). */
+    base: 180,
+    /** Entrada de hojas y diálogos. */
+    slow: 240,
+    /** Revelado circular al cambiar de tema (solo web). */
+    reveal: 400,
+  },
+  /** Curvas cúbicas [x1, y1, x2, y2]: `out` para entradas, `inOut` para cambios de estado. */
+  easing: {
+    out: [0.23, 1, 0.32, 1],
+    inOut: [0.77, 0, 0.175, 1],
+  },
+  /** Escala al presionar un control. */
+  pressScale: 0.97,
 } as const;
 
 export type NavigationLayout = 'bottom-bar' | 'rail' | 'sidebar';
@@ -144,6 +264,8 @@ export const TEXT_PAIRS: readonly (readonly [keyof ColorTokens, keyof ColorToken
   ['text', 'surface'],
   ['textMuted', 'bg'],
   ['textMuted', 'surface'],
+  ['textMuted', 'surfaceAlt'],
+  ['textMuted', 'primarySoft'],
   ['primary', 'bg'],
   ['primary', 'surface'],
   ['primary', 'primarySoft'],

@@ -1,8 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Icon } from '@/components/ui';
 import type { Course } from '@/data/mock';
-import { radius, useTheme } from '@/theme';
 
+/**
+ * Ícono del curso: plano, sin recuadro de color (el ícono funcional va solo). El tono del curso
+ * solo cambia el color del trazo.
+ */
 export function CourseBadge({
   course,
   size = 36,
@@ -10,24 +13,13 @@ export function CourseBadge({
   course: Pick<Course, 'icon' | 'tone'>;
   size?: number;
 }) {
-  const { c } = useTheme();
-  const bg =
-    course.tone === 'primary'
-      ? c.primarySoft
-      : course.tone === 'accent'
-        ? c.accentSoft
-        : c.surfaceAlt;
   return (
-    <View style={[styles.badge, { width: size, height: size, backgroundColor: bg }]}>
+    <View style={{ width: size * 0.67, alignItems: 'flex-start' }}>
       <Icon
         name={course.icon}
-        size={size * 0.5}
-        color={course.tone === 'primary' ? 'primary' : 'text'}
+        size={size * 0.6}
+        color={course.tone === 'primary' ? 'primary' : 'textMuted'}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  badge: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-});

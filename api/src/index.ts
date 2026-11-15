@@ -53,8 +53,8 @@ async function main(): Promise<void> {
     summaries: createTopicSummarizer({
       models,
       model: modelChoice.summary,
-      // Resumen a demanda: si el alto está saturado, un reintento con el medio (el worker no).
-      fallbackModel: modelChoice.medium,
+      // Resumen a demanda: si el medio está saturado, un reintento con el alto (el worker no).
+      fallbackModel: modelChoice.high,
       storage,
     }),
     study: { repository: createStudyRepository(db), generator: strongGenerator },

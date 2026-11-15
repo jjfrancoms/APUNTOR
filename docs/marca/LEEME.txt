@@ -1,0 +1,16 @@
+APUNTOR - Kit de logo vectorizado (4 nov 2026)
+
+Tipografia del logotipo: Montserrat Bold (700), sin tracking. Licencia SIL OFL (uso comercial libre).
+En los SVG el texto ya esta convertido a trazados: no necesitas tener la fuente instalada.
+
+Colores
+- color   #1D7568  (verde de marca) - sobre fondos claros (#FAF9F6)
+- oscuro  #4DB6A6  - sobre fondo oscuro (#121413)
+- negro   #1C1C1E  - impresion a una tinta
+- blanco  #FFFFFF  - sobre el verde de marca o fotos
+
+Piezas: isotipo, logotipo, logo vertical, logo horizontal (cada una en las 4 variantes),
+icono de app 1024 (cuadrado para tiendas y redondeado de referencia) y PNG del icono en 512/180/48/32/16.
+Todos los SVG tienen fondo transparente y un margen de proteccion de 40 px.
+
+Nota: el isotipo es una vectorizacion fiel del original, incluidos sus detalles (hocico, remate del cuello).

@@ -22,8 +22,8 @@ export default function ScreenMap() {
       </View>
       {screenGroups.map((g) => (
         <View key={g.title} style={styles.group}>
-          <Text variant="overline" color="textMuted">
-            {g.title.toUpperCase()}
+          <Text variant="heading" accessibilityRole="header">
+            {g.title}
           </Text>
           <Card style={styles.list}>
             {g.screens.map((scr, i) => (

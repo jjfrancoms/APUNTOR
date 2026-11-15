@@ -4,8 +4,9 @@ import { GENERATION_MODEL } from './vertex';
  * Tres niveles de modelo Gemini según la tarea:
  * - **bajo** (`low`): tareas pequeñas (p. ej. clasificar un documento en un curso).
  * - **medio** (`medium`): lo que el estudiante espera en el momento (primer intento del chat).
- * - **alto** (`high`): trabajo que se hace una vez y se guarda (OCR, resúmenes de tema), segundo
- *   intento del chat cuando la respuesta no pasa el validador de citas.
+ * - **alto** (`high`): trabajo que se hace una vez y se guarda (OCR), segundo intento del chat
+ *   cuando la respuesta no pasa el validador de citas y único respaldo de los resúmenes de tema
+ *   (que usan el medio) si el medio se satura.
  * `CHAT_MODEL` y `SUMMARY_MODEL` siguen valiendo como ajustes más específicos. `MODEL_FAST` y
  * `MODEL_STRONG` se aceptan como nombres antiguos de medio y alto.
  */
@@ -52,7 +53,7 @@ export function resolveModels(env: ModelEnv): ModelChoice {
     medium,
     high,
     chat: env.CHAT_MODEL ?? medium,
-    summary: env.SUMMARY_MODEL ?? high,
+    summary: env.SUMMARY_MODEL ?? medium,
     ocr: high,
   };
 }

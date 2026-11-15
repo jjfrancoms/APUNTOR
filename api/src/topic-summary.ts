@@ -266,16 +266,19 @@ export function createTopicSummarizer(deps: TopicSummarizerDeps) {
     return { version: SUMMARY_VERSION, topicId: input.topic.id, model, blocks };
   }
 
-  /** Modelo alto; si falla por saturación y hay respaldo, un solo reintento con el medio. */
+  /**
+   * Modelo medio (con su tope de razonamiento, nunca 0); si falla por saturación y hay respaldo,
+   * un solo reintento con el alto (sin tope: lo decide el modelo).
+   */
   async function generateWithFallback(input: SummaryInput): Promise<StoredSummary> {
     try {
-      return await generate(input, deps.model, HIGH_THINKING_BUDGET);
+      return await generate(input, deps.model, MEDIUM_THINKING_BUDGET);
     } catch (error) {
       const fallback = deps.fallbackModel;
       if (fallback === undefined || fallback === deps.model || !isTransientAiError(error)) {
         throw error;
       }
-      return generate(input, fallback, MEDIUM_THINKING_BUDGET);
+      return generate(input, fallback, HIGH_THINKING_BUDGET);
     }
   }
 

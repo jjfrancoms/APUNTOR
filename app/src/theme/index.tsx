@@ -1,15 +1,21 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, useWindowDimensions } from 'react-native';
 import {
+  auth,
+  authColors,
   colors,
   layout,
   mascotPalette,
+  motion,
   navigationLayoutFor,
+  type AuthTokens,
   type ColorMode,
   type ColorTokens,
 } from './tokens';
 
-export { layout, mascotPalette, navigationLayoutFor };
+export { layout, mascotPalette, motion, navigationLayoutFor };
+export type { AuthTokens };
+export { cssEasing, ease, webTransition } from './motion';
 /** Paletas completas, para superficies que no cambian con el tema (p. ej. el visor de cámara). */
 export { colors as palettes };
 export type { ColorTokens };
@@ -26,13 +32,22 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
 
 export const typeScale = {
-  display: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34 },
-  title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
-  heading: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24 },
+  /** Título de pantalla de primer nivel (Inicio, Perfil…): el escalón más alto de la interfaz. */
+  display: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 38 },
+  /** Cifra protagonista de una pantalla (resultado de un quiz): la única que debe verse primero. */
+  numeral: { fontFamily: fonts.extrabold, fontSize: 44, lineHeight: 48 },
+  /** Frase de apoyo bajo un título: algo mayor que el cuerpo. */
+  lead: { fontFamily: fonts.medium, fontSize: 17, lineHeight: 26 },
+  title: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32 },
+  heading: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 26 },
   subheading: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
   bodyStrong: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 22 },
   small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  /** Texto secundario: mismo tamaño que `small`; `Text` le da por defecto el color atenuado. */
+  muted: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  /** Etiqueta de campo o de control: igual que `smallStrong`. */
+  label: { fontFamily: fonts.semibold, fontSize: 13, lineHeight: 18 },
   smallStrong: { fontFamily: fonts.semibold, fontSize: 13, lineHeight: 18 },
   caption: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
   overline: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, letterSpacing: 0.6 },
@@ -43,15 +58,38 @@ export type TypeVariant = keyof typeof typeScale;
 export interface Theme {
   mode: ColorMode;
   c: ColorTokens;
+  /** Tokens extra de las pantallas de acceso; `null` fuera de ellas. */
+  auth: AuthTokens | null;
 }
 
-const ThemeContext = createContext<Theme>({ mode: 'light', c: colors.light });
+const ThemeContext = createContext<Theme>({ mode: 'light', c: colors.light, auth: null });
+
+const AUTH_THEME: Theme = { mode: 'dark', c: authColors, auth };
+
+/**
+ * Tema fijo de las pantallas de acceso: teal profundo con tema claro u oscuro del sistema. Los
+ * componentes de dentro (Text, TextField, Button…) leen `useTheme()` y toman esta paleta solos.
+ */
+export function AuthTheme({ children }: { children: ReactNode }) {
+  return <ThemeContext.Provider value={AUTH_THEME}>{children}</ThemeContext.Provider>;
+}
 
 export function ThemeProvider({ children, mode }: { children: ReactNode; mode?: ColorMode }) {
   const scheme = useColorScheme();
   const resolved: ColorMode = mode ?? (scheme === 'dark' ? 'dark' : 'light');
-  const value = useMemo<Theme>(() => ({ mode: resolved, c: colors[resolved] }), [resolved]);
+  const value = useMemo<Theme>(
+    () => ({ mode: resolved, c: colors[resolved], auth: null }),
+    [resolved],
+  );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+/**
+ * `true` desde tablet (≥ `layout.breakpoints.tablet`, 600 px): los componentes que organizan
+ * contenido pasan a su variante ancha (p. ej. la mascota junto al texto en `EmptyState`).
+ */
+export function useWide(): boolean {
+  return useWindowDimensions().width >= layout.breakpoints.tablet;
 }
 
 export function useTheme(): Theme {

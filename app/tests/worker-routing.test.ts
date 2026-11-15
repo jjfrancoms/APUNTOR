@@ -120,6 +120,11 @@ describe('enrutado de la web', () => {
       '/sitemap.xml',
       '/favicon.png',
       '/apuntor-icon.png',
+      '/illari-estudiando.png',
+      '/illari-estudiando.webp',
+      '/apple-touch-icon.png',
+      '/favicon-32.png',
+      '/favicon-16.png',
     ]) {
       expect(route(url), url).toEqual({ kind: 'static' });
     }

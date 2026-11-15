@@ -8,16 +8,15 @@ import {
   Chip,
   Icon,
   IconButton,
-  Mascot,
   Screen,
+  Segmented,
   Text,
   TextLink,
   TopBar,
 } from '@/components/ui';
 import { topicDetail, useStore } from '@/store/store';
 import { useStrings } from '@/i18n/es';
-import { layout, radius, space, useTheme } from '@/theme';
-import { Tap } from '@/components/ui/Tap';
+import { space, useTheme, useWide } from '@/theme';
 
 type Tab = 'mine' | 'external' | 'compare';
 
@@ -25,6 +24,7 @@ type Tab = 'mine' | 'external' | 'compare';
 function TopicDetail() {
   const s = useStrings();
   const { c } = useTheme();
+  const wide = useWide();
   const { topicId, sheet } = useLocalSearchParams<{ topicId: string; sheet?: string }>();
   const [share, setShare] = useState<ShareStep>(
     sheet === 'share' ? 'create' : sheet === 'created' ? 'created' : 'closed',
@@ -84,6 +84,7 @@ function TopicDetail() {
 
   return (
     <Screen
+      wide
       header={
         <TopBar
           title={topic.breadcrumb.join(' › ')}
@@ -96,32 +97,21 @@ function TopicDetail() {
       <Text variant="title" accessibilityRole="header">
         {topic.title}
       </Text>
-      <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: c.surfaceAlt }]}>
-        {(Object.keys(s.topic.tabs) as Tab[]).map((key) => {
-          const active = key === tab;
-          return (
-            <Tap
-              key={key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-              onPress={() => setTab(key)}
-              style={[styles.segmentItem, active && { backgroundColor: c.surface }]}
-            >
-              <Text variant="smallStrong" color={active ? 'text' : 'textMuted'}>
-                {s.topic.tabs[key]}
-              </Text>
-            </Tap>
-          );
-        })}
+      <Segmented
+        options={(Object.keys(s.topic.tabs) as Tab[]).map((key) => ({
+          value: key,
+          label: s.topic.tabs[key],
+        }))}
+        value={tab}
+        onChange={setTab}
+      />
+      <View style={[styles.cols, wide && tab === 'compare' && styles.colsWide]}>
+        {tab !== 'external' ? <View style={styles.col}>{own}</View> : null}
+        {tab !== 'mine' ? <View style={styles.col}>{external}</View> : null}
       </View>
-      {tab !== 'external' ? own : null}
-      {tab !== 'mine' ? external : null}
       {tab === 'compare' && topic.notes.length > 0 ? (
-        <Card tone="accent">
-          <View style={styles.row}>
-            <Mascot size={40} />
-            <Text variant="smallStrong">{s.topic.noticed}</Text>
-          </View>
+        <Card>
+          <Text variant="subheading">{s.topic.noticed}</Text>
           {topic.notes.map((note) => (
             <Text key={note} variant="small">
               {`• ${note}`}
@@ -141,14 +131,9 @@ function TopicDetail() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
-  segment: { flexDirection: 'row', borderRadius: radius.md, padding: 4 },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-    minHeight: layout.minTouchTarget,
-  },
+  cols: { gap: space.lg },
+  colsWide: { flexDirection: 'row', alignItems: 'flex-start' },
+  col: { flex: 1, minWidth: 0 },
 });
 
 // Usa datos de ejemplo: en la app real se muestra "Muy pronto" hasta su fase.

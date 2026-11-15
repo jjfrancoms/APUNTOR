@@ -54,12 +54,10 @@ export default function Help() {
                 },
               ]}
             >
-              <View
-                style={[styles.tileIcon, { backgroundColor: active ? c.surface : c.primarySoft }]}
-              >
-                <Icon name={CATEGORY_ICONS[i] ?? 'help-circle'} size={18} color="primary" />
-              </View>
-              <Text variant="smallStrong">{label}</Text>
+              <Icon name={CATEGORY_ICONS[i] ?? 'help-circle'} size={18} color="primary" />
+              <Text variant="smallStrong" style={styles.flex}>
+                {label}
+              </Text>
             </Tap>
           );
         })}
@@ -120,7 +118,7 @@ export default function Help() {
         accessibilityRole="link"
         onPress={() => void Linking.openURL(`mailto:${s.help.supportEmail}`).catch(() => undefined)}
       >
-        <Card tone="primary" style={styles.row}>
+        <Card style={styles.row}>
           <View style={styles.flex}>
             <Text variant="bodyStrong" color="primary">
               {s.help.notFoundTitle}
@@ -155,21 +153,17 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
     outlineColor: 'transparent',
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   tile: {
     flexBasis: '47%',
     flexGrow: 1,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: space.lg,
-    gap: space.md,
-  },
-  tileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    gap: space.md,
+    minHeight: layout.minTouchTarget + 8,
   },
   list: { padding: 0, gap: 0 },
   faq: { padding: space.lg, gap: space.sm, minHeight: layout.minTouchTarget + 12 },

@@ -1,26 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  Banner,
-  Button,
-  Card,
-  Checkbox,
-  Icon,
-  ListRow,
-  Screen,
-  Text,
-  TextLink,
-  Toggle,
-  TopBar,
-} from '@/components/ui';
+import { AuthLayout } from '@/components/domain/AuthLayout';
+import { Banner, Button, Checkbox, Text, TextLink, Toggle, TopBar } from '@/components/ui';
 import { useStrings, type ErrorCode } from '@/i18n/es';
 import { acceptLegalDocuments, updateSettings, useStore } from '@/store/store';
-import { space } from '@/theme';
+import { space, useTheme } from '@/theme';
 
 /** Pantalla 15 · Privacidad y consentimiento */
 export default function Privacy() {
   const s = useStrings();
+  const { c } = useTheme();
   const settings = useStore((st) => st.settings);
   const useDocs = settings.useDocs;
   const external = settings.external;
@@ -46,10 +36,12 @@ export default function Privacy() {
     }
     router.push('/onboarding');
   };
+  const rule = { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth };
   return (
-    <Screen
-      narrow
-      header={<TopBar title={s.privacy.header} />}
+    <AuthLayout
+      title={s.privacy.header}
+      subtitle={s.privacy.intro}
+      header={<TopBar />}
       footer={
         <>
           <Checkbox
@@ -82,52 +74,59 @@ export default function Privacy() {
           {/* "Usar mis documentos" es necesario para que la app funcione. */}
           <Button
             label={s.privacy.submit}
+            icon="check"
             disabled={!accepted || !useDocs}
             loading={busy}
             onPress={() => void submit()}
           />
           <Button
             label={s.privacy.fullPolicy}
+            icon="file-text"
             variant="secondary"
             onPress={() => router.push('/legal/privacy')}
           />
         </>
       }
     >
-      <Text variant="small" color="textMuted">
-        {s.privacy.intro}
-      </Text>
-      <Card style={styles.list}>
-        <ListRow
+      <View>
+        <Toggle
+          value={useDocs}
+          onChange={setUseDocs}
+          label={s.privacy.useDocs.title}
           title={s.privacy.useDocs.title}
-          detail={s.privacy.useDocs.detail}
-          trailing={
-            <Toggle value={useDocs} onChange={setUseDocs} label={s.privacy.useDocs.title} />
-          }
+          description={s.privacy.useDocs.detail}
         />
-        <ListRow
-          title={s.privacy.external.title}
-          detail={s.privacy.external.detail}
-          divider={false}
-          trailing={
-            <Toggle value={external} onChange={setExternal} label={s.privacy.external.title} />
-          }
-        />
-      </Card>
-      <Card tone="accent">
-        <View style={styles.row}>
-          <Icon name="shield" size={16} />
-          <Text variant="smallStrong">{s.privacy.minorTitle}</Text>
+        <View style={[styles.second, rule]}>
+          <Toggle
+            value={external}
+            onChange={setExternal}
+            label={s.privacy.external.title}
+            title={s.privacy.external.title}
+            description={s.privacy.external.detail}
+          />
         </View>
-        <Text variant="caption">{s.privacy.minorBody}</Text>
+      </View>
+      {/* Aviso para menores: sección simple con línea fina, sin recuadro de color. */}
+      <View style={[styles.minor, rule]}>
+        <Text variant="smallStrong">{s.privacy.minorTitle}</Text>
+        <Text variant="small" color="textMuted">
+          {s.privacy.minorBody}
+        </Text>
         {/* Mapa: 15 Privacidad → 44 Lista de espera (menores de 18). */}
-        <TextLink label={s.privacy.minorAction} onPress={() => router.push('/waitlist')} />
-      </Card>
-    </Screen>
+        <View style={styles.start}>
+          <TextLink
+            icon="info"
+            label={s.privacy.minorAction}
+            onPress={() => router.push('/waitlist')}
+          />
+        </View>
+      </View>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 0, gap: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  second: { marginTop: space.md, paddingTop: space.md },
+  minor: { gap: space.xs, paddingTop: space.lg },
+  start: { alignItems: 'flex-start' },
 });

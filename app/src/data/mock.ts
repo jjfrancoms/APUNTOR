@@ -531,7 +531,7 @@ export const reviewToday = {
 
 export const plans = {
   freePrice: 'S/ 0',
-  studentPrice: 'S/ 14',
+  studentPrice: 'S/ 19.90',
   reviewTime: '8:00 p. m.',
   renewDate: '30 de noviembre',
   paymentMethod: 'Google Play',

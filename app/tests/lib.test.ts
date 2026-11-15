@@ -76,13 +76,15 @@ describe('fecha de nacimiento', async () => {
 });
 
 describe('precios', () => {
-  it('el anual baja el precio mensual un 20 %', async () => {
-    const { studentPrice, formatSoles } = await import('../src/lib/pricing');
-    expect(formatSoles(studentPrice('monthly').perMonth)).toBe('S/ 14');
+  it('el plan Estudiante cuesta S/ 19.90 al mes o S/ 189 al año, y el pase S/ 9.90', async () => {
+    const { studentPrice, formatSoles, EXAM_PASS } = await import('../src/lib/pricing');
+    expect(formatSoles(studentPrice('monthly').perMonth)).toBe('S/ 19.90');
     const y = studentPrice('yearly');
-    expect(formatSoles(y.perMonth)).toBe('S/ 11.20');
-    expect(formatSoles(y.total)).toBe('S/ 134.40');
-    expect(formatSoles(y.savedPerYear ?? 0)).toBe('S/ 33.60');
+    expect(formatSoles(y.perMonth)).toBe('S/ 15.75');
+    expect(formatSoles(y.total)).toBe('S/ 189');
+    expect(formatSoles(y.before ?? 0)).toBe('S/ 19.90');
+    expect(formatSoles(y.savedPerYear ?? 0)).toBe('S/ 49.80');
+    expect(formatSoles(EXAM_PASS)).toBe('S/ 9.90');
   });
 });
 

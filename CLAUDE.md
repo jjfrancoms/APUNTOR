@@ -21,8 +21,8 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   `gemini-2.5-flash` vía Vertex AI. Tres niveles de modelo (`resolveModels()`,
   `api/src/llm/models.ts`): **bajo** (`MODEL_LOW`) para tareas pequeñas (p. ej. clasificar un
   documento en un curso); **medio** (`MODEL_MEDIUM`) para el primer intento del chat, lo que el
-  estudiante espera; **alto** (`MODEL_HIGH`) para lo que se hace una vez y se guarda (OCR,
-  resúmenes) y para un único segundo intento del chat si la respuesta no pasa el validador o falla
+  estudiante espera, y para los resúmenes de tema (con el alto como único respaldo); **alto** (`MODEL_HIGH`) para lo que se hace una vez y se guarda (OCR) y
+  para un único segundo intento del chat si la respuesta no pasa el validador o falla
   con un error no pasajero (`AnswerDeps.fallbackGenerator`; sigue siendo una pregunta de la cuota).
   `MODEL_FAST`/`MODEL_STRONG` siguen valiendo como nombres antiguos de medio/alto; `CHAT_MODEL` y
   `SUMMARY_MODEL` son ajustes más específicos. Todos valen `GENERATION_MODEL` si no se definen
@@ -99,8 +99,9 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
   fórmula con ">>", figura con caja 0–1000 que el servidor recorta de la página). Se descartan
   páginas que el modelo no vio y figuras de más de media página. Se genera una vez y se guarda
   en `usuario/doc/summaries/` (se borra con el documento). Tope `maxOutputTokens` (corta bucles).
-  Modelo: `SUMMARY_MODEL` o el alto. El worker los genera de antemano tras marcar `completed`
-  (`worker/src/ingestion/topic-summaries.ts`): temas raíz y hojas, máx. 40, uno por uno con
+  Modelo: `SUMMARY_MODEL` o el medio, con el alto como único respaldo si el
+  medio se satura (solo en la API; el worker no cambia de modelo). El worker los genera de antemano tras marcar `completed`
+  (`worker/src/ingestion/topic-summaries.ts`): solo temas raíz, máx. 8; el resto a demanda, uno por uno con
   `WORKER_AI_RETRY` y como mucho 20 min (menos que el vencimiento del trabajo); un fallo nunca
   cambia el estado del documento y lo que falte se genera al pedirlo. La app muestra cada parte
   con su página, que abre la página original para comprobarla.
@@ -183,6 +184,10 @@ error). Lo marcado **Por confirmar** en esa especificación no es una decisión 
 - **`DESIGN.md`** (raíz) es la identidad visual: paleta, tipografía, espacios, patrones y qué
   evitar. Manda sobre cualquier propuesta de una skill. Si cambias `app/src/theme/tokens.ts`,
   actualiza `DESIGN.md` (lo verifica `app/tests/design-md.test.ts`).
+- **`docs/diseno/principios-ux.md`**: reglas de jerarquía, usabilidad, microinteracciones y
+  leyes de UX (de _Refactoring UI_, _Practical UI_, _Don't Make Me Think_, _The Design of
+  Everyday Things_, _Microinteractions_ y _Laws of UX_) con la lista de revisión por pantalla.
+  Úsala al diseñar o revisar cualquier vista.
 - Skills de diseño en `.claude/skills/` (se cargan solas al trabajar en vistas; ver
   `.claude/skills/README.md`):
   - `frontend-design` (Anthropic): planificar el sistema y la dirección antes de codificar.

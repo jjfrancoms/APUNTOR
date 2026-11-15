@@ -1,12 +1,16 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { layout } from '@/theme';
+import { layout, space, typeScale } from '@/theme';
 import { useStrings } from '@/i18n/es';
 import { entryRoute, useStore } from '@/store/store';
 import { IconButton } from './IconButton';
 import { Text } from './Text';
 
+/**
+ * Barra superior tranquila: volver (o cerrar) a la izquierda, título y subtítulo alineados a la
+ * izquierda y una acción opcional a la derecha. Sin fondo ni borde: se apoya en el de la pantalla.
+ */
 export function TopBar({
   title,
   subtitle,
@@ -28,27 +32,47 @@ export function TopBar({
   return (
     <View style={styles.bar}>
       <IconButton
-        icon={icon}
+        plain
+        edge="start"
+        icon={icon === 'x' ? 'x' : 'chevron-left'}
         label={icon === 'x' ? s.common.close : s.common.back}
         onPress={back}
       />
       <View style={styles.title}>
-        <Text variant="subheading" align="center" accessibilityRole="header" numberOfLines={1}>
+        <Text variant="subheading" accessibilityRole="header" numberOfLines={1}>
           {title ?? ''}
         </Text>
         {subtitle ? (
-          <Text variant="caption" color="textMuted" align="center" numberOfLines={1}>
+          <Text variant="caption" color="textMuted" numberOfLines={1}>
             {subtitle}
           </Text>
         ) : null}
       </View>
-      <View style={styles.side}>{right}</View>
+      {right ? <View style={styles.side}>{right}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', minHeight: layout.minTouchTarget + 8 },
-  title: { flex: 1 },
-  side: { width: layout.minTouchTarget, alignItems: 'flex-end' },
+  // El título queda junto al botón de volver; el área táctil del botón sobresale del margen.
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.xs,
+    minHeight: layout.minTouchTarget + 8,
+    paddingTop: 4,
+  },
+  // La primera línea del título queda a la altura del centro del botón de volver (44 px).
+  title: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: (layout.minTouchTarget - typeScale.subheading.lineHeight) / 2,
+    paddingBottom: 4,
+  },
+  side: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: layout.minTouchTarget,
+  },
 });

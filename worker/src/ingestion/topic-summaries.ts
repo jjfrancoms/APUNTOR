@@ -11,13 +11,13 @@ import type { TopicSummarizer } from '../../../api/src/topic-summary';
 
 /**
  * Resúmenes de tema generados de antemano en el worker, tras completar la ingesta: cuando el
- * estudiante abre un tema, el resumen ya está guardado en R2 y no espera al modelo alto. Usa el
+ * estudiante abre un tema raíz, el resumen ya está guardado en R2 y no espera al modelo. Usa el
  * mismo `createTopicSummarizer` que la API (misma clave de caché), así que un resumen que falte se
  * sigue generando al pedirlo. Nunca cambia el estado del documento.
  */
 
-/** Temas resumidos como máximo por documento (el resto se genera al pedirlo). */
-export const MAX_PREGENERATED_SUMMARIES = 40;
+/** Temas raíz resumidos como máximo por documento (el resto se genera al pedirlo). */
+export const MAX_PREGENERATED_SUMMARIES = 8;
 /**
  * Tiempo máximo dedicado a los resúmenes dentro del trabajo de la cola: debe quedar por debajo
  * de `expireInSeconds` (30 min, `api/src/queue.ts`) para que pg-boss no lo dé por vencido.
@@ -45,17 +45,16 @@ const firstPage = (topic: TopicRow): number =>
   topic.sourcePages.length === 0 ? Number.MAX_SAFE_INTEGER : Math.min(...topic.sourcePages);
 
 /**
- * Temas raíz y temas hoja (sin subtemas), en orden de aparición en el documento, hasta `max`.
- * Los intermedios se generan solo si el estudiante los abre.
+ * Solo temas raíz con páginas de origen, en orden de aparición en el documento, hasta `max`.
+ * Los subtemas y las hojas se generan a demanda cuando el estudiante los abre.
  */
 export function selectSummaryTopics(
   topics: readonly TopicRow[],
   max = MAX_PREGENERATED_SUMMARIES,
 ): TopicRow[] {
-  const parents = new Set(topics.flatMap((t) => (t.parentId === null ? [] : [t.parentId])));
   return topics
     .map((topic, index) => ({ topic, index }))
-    .filter(({ topic }) => topic.parentId === null || !parents.has(topic.id))
+    .filter(({ topic }) => topic.parentId === null && topic.sourcePages.length > 0)
     .sort((a, b) => firstPage(a.topic) - firstPage(b.topic) || a.index - b.index)
     .slice(0, max)
     .map(({ topic }) => topic);

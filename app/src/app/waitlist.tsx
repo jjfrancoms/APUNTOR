@@ -34,6 +34,7 @@ export default function Waitlist() {
       footer={
         <>
           <Button
+            icon="send"
             label={w.join}
             loading={sending}
             disabled={joined || !consent || !isValidEmail(email)}
@@ -58,13 +59,11 @@ export default function Waitlist() {
       }
     >
       <View style={styles.hero}>
-        <Mascot size={110} />
-        <Text variant="title" align="center" accessibilityRole="header">
+        <Mascot size={56} />
+        <Text variant="title" accessibilityRole="header">
           {w.title}
         </Text>
-        <Text variant="small" color="textMuted" align="center">
-          {w.body}
-        </Text>
+        <Text variant="muted">{w.body}</Text>
       </View>
       <TextField
         label={w.email}
@@ -87,6 +86,6 @@ export default function Waitlist() {
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: 'center', gap: space.md, paddingTop: space.lg },
-  inline: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.xs },
+  hero: { alignItems: 'flex-start', gap: space.md, paddingTop: space.lg },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
 });

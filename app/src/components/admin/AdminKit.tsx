@@ -148,6 +148,7 @@ export function LoadMore({
       {error ? <Banner tone="danger" title={s.admin.errors[error]} /> : null}
       {hasMore ? (
         <Button
+          icon={error ? 'refresh-cw' : 'chevron-down'}
           label={error ? s.admin.retry : s.admin.loadMore}
           variant="secondary"
           compact
