@@ -798,9 +798,9 @@ export const en: Strings = {
     header: 'Delete account',
     title: "Everything is deleted and it can't be undone",
     items: (docs: number, courses: number, chats: number) => [
-      `${docs} documents and their topics`,
-      `${courses} courses`,
-      `${chats} conversations`,
+      `${docs} ${docs === 1 ? 'document' : 'documents'} and their topics`,
+      `${courses} ${courses === 1 ? 'course' : 'courses'}`,
+      `${chats} ${chats === 1 ? 'conversation' : 'conversations'}`,
       'Shared links (they stop working)',
     ],
     subscription:

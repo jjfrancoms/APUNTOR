@@ -803,9 +803,9 @@ export const es = {
     header: 'Borrar cuenta',
     title: 'Se borra todo y no se puede deshacer',
     items: (docs: number, courses: number, chats: number) => [
-      `${docs} documentos y sus temas`,
-      `${courses} cursos`,
-      `${chats} conversaciones`,
+      `${docs} ${docs === 1 ? 'documento' : 'documentos'} y sus temas`,
+      `${courses} ${courses === 1 ? 'curso' : 'cursos'}`,
+      `${chats} ${chats === 1 ? 'conversación' : 'conversaciones'}`,
       'Enlaces compartidos (dejan de funcionar)',
     ],
     subscription: 'Tu suscripción no se cancela sola. Cancélala antes en Google Play o App Store.',
