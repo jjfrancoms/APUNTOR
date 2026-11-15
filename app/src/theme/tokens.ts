@@ -264,6 +264,8 @@ export const TEXT_PAIRS: readonly (readonly [keyof ColorTokens, keyof ColorToken
   ['text', 'surface'],
   ['textMuted', 'bg'],
   ['textMuted', 'surface'],
+  ['textMuted', 'surfaceAlt'],
+  ['textMuted', 'primarySoft'],
   ['primary', 'bg'],
   ['primary', 'surface'],
   ['primary', 'primarySoft'],

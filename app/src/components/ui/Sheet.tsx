@@ -29,7 +29,7 @@ export function Sheet({
   title?: string;
   children: ReactNode;
 }) {
-  const { c } = useTheme();
+  const { c, mode } = useTheme();
   const s = useStrings();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -114,7 +114,8 @@ export function Sheet({
           style={[
             styles.sheet,
             {
-              backgroundColor: c.surface,
+              // En oscuro la elevación se expresa con una superficie más clara que la de la página.
+              backgroundColor: mode === 'dark' ? c.surfaceAlt : c.surface,
               borderColor: c.border,
               paddingBottom: space.xxl + insets.bottom,
             },

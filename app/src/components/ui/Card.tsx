@@ -38,6 +38,14 @@ export function Card({
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: radius.md, padding: space.lg, gap: space.sm },
   content: { gap: space.sm },
-  header: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: space.md },
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md },
+  // Encabezado: un título corto (se lee antes que el contenido); pie: acciones o metadatos en fila.
+  header: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: space.md, gap: space.xs },
+  footer: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: space.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space.sm,
+  },
 });

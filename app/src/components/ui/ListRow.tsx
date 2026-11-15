@@ -53,7 +53,7 @@ export function ListRow({
           {title}
         </Text>
         {detail ? (
-          <Text variant="caption" color="textMuted">
+          <Text variant="small" color="textMuted">
             {detail}
           </Text>
         ) : null}

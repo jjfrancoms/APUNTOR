@@ -71,7 +71,15 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps) {
             </View>
           )}
           <Text
-            variant={mode === 'sidebar' ? 'bodyStrong' : focused ? 'smallStrong' : 'caption'}
+            variant={
+              mode === 'sidebar'
+                ? focused
+                  ? 'bodyStrong'
+                  : 'body'
+                : focused
+                  ? 'smallStrong'
+                  : 'caption'
+            }
             color={focused ? 'primary' : 'textMuted'}
             // La barra inferior tiene alto fijo: con texto muy grande cortaría las etiquetas.
             maxFontSizeMultiplier={mode === 'sidebar' ? undefined : 1.3}

@@ -39,6 +39,7 @@ export function Field({
   const reduced = useReducedMotion();
   return (
     <View style={styles.wrap}>
+      {/* Jerarquía: etiqueta (seminegrita) > error (13, rojo) > ayuda (12, apagada). */}
       {label ? <Text variant="label">{label}</Text> : null}
       {/* El halo ocupa espacio propio y se compensa con margen negativo: no mueve el diseño. */}
       <View
@@ -53,7 +54,7 @@ export function Field({
       {error ? (
         <View style={styles.message} accessibilityLiveRegion="polite">
           <Icon name="alert-circle" size={14} color="danger" />
-          <Text variant="caption" color="danger" style={styles.flex}>
+          <Text variant="small" color="danger" style={styles.flex}>
             {error}
           </Text>
         </View>
