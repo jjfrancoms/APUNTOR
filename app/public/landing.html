@@ -120,23 +120,37 @@ h2{font-size:1.5rem;line-height:1.3;font-weight:800;letter-spacing:-.01em;margin
 .steps span{color:var(--muted)}
 /* Planes */
 .plans-sub{margin:0;color:var(--muted);font-size:1.0625rem;line-height:1.6}
-.plans{list-style:none;margin:32px 0 0;padding:0;display:grid;gap:16px}
-.plan{display:flex;flex-direction:column;gap:16px;padding:24px;border:1px solid var(--field-border);border-radius:24px;background:color-mix(in srgb,var(--card) 72%,transparent)}
-.plan.hot{border-color:var(--card-border);box-shadow:0 0 40px var(--card-glow),inset 0 0 40px color-mix(in srgb,var(--glow) 18%,transparent)}
-.plan h3{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0;font-size:1.25rem;line-height:1.5;font-weight:800;letter-spacing:-.01em}
-.tag{display:inline-flex;align-items:center;min-height:1.75rem;padding:0 12px;border:1px solid var(--card-border);border-radius:999px;background:var(--accent-ring);color:var(--accent);font-size:0.8125rem;font-weight:700;letter-spacing:0}
-.price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:0}
-.amount{font-size:2.25rem;line-height:1.1;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.billing{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;margin:32px 0 0}
+.billing[hidden]{display:none}
+.switch{position:relative;flex:none;width:3rem;height:1.75rem;margin:8px 0;padding:0;border:1px solid var(--field-border);border-radius:999px;background:var(--field);cursor:pointer}
+.switch::after{content:"";position:absolute;inset:-10px -2px}
+.switch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.knob{position:absolute;top:3px;left:3px;width:1.25rem;height:1.25rem;border-radius:50%;background:var(--muted)}
+.switch[aria-checked=true]{background:var(--accent-ring);border-color:var(--card-border)}
+.switch[aria-checked=true] .knob{transform:translateX(1.25rem);background:var(--accent)}
+.billing-label{font-weight:600;font-size:0.9375rem}
+.save{display:inline-flex;align-items:center;min-height:1.75rem;padding:0 12px;border:1px solid var(--card-border);border-radius:999px;background:var(--accent-ring);color:var(--accent);font-size:0.8125rem;font-weight:700}
+.plans{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:16px}
+.plan{position:relative;display:flex;flex-direction:column;gap:16px;padding:24px;border:1px solid var(--field-border);border-radius:24px;background:color-mix(in srgb,var(--card) 72%,transparent);text-align:center}
+.plan.hot{border:2px solid var(--accent);background:var(--card);box-shadow:0 0 40px var(--card-glow),inset 0 0 40px color-mix(in srgb,var(--glow) 18%,transparent)}
+.plan h3{margin:0;color:var(--muted);font-size:0.9375rem;line-height:1.5;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.plan.hot{padding-top:44px}
+.badge{position:absolute;top:-2px;right:-2px;display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 14px 6px 16px;border-radius:0 22px 0 16px;background:var(--accent);color:var(--on-accent);font-size:0.8125rem;font-weight:800;line-height:1.3}
+.badge .i{width:.875rem;height:.875rem;fill:currentColor}
+.price{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:4px 10px;margin:0}
+.amount{font-size:2.75rem;line-height:1.1;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .hot .amount{color:var(--accent)}
 .per{color:var(--muted);font-size:0.9375rem}
 .alt{margin:-8px 0 0;color:var(--muted);font-size:0.875rem;font-variant-numeric:tabular-nums}
-.perks{flex:1;display:grid;gap:10px;align-content:start;margin:0;padding:16px 0 0;border-top:1px solid var(--field-border);list-style:none}
+.perks{flex:1;display:grid;gap:10px;align-content:start;margin:0;padding:16px 0 0;border-top:1px solid var(--field-border);list-style:none;text-align:left}
 .perks li{display:flex;gap:10px;align-items:flex-start;line-height:1.5}
-.perks .i{margin-top:.125rem;width:1.125rem;height:1.125rem;color:var(--accent)}
+.perks .i{margin-top:.125rem;width:1.125rem;height:1.125rem;flex:none;color:var(--accent)}
+.foot{display:grid;grid-template-rows:3.5rem 2.75rem;align-items:center;justify-items:center;margin-top:-4px;padding-top:16px;border-top:1px solid var(--field-border)}
 .plan .btn{width:100%}
-.btn:disabled{border-style:dashed;border-color:var(--field-border);color:var(--muted);background:transparent;cursor:not-allowed}
+.btn:disabled{background:color-mix(in srgb,var(--accent) 22%,var(--field));color:var(--muted);border-color:var(--field-border);box-shadow:none;filter:none;cursor:not-allowed}
 .btn:disabled:active{transform:none}
-.meanwhile{align-self:center;display:inline-flex;align-items:center;min-height:44px;font-size:0.9375rem;font-weight:600}
+.meanwhile{display:inline-flex;align-items:center;min-height:44px;font-size:0.9375rem;font-weight:600}
+.desc{margin:0;color:var(--muted);font-size:0.875rem}
 .plans-note{margin:24px 0 0;color:var(--muted);font-size:0.9375rem;max-width:60ch}
 .cta{margin:64px 0 0;padding:40px 0 64px;border-top:1px solid var(--field-border);display:grid;gap:20px;justify-items:start}
 .cta h2{margin:0;max-width:20ch}
@@ -147,6 +161,8 @@ footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44
 footer a:hover{color:var(--accent)}
 footer p{margin:0}
 footer .end{flex-basis:100%;margin-top:4px}
+@media (prefers-reduced-motion:no-preference){.knob,.switch{transition:transform var(--dur-base) var(--ease-out),background-color var(--dur-base),border-color var(--dur-base)}.plan{transition:transform var(--dur-slow) var(--ease-out)}}
+@media (min-width:900px) and (prefers-reduced-motion:no-preference){.plans{perspective:1400px}.plan:first-child{transform:translateX(16px) scale(.94) rotateY(10deg);transform-origin:right}.plan:last-child{transform:translateX(-16px) scale(.94) rotateY(-10deg);transform-origin:left}}
 @media (prefers-reduced-motion:reduce){.btn,.enter,.nav a{transition:none}.btn:active,.enter:active{transform:none}}
 /* Revelado al hacer scroll (bajo el hero): nativo con scroll-driven animations; sin soporte, el
    respaldo de abajo. Sin JS o con movimiento reducido no se oculta nada. */
@@ -178,8 +194,9 @@ h2{font-size:1.875rem}
 .rows li{grid-template-columns:4rem 1fr 1.6fr;gap:32px;padding:28px 0;align-items:baseline}
 .rows h3{margin:0}
 .steps{grid-template-columns:repeat(3,1fr);gap:48px}
-.plans{grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+.plans{grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch;margin-top:48px}
 .plan{padding:28px}
+.plan.hot{margin-top:-20px;padding-top:44px;z-index:2}
 .cta{grid-template-columns:1fr auto;align-items:center;gap:32px;margin-top:96px;padding:48px 0 80px}
 footer .end{flex-basis:auto;margin:0 0 0 auto}
 }
@@ -193,6 +210,7 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
 <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
 <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
 <symbol id="i-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/><path d="M22 10v6"/></symbol>
 <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
@@ -310,40 +328,49 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <section class="section reveal" aria-labelledby="planes-titulo" id="planes">
 <h2 id="planes-titulo">Planes</h2>
 <p class="plans-sub">Empieza gratis. Los planes de pago llegan muy pronto.</p>
+<div class="billing" hidden>
+<button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="pago-etiqueta"><span class="knob"></span></button>
+<span id="pago-etiqueta" class="billing-label">Pago anual</span><span class="save">Ahorra 20 %</span>
+</div>
 <ul class="plans">
 <li class="plan">
 <h3>Gratis</h3>
-<p class="price"><span class="amount">S/ 0</span><span class="per">para siempre</span></p>
+<p class="price"><span class="amount">S/ 0</span><span class="per">/ para siempre</span></p>
+<p class="alt">Sin tarjeta</p>
 <ul class="perks">
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>20 preguntas al día</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>500 MB de documentos</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Respuestas con la página de tus apuntes</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Resúmenes por tema</span></li>
 </ul>
-<a class="btn fill" href="/register">Empieza gratis</a>
+<div class="foot"><a class="btn fill" href="/register">Empieza gratis</a></div>
+<p class="desc">Para probar Apuntor con tus apuntes</p>
 </li>
 <li class="plan hot">
-<h3>Estudiante <span class="tag">Recomendado</span></h3>
-<p class="price"><span class="amount">S/ 19.90</span><span class="per">al mes</span></p>
-<p class="alt">o S/ 189 al año (ahorras 20 %)</p>
+<p class="badge"><svg class="i star" aria-hidden="true" focusable="false"><use href="#i-star"/></svg>Recomendado</p>
+<h3>Estudiante</h3>
+<p class="price"><span class="amount">S/ <span id="est-num">19.90</span></span><span class="per" id="est-per">/ mes</span></p>
+<p class="alt" id="est-alt" data-mensual="Se cobra cada mes, o S/ 189 al año" data-anual="S/ 189 al año, en un solo pago">Se cobra cada mes, o S/ 189 al año</p>
 <ul class="perks">
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Hasta 50 preguntas al día</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>5 GB de documentos</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Quizzes y tarjetas de repaso</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Contexto externo con fuente</span></li>
 </ul>
-<button class="btn line" type="button" disabled>Muy pronto</button>
-<a class="meanwhile" href="/register">Mientras tanto, empieza gratis</a>
+<div class="foot"><button class="btn fill" type="button" disabled>Muy pronto</button><a class="meanwhile" href="/register">Mientras tanto, empieza gratis</a></div>
+<p class="desc">Para estudiar todo el ciclo</p>
 </li>
 <li class="plan">
 <h3>Pase de exámenes</h3>
-<p class="price"><span class="amount">S/ 9.90</span><span class="per">por 7 días, sin renovación automática</span></p>
+<p class="price"><span class="amount">S/ 9.90</span><span class="per">/ 7 días</span></p>
+<p class="alt">Pago único, sin renovación</p>
 <ul class="perks">
-<li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Todo lo del plan Estudiante durante 7 días</span></li>
+<li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Todo lo del plan Estudiante</span></li>
+<li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Durante 7 días</span></li>
 <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Ideal para parciales y finales</span></li>
-<li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Pago único</span></li>
 </ul>
-<button class="btn line" type="button" disabled>Muy pronto</button>
+<div class="foot"><button class="btn fill" type="button" disabled>Muy pronto</button></div>
+<p class="desc">Para la semana de exámenes</p>
 </li>
 </ul>
 <p class="plans-note">Precios en soles, IGV incluido. ¿Universidad o instituto? Escríbenos a <a href="mailto:soporte@apuntor.com">soporte@apuntor.com</a> para un plan por grupo.</p>
@@ -369,6 +396,7 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <script>
 /* Menú: desplazamiento suave propio (aceleración y frenado, 0,7–1,1 s; directo con movimiento reducido), resalta la sección en pantalla (aria-current) y cierra el menú del teléfono al elegir. */
 (function(){try{var ids=['inicio','que-hace','como-funciona','planes'];var els=ids.map(function(id){return document.getElementById(id)});var links=[].slice.call(document.querySelectorAll('.nav a[href^="#"],.menu-panel a[href^="#"]'));var menu=document.querySelector('.menu');var mark=function(id){links.forEach(function(a){var on=a.getAttribute('href')==='#'+id;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')})};var gliding=false;var update=function(){busy=false;if(gliding)return;var line=innerHeight*0.35,cur=ids[0];els.forEach(function(el,i){if(el&&el.getBoundingClientRect().top<=line)cur=ids[i]});if(innerHeight+scrollY>=document.documentElement.scrollHeight-4)cur=ids[ids.length-1];mark(cur)};var busy=false;addEventListener('scroll',function(){if(!busy){busy=true;requestAnimationFrame(update)}},{passive:true});var still=matchMedia('(prefers-reduced-motion: reduce)');var ease=function(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};var glide=function(el,id){var gap=id==='inicio'?0:40;var to=Math.max(0,Math.round(el.getBoundingClientRect().top+scrollY-gap));var from=scrollY,dist=to-from;var done=function(){gliding=false;history.pushState(null,'','#'+id);el.setAttribute('tabindex','-1');el.focus({preventScroll:true})};if(still.matches||Math.abs(dist)<2){scrollTo({top:to,behavior:'instant'});done();return}gliding=true;var dur=Math.min(1100,Math.max(700,Math.abs(dist)*.45)),t0=null;var step=function(now){if(t0===null)t0=now;var k=Math.min(1,(now-t0)/dur);scrollTo({top:from+dist*ease(k),behavior:'instant'});if(k<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)};links.forEach(function(a){a.addEventListener('click',function(ev){if(menu)menu.open=false;var id=a.getAttribute('href').slice(1);var el=document.getElementById(id);if(!el)return;ev.preventDefault();mark(id);glide(el,id)})});update()}catch(_){}})();
+(function(){try{var sw=document.querySelector('.switch');var num=document.getElementById('est-num');var per=document.getElementById('est-per');var alt=document.getElementById('est-alt');if(!sw||!num||!per||!alt)return;sw.parentNode.hidden=false;var calm=matchMedia('(prefers-reduced-motion: reduce)');var raf=0;var show=function(v){num.textContent=v.toFixed(2)};var roll=function(to){cancelAnimationFrame(raf);var from=parseFloat(num.textContent);if(calm.matches||from===to){show(to);return}var t0=null;var step=function(now){if(t0===null)t0=now;var k=Math.min(1,(now-t0)/500);show(from+(to-from)*(1-Math.pow(1-k,3)));if(k<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step)};sw.addEventListener('click',function(){var on=sw.getAttribute('aria-checked')!=='true';sw.setAttribute('aria-checked',on?'true':'false');per.textContent='/ mes';alt.textContent=on?alt.getAttribute('data-anual'):alt.getAttribute('data-mensual');roll(on?15.75:19.90)})}catch(_){}})();
 </script>
 </body>
 </html>

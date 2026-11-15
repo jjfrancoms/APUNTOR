@@ -189,18 +189,28 @@ describe('landing', () => {
     expect(planes).toContain('Los planes de pago llegan muy pronto');
     for (const piece of [
       'S/ 0',
-      'S/ 19.90',
-      'S/ 189 al año (ahorras 20 %)',
-      'S/ 9.90',
+      '19.90',
+      'S/ 189 al año',
+      '9.90',
+      'Gratis',
+      'Estudiante',
+      'Pase de exámenes',
       'Hasta 50 preguntas al día',
       'IGV incluido',
       'Recomendado',
+      'Pago anual',
+      'Ahorra 20 %',
     ]) {
       expect(planes).toContain(piece);
     }
+    // El precio anual por mes vive en el script que anima el número.
+    expect(html).toContain('15.75');
+    // El interruptor es un switch accesible, apagado (mensual) por defecto y oculto sin JS.
+    expect(planes).toMatch(/<button[^>]*role="switch"[^>]*aria-checked="false"/);
+    expect(planes).toMatch(/<div class="billing" hidden>/);
     // Los dos planes de pago no se pueden comprar todavía: botones deshabilitados, no enlaces.
     expect(
-      planes.match(/<button class="btn line" type="button" disabled>Muy pronto<\/button>/g),
+      planes.match(/<button class="btn fill" type="button" disabled>Muy pronto<\/button>/g),
     ).toHaveLength(2);
     expect(planes).toMatch(/<a class="btn fill" href="\/register">Empieza gratis<\/a>/);
     expect(planes).toContain('href="/register">Mientras tanto, empieza gratis');
