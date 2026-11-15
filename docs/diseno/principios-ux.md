@@ -7,7 +7,10 @@ estilo; este documento dice **cómo decidir**.
 
 Fuentes: _Refactoring UI_ (Wathan y Schoger), _Practical UI_ (Dannaway), _Don't Make Me
 Think_ (Krug), _The Design of Everyday Things_ (Norman), _Microinteractions_ (Saffer) y
-_Laws of UX_ (Yablonski, lawsofux.com).
+_Laws of UX_ (Yablonski). Leídas en abierto: lawsofux.com/es,
+nngroup.com/articles/ten-usability-heuristics, practical-ui.com, sensible.com/dont-make-me-think
+y la skill comunitaria (MIT) basada en _Refactoring UI_
+(github.com/jeremylongshore/claude-code-plugins-plus-skills, `wondelai-refactoring-ui`).
 
 ## 1. Jerarquía y sistema visual (Refactoring UI, Practical UI)
 
@@ -33,6 +36,19 @@ _Laws of UX_ (Yablonski, lawsofux.com).
 - **Modo oscuro:** menos contraste que blanco puro sobre negro puro; superficies más claras
   = más elevadas; colores de acento algo más claros y menos saturados.
 - **Contraste mínimo AA** (4.5:1 texto, 3:1 controles y bordes que indican estado).
+- **Diseñar primero en escala de grises** y añadir color al final: si la jerarquía no se
+  entiende en gris, el color no la arregla.
+- **Tres palancas de jerarquía: tamaño, peso y color.** Usa una o dos a la vez; las tres en
+  todo anulan el efecto.
+- **Interlineado:** títulos 1.0–1.25, cuerpo 1.5–1.75. Sin pesos menores a 400 en cuerpo.
+  Como mucho dos familias tipográficas.
+- **Anchos:** texto de lectura 40–80 caracteres (ideal 45–75); formularios de 300 a 500 px.
+- **Centrar solo** titulares cortos, el hero y estados vacíos; todo lo demás a la izquierda.
+- **Sombras en escala:** pequeñas para lo apenas elevado (botón, tarjeta), grandes para lo
+  flotante (hoja, menú, diálogo). En oscuro, la elevación se expresa con superficies más
+  claras, no con sombra.
+- **Encabezados que se entienden fuera de contexto** (lectores de pantalla los listan solos).
+- **Prueba de desenfoque:** con la pantalla borrosa, lo que más pesa debe ser lo importante.
 
 ## 2. Usabilidad (Don't Make Me Think)
 
@@ -47,6 +63,28 @@ _Laws of UX_ (Yablonski, lawsofux.com).
 - **Convenciones antes que originalidad** en navegación, formularios y controles.
 - **Prueba rápida:** si alguien nuevo duda más de un par de segundos sobre qué tocar, la
   pantalla falla.
+
+## 2b. Las 10 heurísticas de usabilidad (Nielsen Norman Group)
+
+Síntesis práctica de la consultora de Don Norman y Jakob Nielsen, con la pregunta que se hace
+en cada pantalla:
+
+1. **Visibilidad del estado del sistema:** ¿cada acción tiene confirmación o progreso
+   visible? ¿Se sabe en qué paso estás (subida, quiz)?
+2. **Coincidencia con el mundo real:** ¿las palabras son las del estudiante (curso, tema,
+   apuntes) y no internas (chunk, ingesta, embedding)?
+3. **Control y libertad:** ¿hay Cancelar, Atrás y, cuando se pueda, Deshacer?
+4. **Consistencia y estándares:** ¿la misma acción tiene siempre el mismo nombre e ícono?
+5. **Prevención de errores:** ¿lo irreversible pide confirmación? ¿Los campos evitan
+   entradas inválidas y traen valores por defecto?
+6. **Reconocer antes que recordar:** ¿las etiquetas siguen visibles? ¿Hay que recordar algo
+   de otra pantalla?
+7. **Flexibilidad y eficiencia:** ¿hay atajos para lo frecuente (preguntar desde un tema,
+   sugerencias) sin esconder el camino básico?
+8. **Estética y diseño minimalista:** ¿cada elemento sirve al objetivo de la pantalla?
+9. **Reconocer y recuperarse de errores:** ¿el mensaje dice qué pasó y cómo seguir, en
+   lenguaje claro y sin códigos a la vista?
+10. **Ayuda y documentación:** ¿hay ayuda justo donde la gente se traba?
 
 ## 3. Pistas y retroalimentación (The Design of Everyday Things)
 
@@ -95,6 +133,23 @@ Cada microinteracción tiene **disparador → reglas → feedback → bucles/mod
 | **Tesler**                    | La complejidad no desaparece, se traslada            | Que la app la absorba (clasificar, ordenar temas), no el estudiante          |
 | **Postel**                    | Ser flexible con lo que se recibe                    | Aceptar formatos y fechas variadas; corregir en vez de rechazar              |
 | **Estética-usabilidad**       | Lo bonito se percibe más fácil                       | Pulir lo visible primero: acceso, Inicio, respuesta del chat                 |
+
+Más leyes del catálogo de lawsofux.com que también aplican:
+
+- **Hick, en la práctica:** resaltar la opción recomendada, dividir lo complejo en pasos y
+  enseñar de a poco (onboarding progresivo), sin simplificar hasta perder significado.
+- **Jakob:** si se cambia un patrón conocido, dar un tiempo de transición.
+- **Miller:** no es un límite de "7 cosas"; es una razón para agrupar en bloques.
+- **Carga cognitiva y sobrecarga de opciones:** cada elemento extra cuesta atención.
+- **Atención selectiva:** la gente ve lo que se relaciona con su objetivo; lo demás se ignora.
+- **Paradoja del usuario activo:** nadie lee instrucciones antes de usar; la ayuda va en
+  contexto.
+- **Semejanza y conectividad uniforme:** lo que se parece o está conectado se lee como grupo.
+- **Prägnanz y navaja de Occam:** la forma más simple gana; ante dos diseños que funcionan,
+  el que tenga menos piezas.
+- **Pareto:** cuidar primero el 20 % de pantallas que concentran el uso (Inicio, chat, resumen
+  del tema, subida).
+- **Fluir y Parkinson:** no interrumpir la tarea; mostrar tiempos estimados realistas.
 
 ## Lista de revisión por pantalla
 
