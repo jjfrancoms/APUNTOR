@@ -56,7 +56,7 @@ export default function Upload() {
         <>
           <Button
             label={s.upload.scan}
-            variant="secondary"
+            variant="ghost"
             icon="camera"
             onPress={() => router.push('/upload/scan')}
           />
@@ -71,7 +71,7 @@ export default function Upload() {
     >
       <OfflineBanner title={s.connection.uploads} />
       <View style={[styles.layout, wide && styles.layoutWide]}>
-        <View style={styles.dropCol}>
+        <View style={[styles.dropCol, wide && styles.half]}>
           <View style={styles.lead}>
             <Text variant="title" accessibilityRole="header">
               {s.upload.lead}
@@ -89,20 +89,20 @@ export default function Upload() {
             ]}
           >
             <Icon name="upload" size={22} color="primary" />
-            <Text variant="bodyStrong">{s.upload.dropTitle}</Text>
+            <Text variant="subheading">{s.upload.dropTitle}</Text>
             <Text variant="caption" color="textMuted">
               {s.upload.dropDetail}
             </Text>
           </Tap>
         </View>
-        <View style={styles.filesCol}>
+        <View style={[styles.filesCol, wide && styles.half]}>
           {jobs.length === 0 ? (
             <Text variant="small" color="textMuted">
               {s.demo.noUploads}
             </Text>
           ) : (
             <>
-              <Text variant="smallStrong">{s.upload.processing(jobs.length)}</Text>
+              <Text variant="subheading">{s.upload.processing(jobs.length)}</Text>
               {jobs.map((j) => (
                 <FileRow
                   key={j.id}
@@ -145,7 +145,7 @@ export default function Upload() {
               ]}
             >
               <View style={styles.row}>
-                <Text variant="smallStrong" style={styles.flex}>
+                <Text variant="subheading" style={styles.flex}>
                   {s.upload.planTitle}
                 </Text>
                 <TextLink label={s.upload.edit} onPress={() => router.push('/upload/review')} />
@@ -162,10 +162,12 @@ export default function Upload() {
 }
 
 const styles = StyleSheet.create({
-  layout: { gap: space.xl },
+  layout: { gap: space.xxl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
-  dropCol: { flex: 1, minWidth: 0, gap: space.lg },
-  filesCol: { flex: 1, minWidth: 0, gap: space.md },
+  dropCol: { minWidth: 0, gap: space.lg },
+  filesCol: { minWidth: 0, gap: space.md },
+  // En pantalla ancha las dos columnas se reparten el ancho; en móvil se apilan sin encogerse.
+  half: { flex: 1 },
   lead: { gap: space.xs },
   // Zona de soltar: borde discontinuo sobre la superficie, sin relleno de color.
   drop: {

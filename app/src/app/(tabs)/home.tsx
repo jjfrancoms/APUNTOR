@@ -106,7 +106,7 @@ export default function Home() {
     );
   }
   const main = (
-    <>
+    <View style={styles.sections}>
       {syncError}
       {/* Invitación a preguntar: fila simple, sin recuadro; separada por una línea fina. */}
       <View style={[styles.ask, { borderBottomColor: c.border }]}>
@@ -126,7 +126,7 @@ export default function Home() {
         </View>
       </View>
       {lastDoc ? (
-        <>
+        <View style={styles.section}>
           {/* Encabezado de sección (sin etiqueta en mayúsculas sobre el título). */}
           <Text variant="heading">{s.live.lastDocument}</Text>
           <Tap
@@ -151,7 +151,7 @@ export default function Home() {
                     lastDoc.status === 'failed'
                       ? 'danger'
                       : lastDoc.status === 'completed'
-                        ? 'primary'
+                        ? 'neutral'
                         : 'warning'
                   }
                 />
@@ -159,96 +159,84 @@ export default function Home() {
               </View>
             </View>
           </Tap>
-        </>
+        </View>
       ) : null}
-      <View style={styles.row}>
-        <Text variant="heading" style={styles.flex}>
-          {s.home.myCourses}
-        </Text>
-        <TextLink label={s.common.seeAll} onPress={() => router.navigate('/courses')} />
-      </View>
-      <View style={styles.list}>
-        {courses.map((course, i) => (
-          <Tap
-            key={course.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${course.title}, ${formatPercent(course.progress)}`}
-            onPress={() => router.push(`/courses/${course.id}`)}
-            style={[
-              styles.courseRow,
-              i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
-            ]}
-          >
-            <Icon
-              name={course.icon}
-              size={20}
-              color={course.tone === 'primary' ? 'primary' : 'textMuted'}
-            />
-            <View style={styles.flex}>
-              <View style={styles.row}>
-                <Text variant="smallStrong" style={styles.flex}>
-                  {course.title}
-                </Text>
-                <Text variant="caption" color="textMuted">
-                  {formatPercent(course.progress)}
-                </Text>
+      <View style={styles.section}>
+        <View style={styles.row}>
+          <Text variant="heading" style={styles.flex}>
+            {s.home.myCourses}
+          </Text>
+          <TextLink label={s.common.seeAll} onPress={() => router.navigate('/courses')} />
+        </View>
+        <View style={styles.list}>
+          {courses.map((course, i) => (
+            <Tap
+              key={course.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${course.title}, ${formatPercent(course.progress)}`}
+              onPress={() => router.push(`/courses/${course.id}`)}
+              style={[
+                styles.courseRow,
+                i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth },
+              ]}
+            >
+              <Icon
+                name={course.icon}
+                size={20}
+                color={course.tone === 'primary' ? 'primary' : 'textMuted'}
+              />
+              <View style={styles.flex}>
+                <View style={styles.row}>
+                  <Text variant="bodyStrong" style={styles.flex}>
+                    {course.title}
+                  </Text>
+                  <Text variant="caption" color="textMuted">
+                    {formatPercent(course.progress)}
+                  </Text>
+                </View>
+                <ProgressBar value={course.progress} label={course.title} />
               </View>
-              <ProgressBar value={course.progress} label={course.title} />
-            </View>
-          </Tap>
-        ))}
+            </Tap>
+          ))}
+        </View>
       </View>
-    </>
+    </View>
   );
   // Columna lateral (solo escritorio): resumen de uso y accesos rápidos.
   const side = (
-    <>
+    <View style={styles.section}>
       <Text variant="heading">{s.home.summary}</Text>
       <Card style={styles.summary}>
-        <View style={styles.stat}>
-          <Text variant="small" color="textMuted" style={styles.flex}>
-            {s.home.documents}
-          </Text>
-          <Text variant="bodyStrong">{docCount}</Text>
-        </View>
+        {/* La cuota de preguntas es la cifra clave: grande y en el color de marca. */}
         {plan === 'free' ? (
-          <View style={styles.flex}>
-            <View style={styles.stat}>
-              <Text variant="small" color="textMuted" style={styles.flex}>
-                {s.home.questions}
+          <View style={styles.stat}>
+            <Text variant="small" color="textMuted">
+              {s.home.questions}
+            </Text>
+            <View style={styles.quota}>
+              <Text variant="numeral" color="primary">
+                {String(asked)}
               </Text>
-              <Text variant="bodyStrong">{`${asked} / ${limit}`}</Text>
+              <Text variant="lead" color="textMuted">{`/ ${limit}`}</Text>
             </View>
             <ProgressBar value={asked / limit} label={s.home.questions} />
           </View>
         ) : null}
-        <View style={styles.flex}>
-          <View style={styles.stat}>
-            <Text variant="small" color="textMuted" style={styles.flex}>
-              {s.home.storage}
-            </Text>
-            <Text variant="bodyStrong">{s.home.of(`${used} MB`, `${quota} MB`)}</Text>
-          </View>
+        <View style={styles.stat}>
+          <Text variant="small" color="textMuted">
+            {s.home.documents}
+          </Text>
+          <Text variant="title">{docCount}</Text>
+        </View>
+        <View style={styles.stat}>
+          <Text variant="small" color="textMuted">
+            {s.home.storage}
+          </Text>
+          <Text variant="subheading">{s.home.of(`${used} MB`, `${quota} MB`)}</Text>
           <ProgressBar value={used / quota} label={s.home.storage} />
         </View>
       </Card>
-      <Text variant="heading">{s.home.quickActions}</Text>
-      {/* Acciones sin caja: ícono y etiqueta, alineadas a la izquierda. */}
-      <View style={styles.actions}>
-        <Button
-          label={s.live.firstUploadCta}
-          variant="ghost"
-          icon="upload"
-          onPress={() => router.push('/upload')}
-        />
-        <Button
-          label={s.home.ask}
-          variant="ghost"
-          icon="message-circle"
-          onPress={() => router.push('/conversation')}
-        />
-      </View>
-    </>
+    </View>
   );
   if (desktop) {
     return (
@@ -271,6 +259,9 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   greeting: { gap: space.xs },
+  // Entre secciones hay más aire que dentro de cada una (título pegado a su contenido).
+  sections: { gap: space.xxxl },
+  section: { gap: space.md },
   ask: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -284,11 +275,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1, gap: space.xs },
   list: { gap: 0 },
   actions: { alignItems: 'flex-start', gap: space.xs },
-  summary: { gap: space.lg },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  summary: { gap: space.xl },
+  stat: { gap: space.xs },
+  quota: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
-  mainCol: { flex: 2, gap: space.lg, minWidth: 0 },
-  sideCol: { flex: 1, gap: space.lg, minWidth: 0 },
+  mainCol: { flex: 2, minWidth: 0 },
+  sideCol: { flex: 1, minWidth: 0 },
   courseRow: {
     flexDirection: 'row',
     alignItems: 'center',

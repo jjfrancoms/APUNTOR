@@ -111,7 +111,7 @@ export default function Courses() {
               ]}
             >
               <Icon name="file-text" size={16} color="textMuted" />
-              <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
+              <Text variant="bodyStrong" style={styles.flex} numberOfLines={1}>
                 {doc.name}
               </Text>
               <Chip
@@ -239,7 +239,7 @@ function CourseBody({ course, heading = false }: { course: Course; heading?: boo
     <View style={styles.body}>
       {heading ? (
         <View style={styles.bodyHead}>
-          <Text variant="title" accessibilityRole="header">
+          <Text variant="heading" accessibilityRole="header">
             {course.title}
           </Text>
           <Text variant="muted">

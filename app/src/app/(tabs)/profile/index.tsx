@@ -53,7 +53,7 @@ export default function Profile() {
       <Button
         icon="edit-2"
         label={s.profile.edit}
-        variant="secondary"
+        variant="ghost"
         size="sm"
         onPress={() => router.push('/profile/edit')}
       />
@@ -181,29 +181,36 @@ export default function Profile() {
 
   return (
     <Screen wide>
-      <Text variant="display" accessibilityRole="header">
-        {s.profile.title}
-      </Text>
-      {identity}
-      {wide ? (
-        <View style={styles.columns}>
-          <View style={styles.col}>{account}</View>
-          <View style={styles.col}>{preferences}</View>
+      <View style={styles.page}>
+        <View style={styles.head}>
+          <Text variant="display" accessibilityRole="header">
+            {s.profile.title}
+          </Text>
+          {identity}
         </View>
-      ) : (
-        <>
-          {account}
-          {preferences}
-        </>
-      )}
+        {wide ? (
+          <View style={styles.columns}>
+            <View style={styles.col}>{account}</View>
+            <View style={styles.col}>{preferences}</View>
+          </View>
+        ) : (
+          <>
+            <View style={styles.col}>{account}</View>
+            <View style={styles.col}>{preferences}</View>
+          </>
+        )}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  // Entre bloques hay más aire que dentro de cada uno.
+  page: { gap: space.xxxl },
+  head: { gap: space.lg },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
   flex: { flex: 1, gap: 2, minWidth: 0 },
-  section: { gap: space.sm },
+  section: { gap: space.md },
   second: { marginTop: space.md, paddingTop: space.md },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxxl },
   col: { flex: 1, minWidth: 0, gap: space.xl },

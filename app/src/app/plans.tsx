@@ -51,7 +51,7 @@ function Plans() {
         ]}
       >
         <View style={styles.row}>
-          <Text variant="bodyStrong" style={styles.flex}>
+          <Text variant="subheading" style={styles.flex}>
             {names[key]}
           </Text>
           {badge ? (
@@ -66,7 +66,8 @@ function Plans() {
               {extra.before}
             </Text>
           ) : null}
-          <Text variant="title" color={key === 'student' ? 'primary' : 'text'}>
+          {/* El precio es la cifra clave de cada tarjeta; el color de marca solo en la elegida. */}
+          <Text variant="display" color={active ? 'primary' : 'text'}>
             {price}
           </Text>
           {unit ? (
@@ -88,7 +89,7 @@ function Plans() {
         {items.map((item) => (
           <View key={item} style={styles.row}>
             <Icon name="check" size={14} color="primary" />
-            <Text variant="caption">{item}</Text>
+            <Text variant="small">{item}</Text>
           </View>
         ))}
       </Tap>
@@ -147,12 +148,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   billing: { maxWidth: 420 },
   cta: { maxWidth: 360 },
-  cards: { gap: space.md },
+  cards: { gap: space.lg },
   cardsRow: { flexDirection: 'row', alignItems: 'stretch' },
   column: { flex: 1, minWidth: 0, gap: space.sm },
   strike: { textDecorationLine: 'line-through' },
   start: { alignItems: 'flex-start' },
-  card: { borderWidth: 1, borderRadius: radius.md, padding: space.lg, gap: space.xs + 2 },
+  card: { borderWidth: 1, borderRadius: radius.md, padding: space.lg, gap: space.sm },
   price: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
 });
 

@@ -92,9 +92,10 @@ export default function TopicSummaryScreen() {
 
   const metaBlock = summary ? (
     <View style={[styles.meta, wide && styles.metaWide]}>
-      {summary.path.length > 1 ? (
+      {/* La ruta de temas superiores; el documento ya va en la barra superior. */}
+      {summary.path.length > 2 ? (
         <Text variant="caption" color="textMuted">
-          {summary.path.slice(0, -1).join(' › ')}
+          {summary.path.slice(1, -1).join(' › ')}
         </Text>
       ) : null}
       {summary.topic.sourcePages.length > 0 ? (
@@ -103,7 +104,7 @@ export default function TopicSummaryScreen() {
             summary.topic.sourcePages.length,
             formatPageRanges(summary.topic.sourcePages),
           )}
-          tone="primary"
+          tone="neutral"
           icon="file-text"
         />
       ) : null}
@@ -119,7 +120,8 @@ export default function TopicSummaryScreen() {
   return (
     <Screen
       wide
-      header={<TopBar title={topicTitle} subtitle={summary?.document.title} />}
+      // Barra: el documento al que pertenece el tema (contexto). El tema es el título de la página.
+      header={<TopBar title={summary?.document.title ?? topicTitle} />}
       footer={
         load.state === 'ready' && !wide ? (
           <>
@@ -180,8 +182,13 @@ export default function TopicSummaryScreen() {
         <EmptyState mood="curious" title={t.emptyTitle} body={t.emptyBody} />
       ) : (
         <View style={[styles.layout, wide && styles.layoutWide]}>
-          {wide ? null : metaBlock}
           <View style={styles.main}>
+            <View style={styles.titleBlock}>
+              <Text variant="title" accessibilityRole="header">
+                {topicTitle}
+              </Text>
+              {wide ? null : metaBlock}
+            </View>
             <TopicSummary summary={{ ...summary, blocks }} />
           </View>
           {wide ? (
@@ -236,11 +243,12 @@ const styles = StyleSheet.create({
   study: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   flexWide: { flex: 1.6 },
-  layout: { gap: space.lg, paddingBottom: space.xl },
+  layout: { gap: space.xxl, paddingBottom: space.xl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
-  main: { flex: 1, minWidth: 0, maxWidth: 680 },
+  main: { flex: 1, minWidth: 0, maxWidth: 680, gap: space.lg },
+  titleBlock: { gap: space.sm, alignItems: 'flex-start' },
   metaWide: { gap: space.sm },
-  aside: { width: 280, gap: space.xl },
+  aside: { width: 320, gap: space.xl },
   actions: { gap: space.sm },
   actionsRow: { flexDirection: 'row', gap: space.sm },
 });

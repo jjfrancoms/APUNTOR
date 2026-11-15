@@ -72,7 +72,7 @@ export default function Uploading() {
             <Button
               icon="alert-circle"
               label={s.demo.seeProblems}
-              variant="secondary"
+              variant="ghost"
               onPress={() => router.push('/upload/problems')}
             />
           ) : null}
@@ -86,7 +86,7 @@ export default function Uploading() {
           <Button
             icon="plus"
             label={s.uploading.addMore}
-            variant="secondary"
+            variant="ghost"
             onPress={() => void pickFiles().then((f) => f.length > 0 && enqueueUploads(f))}
           />
         </>
@@ -96,10 +96,11 @@ export default function Uploading() {
       <View style={[styles.layout, wide && styles.layoutWide]}>
         <View style={[styles.side, wide && styles.sideWide]}>
           <View style={styles.head}>
-            <Text variant="heading" style={styles.flex}>
+            <Text variant="subheading" style={styles.flex}>
               {s.uploading.count(ready.length, jobs.length - failed.length)}
             </Text>
-            <Text variant="smallStrong" color="primary">
+            {/* La cifra clave de la pantalla: grande y en el color de marca. */}
+            <Text variant="title" color="primary">
               {formatPercent(ratio)}
             </Text>
           </View>
@@ -117,7 +118,7 @@ export default function Uploading() {
                     ext={extLabel(j.name)}
                     name={j.name}
                     detail={`${j.sizeMb} MB · ${s.upload.classified}`}
-                    trailing={<Chip label={s.upload.status.ready} tone="primary" icon="check" />}
+                    trailing={<Chip label={s.upload.status.ready} tone="neutral" icon="check" />}
                   />
                 );
               }
@@ -173,7 +174,7 @@ export default function Uploading() {
 }
 
 const styles = StyleSheet.create({
-  layout: { gap: space.xl },
+  layout: { gap: space.xxl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
   side: { gap: space.md },
   sideWide: { width: 340 },

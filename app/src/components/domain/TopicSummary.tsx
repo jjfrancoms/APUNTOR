@@ -78,7 +78,13 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
         // El título del tema ya está en la barra superior: no se repite.
         if (i === firstHeading && sameTitle(block.text, summary.topic.title)) return null;
         return (
-          <Text key={i} variant="subheading" accessibilityRole="header" style={styles.heading}>
+          <Text
+            key={i}
+            variant="heading"
+            accessibilityRole="header"
+            // El primer subtítulo queda pegado al título del tema; los demás separan secciones.
+            style={i === 0 ? styles.headingFirst : styles.heading}
+          >
             {tidyText(block.text)}
           </Text>
         );
@@ -180,7 +186,8 @@ export function TopicSummary({ summary }: { summary: ApiTopicSummary }) {
 const styles = StyleSheet.create({
   list: { gap: space.lg },
   // Más aire sobre un subtítulo que debajo: queda unido a lo que presenta.
-  heading: { marginTop: space.lg, marginBottom: -space.xs },
+  heading: { marginTop: space.xl, marginBottom: -space.sm },
+  headingFirst: { marginBottom: -space.sm },
   block: { gap: space.sm },
   flex: { flex: 1 },
   chip: { alignSelf: 'flex-start' },

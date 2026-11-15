@@ -41,7 +41,6 @@ export default function CourseDetail() {
       wide
       header={
         <TopBar
-          title={course.title}
           right={
             <IconButton
               icon="more-horizontal"
@@ -61,7 +60,7 @@ export default function CourseDetail() {
           <Button
             icon="upload"
             label={s.course.addDocument}
-            variant="secondary"
+            variant="ghost"
             onPress={() => router.push('/upload')}
           />
         </>
@@ -69,12 +68,14 @@ export default function CourseDetail() {
     >
       <View style={[styles.layout, wide && styles.layoutWide]}>
         <View style={[styles.summary, wide && styles.summaryWide]}>
+          {/* El curso es el título de la página; la barra solo lleva volver y el menú. */}
+          <Text variant="title" accessibilityRole="header">
+            {course.title}
+          </Text>
           <View style={styles.stats}>
             {stats.map(([n, label]) => (
               <View key={label} style={styles.stat}>
-                <Text variant="title" color="primary">
-                  {String(n)}
-                </Text>
+                <Text variant="heading">{String(n)}</Text>
                 <Text variant="caption" color="textMuted">
                   {label}
                 </Text>
@@ -86,7 +87,7 @@ export default function CourseDetail() {
               <Text variant="smallStrong" style={styles.flex}>
                 {s.course.progress}
               </Text>
-              <Text variant="smallStrong" color="primary">
+              <Text variant="title" color="primary">
                 {formatPercent(course.progress)}
               </Text>
             </View>
@@ -118,7 +119,7 @@ export default function CourseDetail() {
                   ]}
                 >
                   <View style={[styles.flex, styles.gapXs]}>
-                    <Text variant="smallStrong">{klass.title}</Text>
+                    <Text variant="bodyStrong">{klass.title}</Text>
                     <ProgressBar value={klass.progress} label={klass.title} />
                     <Text variant="caption" color="textMuted">
                       {s.course.classProgress(klass.topicCount, status)}
@@ -165,7 +166,7 @@ export default function CourseDetail() {
 }
 
 const styles = StyleSheet.create({
-  layout: { gap: space.xl },
+  layout: { gap: space.xxl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
   summary: { gap: space.lg },
   summaryWide: { width: 300 },
