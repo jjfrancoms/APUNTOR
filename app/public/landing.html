@@ -103,6 +103,8 @@ h1{font-size:2.25rem;line-height:1.14;font-weight:800;letter-spacing:-.02em;marg
 /* Secciones de abajo */
 h2{font-size:1.5rem;line-height:1.3;font-weight:800;letter-spacing:-.01em;margin:0 0 16px}
 .section{padding:56px 0 8px;scroll-margin-top:16px}
+/* Destinos del menú: al llegar, el título queda con aire arriba y no cortado. */
+#que-hace,#como-funciona,#planes{scroll-margin-top:40px}
 .about{display:grid;gap:12px}
 .about p{margin:0 0 12px;font-size:1.0625rem;line-height:1.75;max-width:60ch;color:var(--text)}
 .about h2{margin:0}
@@ -363,6 +365,10 @@ footer .end{flex-basis:auto;margin:0 0 0 auto}
 <script>
 /* Respaldo del revelado al hacer scroll para navegadores sin animation-timeline. Solo añade la clase que oculta; sin JS todo se ve. */
 (function(){try{if(!window.IntersectionObserver||!window.CSS||CSS.supports('animation-timeline','view()')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-visible');io.unobserve(e.target)}})},{threshold:.15});document.querySelectorAll('.reveal').forEach(function(el){if(el.getBoundingClientRect().top<innerHeight)return;el.classList.add('reveal-js');io.observe(el)})}catch(_){}})();
+</script>
+<script>
+/* Menú: resalta la sección en pantalla (aria-current) y cierra el menú del teléfono al elegir. */
+(function(){try{var ids=['inicio','que-hace','como-funciona','planes'];var els=ids.map(function(id){return document.getElementById(id)});var links=[].slice.call(document.querySelectorAll('.nav a[href^="#"],.menu-panel a[href^="#"]'));var menu=document.querySelector('.menu');var mark=function(id){links.forEach(function(a){var on=a.getAttribute('href')==='#'+id;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')})};var update=function(){busy=false;var line=innerHeight*0.35,cur=ids[0];els.forEach(function(el,i){if(el&&el.getBoundingClientRect().top<=line)cur=ids[i]});if(innerHeight+scrollY>=document.documentElement.scrollHeight-4)cur=ids[ids.length-1];mark(cur)};var busy=false;addEventListener('scroll',function(){if(!busy){busy=true;requestAnimationFrame(update)}},{passive:true});links.forEach(function(a){a.addEventListener('click',function(){if(menu)menu.open=false})});update()}catch(_){}})();
 </script>
 </body>
 </html>

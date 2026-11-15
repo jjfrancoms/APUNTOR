@@ -107,9 +107,15 @@ describe('landing', () => {
     expect(html).toContain('Solo para personas de 18 años o más');
   });
 
-  it('solo hay dos scripts: la redirección a /home cuando ya hay sesión y el respaldo del revelado', () => {
+  it('solo hay tres scripts: la redirección a /home con sesión, el respaldo del revelado y el menú', () => {
     const scripts = [...html.matchAll(/<script(?![^>]*ld\+json)[^>]*>([\s\S]*?)<\/script>/g)];
-    expect(scripts).toHaveLength(2);
+    expect(scripts).toHaveLength(3);
+    const nav = scripts[2]?.[1] ?? '';
+    // El menú solo marca la sección visible y cierra el panel del teléfono.
+    expect(nav).toContain('aria-current');
+    expect(nav).toContain('passive:true');
+    expect(nav).toContain('menu.open=false');
+    expect(nav).not.toMatch(/eval|innerHTML|document\.write|fetch|XMLHttpRequest|https?:\/\//);
     const code = scripts[0]?.[1] ?? '';
     expect(code).toContain("location.replace('/home')");
     // Clave de sesión de Supabase (`sb-<ref>-auth-token`) sin fijar el proyecto.
@@ -291,7 +297,11 @@ describe('landing: revelado al hacer scroll', () => {
   const html = read('public/landing.html');
   const css = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? '';
   const body = html.slice(html.indexOf('<body>'));
-  const reveal = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
+  // El respaldo del revelado es el script que menciona `reveal-js`.
+  const reveal =
+    [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+      .map((m) => m[1] ?? '')
+      .find((code) => code.includes('reveal-js')) ?? '';
 
   it('el revelado nativo va tras @supports y solo con movimiento permitido', () => {
     const block = /@media \(prefers-reduced-motion:no-preference\)\{([\s\S]*?)\n\}\n/.exec(
