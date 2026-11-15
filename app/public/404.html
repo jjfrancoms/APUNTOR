@@ -25,8 +25,9 @@ body{margin:0;font-size-adjust:from-font;min-height:100vh;min-height:100dvh;disp
 .brand .logo{display:block;height:2.5rem;width:auto;fill:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .i{width:1.25rem;height:1.25rem;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--field-border);border-radius:var(--r);background:transparent;color:var(--text);font-weight:600;font-size:0.9375rem;text-decoration:none}
+.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--card-border);border-radius:var(--r);background:transparent;color:var(--text);font-weight:600;font-size:0.9375rem;text-decoration:none}
 .enter:hover{background:var(--accent-ring);border-color:var(--card-border)}
+.enter:active{transform:scale(.97)}
 main.wrap{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding-top:24px;padding-bottom:48px}
 main>div{max-width:34rem}
 h1{font-size:2.25rem;line-height:1.1;font-weight:800;letter-spacing:-.025em;margin:0 0 16px;text-wrap:balance}
@@ -35,7 +36,7 @@ p{color:var(--muted);font-size:1.0625rem;line-height:1.65;margin:0 0 32px}
 .btn:hover{filter:brightness(1.07)}
 .btn:active{transform:scale(.97)}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-@media (prefers-reduced-motion:reduce){.btn{transition:none}.btn:active{transform:none}}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}.btn:active,.enter:active{transform:none}}
 @media (min-width:900px){.wrap{padding:0 32px}h1{font-size:3.25rem}}
 footer{border-top:1px solid var(--field-border);padding:16px 0 32px;color:var(--muted);font-size:0.875rem;line-height:1.25rem}
 footer .wrap{display:flex;flex-wrap:wrap;gap:0 24px}
@@ -52,7 +53,7 @@ footer a:hover{color:var(--accent)}
 <div>
 <h1>No encontramos esta página</h1>
 <p>Puede que el enlace esté mal escrito o que la página ya no exista.</p>
-<a class="btn" href="/">Ir a Apuntor</a>
+<a class="btn" href="/">Volver al inicio</a>
 </div>
 </main>
 <footer>

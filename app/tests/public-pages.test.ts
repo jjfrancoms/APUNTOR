@@ -115,6 +115,9 @@ describe('landing', () => {
     expect(nav).toContain('aria-current');
     expect(nav).toContain('passive:true');
     expect(nav).toContain('menu.open=false');
+    // El panel también se cierra con Escape (devolviendo el foco) y al tocar fuera.
+    expect(nav).toContain("e.key==='Escape'");
+    expect(nav).toContain('!menu.contains(e.target)');
     expect(nav).not.toMatch(/eval|innerHTML|document\.write|fetch|XMLHttpRequest|https?:\/\//);
     const code = scripts[0]?.[1] ?? '';
     expect(code).toContain("location.replace('/home')");
@@ -210,8 +213,14 @@ describe('landing', () => {
     expect(planes).toMatch(/<div class="billing" hidden>/);
     // Los dos planes de pago no se pueden comprar todavía: botones deshabilitados, no enlaces.
     expect(
-      planes.match(/<button class="btn fill" type="button" disabled>Muy pronto<\/button>/g),
+      planes.match(
+        /<button class="btn fill" type="button" disabled aria-describedby="pagos-pronto">Muy pronto<\/button>/g,
+      ),
     ).toHaveLength(2);
+    expect(planes).toContain('id="pagos-pronto"');
+    // Estado del interruptor visible: «Mensual» y «Pago anual» se encienden según el modo.
+    expect(planes).toContain('id="pago-mensual"');
+    expect(planes).toMatch(/id="est-alt" aria-live="polite"/);
     expect(planes).toMatch(/<a class="btn line" href="\/register">Empieza gratis<\/a>/);
     expect(planes).toContain('href="/register">Mientras tanto, empieza gratis');
     expect(planes).toContain('soporte@apuntor.com');

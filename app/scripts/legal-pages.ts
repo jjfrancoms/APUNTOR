@@ -73,8 +73,9 @@ a{color:var(--accent)}
 .brand .logo{display:block;height:2.5rem;width:auto;fill:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .i{width:1.25rem;height:1.25rem;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--field-border);border-radius:var(--r);background:transparent;color:var(--text);font-weight:600;font-size:0.9375rem;text-decoration:none}
+.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--card-border);border-radius:var(--r);background:transparent;color:var(--text);font-weight:600;font-size:0.9375rem;text-decoration:none}
 .enter:hover{background:var(--accent-ring);border-color:var(--card-border)}
+.enter:active{transform:scale(.97)}
 main{max-width:70ch;padding:32px 0 64px}
 h1{font-size:2rem;line-height:1.15;font-weight:800;letter-spacing:-.025em;margin:0 0 12px;text-wrap:balance}
 .meta{color:var(--muted);font-size:0.875rem;line-height:1.25rem;margin:0 0 48px}
