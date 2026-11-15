@@ -5,6 +5,7 @@ import type { ChunkRow, TopicRow } from '../../api/src/topic-content';
 import type { SummaryInput, TopicSummarizer } from '../../api/src/topic-summary';
 import {
   createSummaryPregenerator,
+  MAX_PREGENERATED_SUMMARIES,
   selectSummaryTopics,
 } from '../../worker/src/ingestion/topic-summaries';
 
@@ -14,6 +15,7 @@ const TOPICS: TopicRow[] = [
   { id: 'a2', parentId: 'a', title: '1.2 Reglas', sourcePages: [2] },
   { id: 'a2x', parentId: 'a2', title: 'Modus ponens', sourcePages: [2] },
   { id: 'b', parentId: null, title: '2. Conjuntos', sourcePages: [3] },
+  { id: 'c', parentId: null, title: '3. Sin páginas', sourcePages: [] },
 ];
 
 const CHUNKS: ChunkRow[] = [
@@ -83,9 +85,20 @@ function fakeSummarizer(fail: (input: SummaryInput) => Error | null = () => null
 const input = { documentId: 'd1', filePath: 'u/doc.pdf', topics: TOPICS, chunks: CHUNKS };
 
 describe('selectSummaryTopics', () => {
-  it('elige temas raíz y hojas, en orden del documento y con tope', () => {
-    expect(selectSummaryTopics(TOPICS).map((t) => t.id)).toEqual(['a', 'a1', 'a2x', 'b']);
-    expect(selectSummaryTopics(TOPICS, 2).map((t) => t.id)).toEqual(['a', 'a1']);
+  it('elige solo temas raíz con páginas, en orden del documento y con tope', () => {
+    expect(selectSummaryTopics(TOPICS).map((t) => t.id)).toEqual(['a', 'b']);
+    expect(selectSummaryTopics(TOPICS, 1).map((t) => t.id)).toEqual(['a']);
+  });
+
+  it('el tope por defecto es 8, aunque haya más raíces', () => {
+    expect(MAX_PREGENERATED_SUMMARIES).toBe(8);
+    const roots: TopicRow[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `r${i}`,
+      parentId: null,
+      title: `Tema ${i}`,
+      sourcePages: [i + 1],
+    }));
+    expect(selectSummaryTopics(roots).map((t) => t.id)).toEqual(roots.slice(0, 8).map((t) => t.id));
   });
 });
 
@@ -96,31 +109,31 @@ describe('createSummaryPregenerator', () => {
       summarizer,
       storage: storageWith(MANIFEST),
     }).generate(input);
-    expect(result).toEqual({ generated: 4, failed: 0, skipped: 0 });
-    expect(inputs.map((i) => i.topic.id)).toEqual(['a', 'a1', 'a2x', 'b']);
-    expect(inputs[1]?.path).toEqual(['1. Lógica', '1.1 Tablas']);
-    expect(inputs[1]?.blocks[0]?.text).toBe('Tablas de\nverdad.');
+    expect(result).toEqual({ generated: 2, failed: 0, skipped: 0 });
+    expect(inputs.map((i) => i.topic.id)).toEqual(['a', 'b']);
+    expect(inputs[1]?.blocks[0]?.text).toBe('Un conjunto.');
+    expect(inputs[0]?.blocks[0]?.text).toBe('Tablas de\nverdad.');
     expect(inputs[1]?.manifest).toEqual(MANIFEST);
   });
 
   it('sin manifiesto usa el texto de los fragmentos', async () => {
     const { summarizer, inputs } = fakeSummarizer();
     await createSummaryPregenerator({ summarizer, storage: storageWith(null) }).generate(input);
-    expect(inputs[1]?.blocks[0]?.text).toBe('Tablas de verdad.');
+    expect(inputs[0]?.blocks[0]?.text).toBe('Tablas de verdad.');
     expect(inputs[1]?.manifest).toBeNull();
   });
 
   it('un tema que falla no detiene los demás ni registra contenido', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { summarizer, inputs } = fakeSummarizer((i) =>
-      i.topic.id === 'a1' ? new Error('Tablas de verdad: respuesta rota') : null,
+      i.topic.id === 'a' ? new Error('Tablas de verdad: respuesta rota') : null,
     );
     const result = await createSummaryPregenerator({
       summarizer,
       storage: storageWith(MANIFEST),
     }).generate(input);
-    expect(result).toEqual({ generated: 3, failed: 1, skipped: 0 });
-    expect(inputs).toHaveLength(4);
+    expect(result).toEqual({ generated: 1, failed: 1, skipped: 0 });
+    expect(inputs).toHaveLength(2);
     expect(warn.mock.calls.flat().join(' ')).not.toMatch(/Tablas|Lógica/u);
     warn.mockRestore();
   });
@@ -128,14 +141,14 @@ describe('createSummaryPregenerator', () => {
   it('ante un límite de la IA deja el resto para cuando se pidan', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { summarizer, inputs } = fakeSummarizer((i) =>
-      i.topic.id === 'a1' ? new Error('RESOURCE_EXHAUSTED') : null,
+      i.topic.id === 'a' ? new Error('RESOURCE_EXHAUSTED') : null,
     );
     const result = await createSummaryPregenerator({
       summarizer,
       storage: storageWith(MANIFEST),
     }).generate(input);
-    expect(result).toEqual({ generated: 1, failed: 1, skipped: 2 });
-    expect(inputs).toHaveLength(2);
+    expect(result).toEqual({ generated: 0, failed: 1, skipped: 1 });
+    expect(inputs).toHaveLength(1);
     warn.mockRestore();
   });
 
@@ -148,10 +161,10 @@ describe('createSummaryPregenerator', () => {
     const result = await createSummaryPregenerator({
       summarizer,
       storage: storageWith(MANIFEST),
-      timeBudgetMs: 1_500,
+      timeBudgetMs: 500,
       now: () => clock,
     }).generate(input);
-    expect(result).toEqual({ generated: 2, failed: 0, skipped: 2 });
-    expect(inputs).toHaveLength(2);
+    expect(result).toEqual({ generated: 1, failed: 0, skipped: 1 });
+    expect(inputs).toHaveLength(1);
   });
 });

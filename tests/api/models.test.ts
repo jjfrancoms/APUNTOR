@@ -26,7 +26,7 @@ describe('resolveModels', () => {
     expect(models.high).toBe('gemini-3.8-flash');
   });
 
-  it('bajo, medio y alto: medio para el chat, alto para OCR y resúmenes', () => {
+  it('bajo, medio y alto: medio para el chat y los resúmenes, alto para OCR', () => {
     expect(
       resolveModels({
         MODEL_LOW: 'bajo',
@@ -39,9 +39,20 @@ describe('resolveModels', () => {
       medium: 'medio',
       high: 'alto',
       chat: 'medio',
-      summary: 'alto',
+      summary: 'medio',
       ocr: 'alto',
     });
+  });
+
+  it('el resumen usa el medio si SUMMARY_MODEL no está definido', () => {
+    expect(resolveModels({ MODEL_MEDIUM: 'medio', MODEL_HIGH: 'alto' }).summary).toBe('medio');
+    expect(resolveModels({ MODEL_FAST: 'rápido', MODEL_STRONG: 'fuerte' }).summary).toBe('rápido');
+  });
+
+  it('SUMMARY_MODEL sigue mandando sobre el medio', () => {
+    expect(resolveModels({ MODEL_MEDIUM: 'medio', SUMMARY_MODEL: 'resumen' }).summary).toBe(
+      'resumen',
+    );
   });
 
   it('el nivel bajo es el medio si no se indica', () => {
