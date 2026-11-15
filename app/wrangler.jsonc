@@ -5,6 +5,9 @@
   "name": "apuntor",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-11-01",
+  // Vistas previas por rama (`wrangler preview`, comando de Previews Base en Cloudflare): el
+  // bloque puede ir vacío; assets y compatibilidad se heredan de lo de arriba.
+  "previews": {},
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
