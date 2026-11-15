@@ -8,7 +8,8 @@ export type ChipTone = 'primary' | 'external' | 'warning' | 'danger' | 'neutral'
 
 /**
  * Etiqueta compacta en píldora. Con `onPress` se vuelve tocable (referencia: Citation de
- * redrob-labs): borde del color del tono, flecha al final y un área táctil ampliada con `hitSlop`.
+ * redrob-labs): flecha al final y un área táctil ampliada con `hitSlop`; el borde del tono solo
+ * aparece al pasar el puntero o presionar, para que las citas no compitan con el texto.
  */
 export function Chip({
   label,
@@ -64,7 +65,7 @@ export function Chip({
       pressScale={motion.pressScale}
       style={({ pressed, hovered }: TapState) => [
         styles.chip,
-        { backgroundColor: t.bg, borderColor: pressed || hovered === true ? t.bg : c[t.fg] },
+        { backgroundColor: t.bg, borderColor: pressed || hovered === true ? c[t.fg] : t.bg },
       ]}
     >
       {content}

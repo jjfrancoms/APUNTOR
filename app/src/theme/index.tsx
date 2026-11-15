@@ -32,11 +32,14 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
 
 export const typeScale = {
-  display: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34 },
+  /** Título de pantalla de primer nivel (Inicio, Perfil…): el escalón más alto de la interfaz. */
+  display: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 38 },
+  /** Cifra protagonista de una pantalla (resultado de un quiz): la única que debe verse primero. */
+  numeral: { fontFamily: fonts.extrabold, fontSize: 44, lineHeight: 48 },
   /** Frase de apoyo bajo un título: algo mayor que el cuerpo. */
   lead: { fontFamily: fonts.medium, fontSize: 17, lineHeight: 26 },
-  title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
-  heading: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24 },
+  title: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32 },
+  heading: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 26 },
   subheading: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
   bodyStrong: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 22 },

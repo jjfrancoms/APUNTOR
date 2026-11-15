@@ -77,10 +77,18 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 ## Tipografía
 
 - Una sola familia: **Plus Jakarta Sans** (400, 500, 600, 700, 800).
-- Escala (`app/src/theme/index.tsx`): display 28/34 · title 24/30 · heading 18/24 ·
-  subheading 16/22 · lead 17/26 · body 15/22 · small 13/18 (`muted` = small en `textMuted`;
-  `label` = small en seminegrita) · caption 12/16 · overline 11/14 (+0,6). Los nombres
-  anteriores siguen valiendo; `lead`, `muted` y `label` son los roles tipográficos nuevos.
+- Escala (`app/src/theme/index.tsx`): numeral 44/48 (800) · display 32/38 (800) · title 26/32 ·
+  heading 20/26 · lead 17/26 · subheading 16/22 (600) · body 15/22 · small 13/18 (`muted` = small
+  en `textMuted`; `label` = small en seminegrita) · caption 12/16 · overline 11/14 (+0,6). Los
+  nombres anteriores siguen valiendo; `lead`, `muted` y `label` son los roles tipográficos nuevos.
+- Jerarquía visual (lo primero que se ve, luego lo segundo): una acción principal rellena por
+  región; el título de pantalla es claramente mayor y más pesado que los encabezados de sección
+  (`title`/`display` frente a `heading`), y estos mayores que el cuerpo; el cuerpo va en regular y
+  los metadatos, pies y marcas de tiempo en `muted` o `caption`. El espacio entre grupos
+  (`xl`/`xxl`) es mayor que dentro de un grupo (`xs`/`sm`/`md`): el título queda pegado a su
+  contenido. El color de marca va solo a la acción principal, al estado activo y a las cifras
+  clave (`numeral`, `title` en tarjetas de uso). Chips y estados son pequeños y callados (neutros
+  salvo que avisen de un problema) y nunca compiten con un título.
 - Overline en mayúsculas solo para encabezados de sección de listas, no sobre cada título ni como
   etiqueta de un campo.
 - Ningún texto incrustado en imágenes; todo texto vive en `app/src/i18n/`.
@@ -129,7 +137,8 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
   - **Segmented**: pulgar deslizante (`motion.duration.base`); sin animación con "reducir
     movimiento".
   - **Chip / CitationChip**: solo donde significa algo (cita "pág. N", estado). Con `onPress` se
-    lee como tocable: borde del tono, flecha y área táctil ampliada.
+    lee como tocable: flecha, área táctil ampliada y borde del tono solo al pasar el puntero o
+    presionar (en reposo no lleva borde, para no competir con el texto).
   - **FilterChips**: el seleccionado lleva fondo `primarySoft`, borde `primary` y una marca.
   - **Banner**: ícono a la izquierda, título y texto; tonos `info`, `success`, `warning`,
     `danger`, `external`; `action` y `onClose` opcionales.

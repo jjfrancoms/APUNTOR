@@ -90,10 +90,10 @@ export function Banner({
         <Icon name={icon ?? t.icon} size={18} color={t.fg} />
       </View>
       <View style={styles.content}>
-        <Text variant="smallStrong" color={t.fg}>
+        <Text variant="bodyStrong" color={t.fg}>
           {title}
         </Text>
-        {body ? <Text variant="caption">{body}</Text> : null}
+        {body ? <Text variant="small">{body}</Text> : null}
         {children}
         {action ? (
           <View style={styles.action}>
