@@ -4,23 +4,23 @@ import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button, Chip, Icon, Screen, Segmented, Text, TopBar } from '@/components/ui';
 import { plans } from '@/data/mock';
-import { formatSoles, studentPrice } from '@/lib/pricing';
+import { EXAM_PASS, formatSoles, studentPrice } from '@/lib/pricing';
 import { choosePlan } from '@/store/store';
 import { useStrings } from '@/i18n/es';
 import { radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
-type Plan = 'free' | 'student' | 'school';
+type Plan = 'free' | 'student' | 'pass';
 type Billing = 'monthly' | 'yearly';
 
-/** Pantalla 26 · Planes. Compra dentro de la app (Google Play / App Store); precios de ejemplo. */
+/** Pantalla 26 · Planes. Compra dentro de la app (Google Play / App Store); precios en soles con IGV. */
 function Plans() {
   const s = useStrings();
   const { c } = useTheme();
   const p = s.plans;
   const [billing, setBilling] = useState<Billing>('monthly');
   const [plan, setPlan] = useState<Plan>('student');
-  const names: Record<Plan, string> = { free: p.free, student: p.student, school: p.school };
+  const names: Record<Plan, string> = { free: p.free, student: p.student, pass: p.pass };
   // Tres columnas cuando hay espacio (tablet ancha y escritorio); en móvil, una debajo de otra.
   const columns = useWindowDimensions().width >= 840;
   const student = studentPrice(billing);
@@ -100,10 +100,8 @@ function Plans() {
     <Button
       icon="arrow-right"
       label={p.continueWith(names[plan])}
-      disabled={plan === 'free'}
+      disabled={plan === 'free' || plan === 'pass'}
       onPress={() => {
-        // Colegio o institución se cotiza a medida: va a soporte.
-        if (plan === 'school') return router.push('/profile/contact');
         choosePlan('student');
         router.replace('/profile/subscription');
       }}
@@ -134,10 +132,10 @@ function Plans() {
             ? { save: p.save(formatSoles(student.savedPerYear)) }
             : {}),
         })}
-        {card('school', p.custom, '', p.schoolItems)}
+        {card('pass', formatSoles(EXAM_PASS), p.passUnit, p.passItems)}
       </View>
       <Text variant="caption" color="textMuted">
-        {p.exampleNote}
+        {p.vatNote}
       </Text>
       {columns ? <View style={styles.cta}>{cta}</View> : null}
     </Screen>
