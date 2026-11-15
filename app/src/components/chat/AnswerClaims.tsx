@@ -19,18 +19,18 @@ export function AnswerClaims({ claims }: { claims: readonly AnswerClaim[] }) {
           {claim.label || claim.formula ? (
             <View style={styles.head}>
               {claim.label ? (
-                <Text variant="smallStrong" selectable>
+                <Text variant="subheading" selectable>
                   {claim.label}
                 </Text>
               ) : null}
               {claim.formula ? (
-                <Text variant="smallStrong" color="primary" selectable>
+                <Text variant="subheading" color="primary" selectable>
                   {claim.formula}
                 </Text>
               ) : null}
             </View>
           ) : null}
-          <Text variant="small" selectable>
+          <Text variant="body" selectable>
             {claim.text}
           </Text>
           <View style={styles.pages}>
@@ -53,7 +53,7 @@ export function AnswerClaims({ claims }: { claims: readonly AnswerClaim[] }) {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: space.md },
+  list: { gap: space.lg },
   claim: { gap: space.xs },
   head: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
   pages: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },

@@ -131,7 +131,7 @@ function QuizPlay({
             <Button
               icon="home"
               label={s.empty.backHome}
-              variant="secondary"
+              variant="ghost"
               onPress={() => router.replace('/home')}
             />
           </>
@@ -140,11 +140,16 @@ function QuizPlay({
         <View style={[styles.result, wide && styles.resultWide]}>
           <Mascot size={wide ? 96 : 64} mood={score / total >= 0.6 ? 'sparkle' : 'curious'} />
           <View style={styles.resultText}>
-            <Text variant="title" accessibilityRole="header">
+            <Text variant="heading" accessibilityRole="header">
               {s.demo.quizDone}
             </Text>
-            <Text variant="heading" color="primary">
-              {s.demo.quizResult(score, total)}
+            {/* El resultado es la cifra protagonista: lo más grande y pesado de la pantalla. */}
+            <Text
+              variant="numeral"
+              color="primary"
+              accessibilityLabel={s.demo.quizResult(score, total)}
+            >
+              {`${score} / ${total}`}
             </Text>
             <ProgressBar value={score / total} label={s.demo.quizResult(score, total)} />
             {saveFailed ? (
@@ -163,7 +168,7 @@ function QuizPlay({
         <TopBar
           icon="x"
           title={s.quiz.header(title)}
-          right={<Chip label={s.quiz.counter(index + 1, total)} tone="primary" />}
+          right={<Chip label={s.quiz.counter(index + 1, total)} tone="neutral" />}
         />
       }
       footer={
@@ -218,7 +223,7 @@ function QuizPlay({
                     )}
                   </View>
                   <Text
-                    variant="small"
+                    variant="body"
                     color={right ? 'primary' : wrong ? 'danger' : 'text'}
                     style={styles.flex}
                   >
@@ -231,7 +236,7 @@ function QuizPlay({
           {answered ? (
             <Card>
               <CitationChip citation={q.citation} />
-              <Text variant="small">{q.explanation}</Text>
+              <Text variant="body">{q.explanation}</Text>
             </Card>
           ) : null}
         </View>
@@ -266,5 +271,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   result: { gap: space.lg, paddingVertical: space.xl },
   resultWide: { flexDirection: 'row', alignItems: 'center', gap: space.xxl },
-  resultText: { flex: 1, gap: space.md },
+  resultText: { flex: 1, gap: space.sm },
 });

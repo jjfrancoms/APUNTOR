@@ -71,7 +71,7 @@ export default function DailyReview() {
     >
       <View style={[styles.layout, wide && styles.layoutWide]}>
         <View style={[styles.hero, wide && styles.heroWide]}>
-          <Text variant="display" color="primary" style={styles.big}>
+          <Text variant="numeral" color="primary">
             {String(items.length)}
           </Text>
           <Text variant="bodyStrong">{r.cardsToday}</Text>
@@ -107,12 +107,11 @@ export default function DailyReview() {
 }
 
 const styles = StyleSheet.create({
-  layout: { gap: space.xl },
+  layout: { gap: space.xxl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
-  rows: { flex: 1, minWidth: 0, gap: space.sm },
+  rows: { flex: 1, minWidth: 0, gap: space.md },
   hero: { gap: space.xs },
   heroWide: { width: 240 },
-  big: { fontSize: 48, lineHeight: 54 },
   list: { padding: 0, gap: 0 },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },

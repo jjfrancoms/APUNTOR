@@ -193,7 +193,7 @@ export default function Conversation() {
             {m.claims ? (
               <AnswerClaims claims={m.claims} />
             ) : (
-              <Text variant="small" selectable>
+              <Text variant="body" selectable>
                 {m.text}
               </Text>
             )}
@@ -202,7 +202,7 @@ export default function Conversation() {
       case 'smallTalk':
         return (
           <MascotBubble key={m.id}>
-            <Text variant="small">{s.chat.smallTalk[m.smallTalk ?? 'greeting']}</Text>
+            <Text variant="body">{s.chat.smallTalk[m.smallTalk ?? 'greeting']}</Text>
           </MascotBubble>
         );
       case 'notFound':
@@ -210,13 +210,13 @@ export default function Conversation() {
           // Pregunta demasiado corta o ambigua: buscar fuera no ayudaría; basta con "Editar".
           return (
             <MascotBubble key={m.id}>
-              <Text variant="small">{s.chat.notFoundUnclear(questionBefore(index))}</Text>
+              <Text variant="body">{s.chat.notFoundUnclear(questionBefore(index))}</Text>
             </MascotBubble>
           );
         }
         return (
           <MascotBubble key={m.id}>
-            <Text variant="small">
+            <Text variant="body">
               {m.reason === 'validation_failed' ? s.chat.notFoundUnverified : s.chat.notFound}
             </Text>
             {isLast ? (
@@ -256,7 +256,7 @@ export default function Conversation() {
                 {s.chat.externalAnswer}
               </Text>
             </View>
-            <Text variant="small">{m.text || s.live.externalEmpty}</Text>
+            <Text variant="body">{m.text || s.live.externalEmpty}</Text>
             {m.external ? (
               <Tap
                 accessibilityRole="link"
@@ -316,7 +316,7 @@ export default function Conversation() {
       default:
         return (
           <MascotBubble key={m.id}>
-            <Text variant="small">{m.text}</Text>
+            <Text variant="body">{m.text}</Text>
           </MascotBubble>
         );
     }

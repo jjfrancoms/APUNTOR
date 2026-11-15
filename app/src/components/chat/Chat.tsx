@@ -9,12 +9,12 @@ import { useDictation } from '@/lib/dictation';
 import { fonts, layout, radius, space, useTheme } from '@/theme';
 import { Tap } from '@/components/ui/Tap';
 
-/** Burbuja del estudiante (derecha, verde). */
+/** Burbuja del estudiante (derecha): suave y callada, para que la respuesta sea lo primero que se lee. */
 export function UserBubble({ text }: { text: string }) {
   const { c } = useTheme();
   return (
-    <View style={[styles.user, { backgroundColor: c.primary }]}>
-      <Text variant="small" color="onPrimary">
+    <View style={[styles.user, { backgroundColor: c.primarySoft }]}>
+      <Text variant="body" color="text">
         {text}
       </Text>
     </View>
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   mascot: {
     alignSelf: 'stretch',
-    gap: space.sm,
+    gap: space.md,
   },
   sources: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   composerWrap: { alignSelf: 'stretch', gap: space.xs },

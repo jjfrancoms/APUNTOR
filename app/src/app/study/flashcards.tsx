@@ -117,11 +117,16 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
         <View style={[styles.done, wide && styles.doneWide]}>
           <Mascot size={wide ? 96 : 64} mood="sparkle" />
           <View style={styles.doneText}>
-            <Text variant="title" accessibilityRole="header">
+            <Text variant="heading" accessibilityRole="header">
               {s.demo.cardsDone}
             </Text>
-            <Text variant="heading" color="primary">
-              {s.demo.cardsResult(knownFirstTry(session), total)}
+            {/* La cifra protagonista: lo más grande y pesado de la pantalla. */}
+            <Text
+              variant="numeral"
+              color="primary"
+              accessibilityLabel={s.demo.cardsResult(knownFirstTry(session), total)}
+            >
+              {`${knownFirstTry(session)} / ${total}`}
             </Text>
             <Text variant="small" color="textMuted">
               {f.doneDetail}
@@ -139,7 +144,7 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
           icon="x"
           title={f.header}
           subtitle={title}
-          right={<Chip label={f.counter(learned, total)} tone="primary" />}
+          right={<Chip label={f.counter(learned, total)} tone="neutral" />}
         />
       }
       footer={
@@ -188,7 +193,7 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
               <Text variant="smallStrong" color="textMuted">
                 {card.front}
               </Text>
-              <Text variant="subheading">{card.back}</Text>
+              <Text variant="title">{card.back}</Text>
             </>
           ) : (
             <Text variant="title">{card.front}</Text>

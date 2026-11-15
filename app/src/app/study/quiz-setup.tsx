@@ -169,14 +169,16 @@ export default function QuizSetup() {
         />
       }
     >
-      <Text variant="lead">{q.mascot}</Text>
+      <Text variant="heading" accessibilityRole="header">
+        {q.mascot}
+      </Text>
       {!online ? <Banner tone="warning" icon="wifi-off" title={st.offlineBody} /> : null}
       {error ? <Banner tone="danger" icon="alert-circle" title={st.errors[error]} /> : null}
       {usage ? (
         <View style={styles.chips}>
           <Chip
             label={st.usage(usage.studyGenerationsToday, usage.studyGenerationsLimit)}
-            tone={limitReached ? 'danger' : 'primary'}
+            tone={limitReached ? 'danger' : 'neutral'}
           />
           {left !== null && !limitReached ? <Chip label={st.usageLeft(left)} /> : null}
         </View>
@@ -194,7 +196,7 @@ export default function QuizSetup() {
               </Text>
             </Card>
           ) : (
-            <>
+            <View style={styles.group}>
               <Text variant="smallStrong" accessibilityRole="header">
                 {st.document}
               </Text>
@@ -215,29 +217,33 @@ export default function QuizSetup() {
                   icon="book-open"
                 />
               ) : null}
-            </>
+            </View>
           )}
-          <Text variant="smallStrong" accessibilityRole="header">
-            {st.kindLabel}
-          </Text>
-          <Segmented
-            options={[
-              { value: 'quiz' as StudyKind, label: st.kindQuiz },
-              { value: 'cards' as StudyKind, label: st.kindCards },
-            ]}
-            value={kind}
-            onChange={setKind}
-          />
-          <Text variant="smallStrong" accessibilityRole="header">
-            {kind === 'quiz' ? st.amountQuiz : st.amountCards}
-          </Text>
-          <Segmented
-            options={STUDY_COUNTS.map((a) => ({ value: a, label: a }))}
-            value={amount}
-            onChange={setAmount}
-          />
-          <View style={styles.chips}>
-            <Chip label={q.minutes(estimateMinutes(count))} icon="clock" />
+          <View style={styles.group}>
+            <Text variant="smallStrong" accessibilityRole="header">
+              {st.kindLabel}
+            </Text>
+            <Segmented
+              options={[
+                { value: 'quiz' as StudyKind, label: st.kindQuiz },
+                { value: 'cards' as StudyKind, label: st.kindCards },
+              ]}
+              value={kind}
+              onChange={setKind}
+            />
+          </View>
+          <View style={styles.group}>
+            <Text variant="smallStrong" accessibilityRole="header">
+              {kind === 'quiz' ? st.amountQuiz : st.amountCards}
+            </Text>
+            <Segmented
+              options={STUDY_COUNTS.map((a) => ({ value: a, label: a }))}
+              value={amount}
+              onChange={setAmount}
+            />
+            <View style={styles.chips}>
+              <Chip label={q.minutes(estimateMinutes(count))} icon="clock" />
+            </View>
           </View>
         </View>
         <View style={styles.saved}>
@@ -275,9 +281,11 @@ export default function QuizSetup() {
 }
 
 const styles = StyleSheet.create({
-  layout: { gap: space.lg },
+  layout: { gap: space.xxl },
   layoutWide: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xxl },
-  form: { flex: 1, minWidth: 0, gap: space.md },
+  // Entre grupos hay más aire que dentro de cada uno (etiqueta pegada a su control).
+  form: { flex: 1, minWidth: 0, gap: space.xl },
+  group: { gap: space.sm },
   saved: { flex: 1, minWidth: 0, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   list: { padding: 0, gap: 0 },
