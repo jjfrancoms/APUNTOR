@@ -102,7 +102,28 @@ en cada pantalla:
 
 ## 4. Microinteracciones (Microinteractions)
 
-Cada microinteracción tiene **disparador → reglas → feedback → bucles/modos**.
+Toda interacción pequeña (botón, campo, interruptor, carga) se diseña en cuatro fases:
+
+1. **Disparador (trigger):** qué la inicia (toque, clic, hover, foco, o el sistema, como una
+   subida que termina). Debe verse que se puede activar.
+2. **Reglas:** qué pasa por dentro y qué está permitido (p. ej. "Enviar" solo con texto; la
+   pregunta se gasta de la cuota solo si llega respuesta).
+3. **Retroalimentación (feedback):** respuesta visual inmediata que confirma la acción: borde
+   activo en el campo con foco, rueda en el botón al enviar, check al guardar, error claro
+   junto al campo.
+4. **Bucles y modos:** qué pasa si se repite o cambia de estado: el botón se desactiva
+   mientras carga para evitar el doble envío; "Detener" reemplaza a "Enviar" mientras Illari
+   responde; un reintento no duplica el mensaje.
+
+| Interacción en Apuntor | Disparador                | Reglas                                | Feedback                               | Bucles y modos                                                        |
+| ---------------------- | ------------------------- | ------------------------------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| Iniciar sesión         | Toque en "Iniciar sesión" | Correo y contraseña válidos           | Rueda en el botón; error al lado       | Botón desactivado mientras carga; tras error, foco al campo culpable  |
+| Preguntar en el chat   | "Enviar" o Intro          | Texto no vacío, con conexión y cuota  | Burbuja propia al instante             | "Detener" mientras responde; reintentar sin duplicar; borrador guarda |
+| Subir apuntes          | Elegir o soltar archivos  | Formato y tamaño permitidos           | Pasos subir → leer → ordenar           | Se puede salir; sigue en segundo plano; aviso al terminar             |
+| Interruptor de ajustes | Toque en el interruptor   | Cambia solo esa preferencia           | El pulgar se desliza y cambia de color | Si falla al guardar, vuelve a su estado y avisa                       |
+| Cita "pág. N"          | Toque en la cita          | Abre la página del documento original | Presionado visible                     | Volver deja el chat donde estaba                                      |
+
+Además:
 
 - **Disparador visible** y con estado (hover, presionado, foco, desactivado).
 - **Feedback proporcional:** pequeño para acciones pequeñas (check, cambio de color),
