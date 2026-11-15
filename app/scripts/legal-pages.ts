@@ -73,21 +73,22 @@ a{color:var(--accent)}
 .brand .logo{display:block;height:2.5rem;width:auto;fill:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .i{width:1.25rem;height:1.25rem;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--card-border);border-radius:var(--r);background:color-mix(in srgb,var(--field) 70%,transparent);color:var(--accent);font-weight:700;font-size:0.9375rem;text-decoration:none;box-shadow:0 0 22px var(--card-glow)}
-.enter:hover{background:var(--accent-ring)}
-main{max-width:70ch;padding:16px 0 40px}
-h1{font-size:1.75rem;line-height:2.125rem;font-weight:800;letter-spacing:-.02em;margin:16px 0 8px}
-.meta{color:var(--muted);font-size:0.8125rem;line-height:1.125rem;margin:0 0 24px}
-section{border-top:1px solid var(--field-border);padding:24px 0}
-h2{font-size:1.125rem;line-height:1.5rem;font-weight:700;margin:0 0 12px}
-p{margin:0 0 12px;overflow-wrap:anywhere}
+.enter{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px;border:1px solid var(--field-border);border-radius:var(--r);background:transparent;color:var(--text);font-weight:600;font-size:0.9375rem;text-decoration:none}
+.enter:hover{background:var(--accent-ring);border-color:var(--card-border)}
+main{max-width:70ch;padding:32px 0 64px}
+h1{font-size:2rem;line-height:1.15;font-weight:800;letter-spacing:-.025em;margin:0 0 12px;text-wrap:balance}
+.meta{color:var(--muted);font-size:0.875rem;line-height:1.25rem;margin:0 0 48px}
+section{border-top:1px solid var(--field-border);padding:32px 0 36px}
+h2{font-size:1.375rem;line-height:1.3;font-weight:800;letter-spacing:-.01em;margin:0 0 16px}
+p{margin:0 0 16px;font-size:1.0625rem;line-height:1.7;overflow-wrap:anywhere}
+.meta{font-size:0.875rem}
 p:last-child{margin-bottom:0}
 footer{border-top:1px solid var(--field-border);padding:16px 0 32px;color:var(--muted);font-size:0.875rem;line-height:1.25rem}
 footer .wrap{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
 footer a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px}
 footer a:hover{color:var(--accent)}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-@media (min-width:900px){.wrap{padding:0 32px}h1{font-size:2.25rem;line-height:2.75rem}}`;
+@media (min-width:900px){.wrap{padding:0 32px}h1{font-size:3rem}h2{font-size:1.5rem}section{padding:40px 0 44px}}`;
 
 export function renderLegalPage(doc: PublicLegalDoc): string {
   const title = TITLES[doc];

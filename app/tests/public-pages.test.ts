@@ -212,7 +212,7 @@ describe('landing', () => {
     expect(
       planes.match(/<button class="btn fill" type="button" disabled>Muy pronto<\/button>/g),
     ).toHaveLength(2);
-    expect(planes).toMatch(/<a class="btn fill" href="\/register">Empieza gratis<\/a>/);
+    expect(planes).toMatch(/<a class="btn line" href="\/register">Empieza gratis<\/a>/);
     expect(planes).toContain('href="/register">Mientras tanto, empieza gratis');
     expect(planes).toContain('soporte@apuntor.com');
   });
