@@ -22,6 +22,8 @@ export interface ScreenProps {
   wide?: boolean;
   /** Acceso y registro: una columna angosta. A 800 px, un campo de correo se ve vacío y perdido. */
   narrow?: boolean;
+  /** Capa decorativa fija detrás de todo el contenido (no se desplaza). Solo pantallas de acceso. */
+  background?: ReactNode;
   /** Mantiene visible lo último (chat): baja al final cuando crece el contenido. */
   stickToBottom?: boolean;
 }
@@ -36,6 +38,7 @@ export function Screen({
   wide = false,
   narrow = false,
   stickToBottom = false,
+  background,
 }: ScreenProps) {
   const { c } = useTheme();
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -50,6 +53,7 @@ export function Screen({
   const body = <View style={[styles.content, limit]}>{children}</View>;
   return (
     <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: c.bg }]}>
+      {background}
       {/* En iOS el teclado tapa el pie (botones, campo del chat): se sube el contenido. */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

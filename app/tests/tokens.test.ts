@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AUTH_TEXT_PAIRS,
   colors,
   contrastRatio,
   navigationLayoutFor,
@@ -26,6 +27,12 @@ describe('tokens de color', () => {
 
   it('calcula el contraste de referencia (negro/blanco = 21:1)', () => {
     expect(contrastRatio('#000000', '#FFFFFF')).toBeCloseTo(21, 5);
+  });
+});
+
+describe('paleta de acceso', () => {
+  it.each(AUTH_TEXT_PAIRS.map(([fg, bg]) => [fg, bg]))('%s sobre %s cumple AA', (fg, bg) => {
+    expect(contrastRatio(fg as string, bg as string)).toBeGreaterThanOrEqual(AA);
   });
 });
 

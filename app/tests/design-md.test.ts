@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { colors, motion, type ColorTokens } from '../src/theme/tokens';
+import { auth, colors, motion, type ColorTokens } from '../src/theme/tokens';
 
 const designMd = readFileSync(join(__dirname, '..', '..', 'DESIGN.md'), 'utf8');
 
@@ -28,6 +28,14 @@ describe('DESIGN.md', () => {
       expect(row(`motion.easing.${name}`)).toContain(curve.join(', '));
     }
     expect(row('motion.pressScale')).toContain(String(motion.pressScale));
+  });
+
+  it('documenta la paleta de acceso con los mismos valores que tokens.ts', () => {
+    for (const [token, value] of Object.entries(auth)) {
+      const row = designMd.split('\n').find((line) => line.startsWith(`| \`auth.${token}\``));
+      expect(row, `falta la fila de auth.${token}`).toBeDefined();
+      expect(row).toContain(value);
+    }
   });
 
   it('pide acciones sin caja cuando basta el ícono', () => {

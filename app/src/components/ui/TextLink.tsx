@@ -1,4 +1,6 @@
-import { layout } from '@/theme';
+import { View } from 'react-native';
+import { layout, space } from '@/theme';
+import { Icon, type IconName } from './Icon';
 import { Text, type AppTextProps } from './Text';
 import { Tap, type TapState } from './Tap';
 
@@ -12,6 +14,7 @@ export function TextLink({
   variant = 'smallStrong',
   color = 'primary',
   role = 'button',
+  icon,
 }: {
   label: string;
   onPress?: () => void;
@@ -19,6 +22,8 @@ export function TextLink({
   color?: AppTextProps['color'];
   /** 'button' para acciones (Editar, Cambiar…); 'link' solo para abrir documentos o páginas. */
   role?: 'button' | 'link';
+  /** Ícono plano a la izquierda de la etiqueta. */
+  icon?: IconName;
 }) {
   return (
     <Tap
@@ -29,13 +34,16 @@ export function TextLink({
       style={{ minHeight: layout.minTouchTarget - 20, justifyContent: 'center' }}
     >
       {({ pressed, hovered }: TapState) => (
-        <Text
-          variant={variant}
-          color={color}
-          style={{ textDecorationLine: pressed || hovered === true ? 'underline' : 'none' }}
-        >
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs + 2 }}>
+          {icon ? <Icon name={icon} size={14} color={color ?? 'primary'} /> : null}
+          <Text
+            variant={variant}
+            color={color}
+            style={{ textDecorationLine: pressed || hovered === true ? 'underline' : 'none' }}
+          >
+            {label}
+          </Text>
+        </View>
       )}
     </Tap>
   );

@@ -49,12 +49,16 @@ export default function AuthCallback() {
   }, [code, flowId, providerError]);
 
   return (
-    <AuthLayout title={a.header} header={<TopBar />} mood={error ? 'worried' : 'curious'}>
+    <AuthLayout title={a.header} header={<TopBar />}>
       {error ? (
         <>
           <Banner tone="danger" title={s.errors[error]} />
           <View style={styles.start}>
-            <TextLink label={a.backToLogin} onPress={() => router.replace('/login')} />
+            <TextLink
+              icon="arrow-left"
+              label={a.backToLogin}
+              onPress={() => router.replace('/login')}
+            />
           </View>
         </>
       ) : (

@@ -1,16 +1,20 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useColorScheme, useWindowDimensions } from 'react-native';
 import {
+  auth,
+  authColors,
   colors,
   layout,
   mascotPalette,
   motion,
   navigationLayoutFor,
+  type AuthTokens,
   type ColorMode,
   type ColorTokens,
 } from './tokens';
 
 export { layout, mascotPalette, motion, navigationLayoutFor };
+export type { AuthTokens };
 export { cssEasing, ease, webTransition } from './motion';
 /** Paletas completas, para superficies que no cambian con el tema (p. ej. el visor de cámara). */
 export { colors as palettes };
@@ -51,14 +55,29 @@ export type TypeVariant = keyof typeof typeScale;
 export interface Theme {
   mode: ColorMode;
   c: ColorTokens;
+  /** Tokens extra de las pantallas de acceso; `null` fuera de ellas. */
+  auth: AuthTokens | null;
 }
 
-const ThemeContext = createContext<Theme>({ mode: 'light', c: colors.light });
+const ThemeContext = createContext<Theme>({ mode: 'light', c: colors.light, auth: null });
+
+const AUTH_THEME: Theme = { mode: 'dark', c: authColors, auth };
+
+/**
+ * Tema fijo de las pantallas de acceso: teal profundo con tema claro u oscuro del sistema. Los
+ * componentes de dentro (Text, TextField, Button…) leen `useTheme()` y toman esta paleta solos.
+ */
+export function AuthTheme({ children }: { children: ReactNode }) {
+  return <ThemeContext.Provider value={AUTH_THEME}>{children}</ThemeContext.Provider>;
+}
 
 export function ThemeProvider({ children, mode }: { children: ReactNode; mode?: ColorMode }) {
   const scheme = useColorScheme();
   const resolved: ColorMode = mode ?? (scheme === 'dark' ? 'dark' : 'light');
-  const value = useMemo<Theme>(() => ({ mode: resolved, c: colors[resolved] }), [resolved]);
+  const value = useMemo<Theme>(
+    () => ({ mode: resolved, c: colors[resolved], auth: null }),
+    [resolved],
+  );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

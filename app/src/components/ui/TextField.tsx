@@ -1,8 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { useStrings } from '@/i18n/es';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { fonts, layout, radius, space, webTransition } from '@/theme';
 import { Field, FIELD_HEIGHT, useFieldColors } from './Field';
+import { Icon, type IconName } from './Icon';
+import { IconButton } from './IconButton';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -13,6 +16,13 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   multiline?: boolean;
   /** Control a la derecha dentro del campo (p. ej. el botón de calendario). */
   trailing?: ReactNode;
+  /** Ícono a la izquierda dentro del campo (correo, candado…). Decorativo: la etiqueta sigue arriba. */
+  icon?: IconName;
+  /**
+   * Campo de contraseña con ojo para mostrar u ocultar lo escrito. Empieza oculto; reemplaza a
+   * `trailing` y a `secureTextEntry`.
+   */
+  secureToggle?: boolean;
 }
 
 /** Campo de texto (referencia: HeroUI Input): etiqueta arriba, foco con borde y halo de marca. */
@@ -22,15 +32,31 @@ export function TextField({
   helper,
   multiline,
   trailing,
+  icon,
+  secureToggle,
   onFocus,
   onBlur,
   editable,
   ...input
 }: TextFieldProps) {
+  const s = useStrings();
   const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
   const disabled = editable === false;
   const colors = useFieldColors({ focused, error, disabled });
   const reduced = useReducedMotion();
+  const eye = secureToggle === true;
+  const end: ReactNode = eye ? (
+    <IconButton
+      plain
+      edge="none"
+      icon={hidden ? 'eye' : 'eye-off'}
+      label={hidden ? s.common.showPassword : s.common.hidePassword}
+      onPress={() => setHidden((v) => !v)}
+    />
+  ) : (
+    trailing
+  );
   return (
     <Field label={label} helper={helper} error={error} ring={colors.ring}>
       <View>
@@ -40,6 +66,7 @@ export function TextField({
           multiline={multiline}
           editable={editable}
           {...input}
+          secureTextEntry={eye ? hidden : input.secureTextEntry}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -59,16 +86,31 @@ export function TextField({
               minHeight: multiline ? 120 : FIELD_HEIGHT,
               textAlignVertical: multiline ? 'top' : 'center',
             },
-            trailing ? styles.withTrailing : null,
+            end ? styles.withTrailing : null,
+            icon ? styles.withIcon : null,
           ]}
         />
-        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        {icon ? (
+          <View style={styles.leading} pointerEvents="none">
+            <Icon name={icon} size={18} color="textMuted" />
+          </View>
+        ) : null}
+        {end ? <View style={styles.trailing}>{end}</View> : null}
       </View>
     </Field>
   );
 }
 
 const styles = StyleSheet.create({
+  // Deja sitio al ícono de la izquierda (16 de margen + 18 de ícono + 12 de aire).
+  withIcon: { paddingLeft: space.lg + 18 + space.md },
+  leading: {
+    position: 'absolute',
+    left: space.lg,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
   withTrailing: { paddingRight: layout.minTouchTarget + space.sm },
   trailing: {
     position: 'absolute',

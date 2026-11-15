@@ -42,7 +42,6 @@ export default function Privacy() {
       title={s.privacy.header}
       subtitle={s.privacy.intro}
       header={<TopBar />}
-      mood="curious"
       footer={
         <>
           <Checkbox
@@ -75,12 +74,14 @@ export default function Privacy() {
           {/* "Usar mis documentos" es necesario para que la app funcione. */}
           <Button
             label={s.privacy.submit}
+            icon="check"
             disabled={!accepted || !useDocs}
             loading={busy}
             onPress={() => void submit()}
           />
           <Button
             label={s.privacy.fullPolicy}
+            icon="file-text"
             variant="secondary"
             onPress={() => router.push('/legal/privacy')}
           />
@@ -113,7 +114,11 @@ export default function Privacy() {
         </Text>
         {/* Mapa: 15 Privacidad → 44 Lista de espera (menores de 18). */}
         <View style={styles.start}>
-          <TextLink label={s.privacy.minorAction} onPress={() => router.push('/waitlist')} />
+          <TextLink
+            icon="info"
+            label={s.privacy.minorAction}
+            onPress={() => router.push('/waitlist')}
+          />
         </View>
       </View>
     </AuthLayout>

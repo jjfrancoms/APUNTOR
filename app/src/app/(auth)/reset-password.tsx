@@ -66,7 +66,6 @@ export default function ResetPassword() {
       title={phase === 'ready' ? r.title : r.header}
       subtitle={phase === 'ready' ? r.subtitle : undefined}
       header={<TopBar />}
-      mood={phase === 'failed' ? 'worried' : 'curious'}
     >
       {phase === 'opening' ? (
         <Text variant="small" color="textMuted" accessibilityRole="alert">
@@ -76,9 +75,17 @@ export default function ResetPassword() {
       {phase === 'failed' ? (
         <>
           <Banner tone="danger" title={s.errors[linkError]} />
-          <Button label={r.requestNew} onPress={() => router.replace('/forgot-password')} />
+          <Button
+            icon="send"
+            label={r.requestNew}
+            onPress={() => router.replace('/forgot-password')}
+          />
           <View style={styles.start}>
-            <TextLink label={s.forgot.backToLogin} onPress={() => router.replace('/login')} />
+            <TextLink
+              icon="arrow-left"
+              label={s.forgot.backToLogin}
+              onPress={() => router.replace('/login')}
+            />
           </View>
         </>
       ) : null}
@@ -86,31 +93,34 @@ export default function ResetPassword() {
         <>
           <TextField
             label={r.password}
+            icon="lock"
             placeholder={r.passwordPlaceholder}
             value={password}
             onChangeText={(v) => {
               setPassword(v);
               if (error?.field === 'password') setError(null);
             }}
-            secureTextEntry
+            secureToggle
             autoComplete="new-password"
             error={error?.field === 'password' ? s.errors[error.code] : undefined}
           />
           <TextField
             label={r.confirm}
+            icon="lock"
             placeholder={r.confirmPlaceholder}
             value={confirm}
             onChangeText={(v) => {
               setConfirm(v);
               if (error?.field === 'confirm') setError(null);
             }}
-            secureTextEntry
+            secureToggle
             autoComplete="new-password"
             onSubmitEditing={() => void save()}
             error={error?.field === 'confirm' ? s.errors[error.code] : undefined}
           />
           <Button
             label={r.submit}
+            icon="check"
             loading={busy}
             disabled={password.length === 0 || confirm.length === 0}
             onPress={() => void save()}

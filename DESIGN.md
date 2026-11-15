@@ -47,7 +47,7 @@ fuente)**, **ámbar = avisos y mascota (nunca texto)**, **rojo = errores y accio
 
 - Todo par texto/fondo cumple WCAG AA (≥ 4,5:1); lo prueba `TEXT_PAIRS` en `tokens.ts`.
 - Nunca hex sueltos en pantallas: siempre `useTheme().c.<token>`.
-- Sin degradados, sin sombras marcadas, sin glassmorphism.
+- Sin degradados, sin sombras marcadas, sin glassmorphism (salvo las pantallas de acceso, ver abajo).
 - La mascota usa su propia paleta de ilustración (`mascotPalette` en `tokens.ts`): es parte
   del dibujo, no cambia con el tema y no se usa en la interfaz.
 
@@ -175,6 +175,40 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
   `animation-timeline: view()` y respaldo con `IntersectionObserver`). El contenido es visible sin
   JavaScript y con “reducir movimiento”. La app no usa revelado al hacer scroll.
 
+## Pantallas de acceso (paleta propia)
+
+Inicio de sesión, registro, recuperación, privacidad, onboarding y demás pantallas de `(auth)/` usan
+una paleta fija teal profundo, igual con el tema claro y con el oscuro ("ni tan claro ni tan
+oscuro"). Vive en `auth` (`tokens.ts`); `AuthTheme` la reparte a los componentes de dentro y
+`authColors` la expone con la forma de `ColorTokens`.
+
+| Token               | Valor       | Uso                                                                  |
+| ------------------- | ----------- | -------------------------------------------------------------------- |
+| `auth.bg`           | `#0D2427`   | Fondo base de la pantalla.                                           |
+| `auth.bgDeep`       | `#08191B`   | Fondo más profundo, para las esquinas y las curvas.                  |
+| `auth.card`         | `#0F292C`   | Superficie de la tarjeta del formulario.                             |
+| `auth.field`        | `#0A1D20`   | Relleno de los campos y de los botones secundarios.                  |
+| `auth.fieldBorder`  | `#2F5254`   | Borde fino de campos, botones secundarios y líneas divisorias.       |
+| `auth.cardBorder`   | `#4DB6A68C` | Borde brillante de la tarjeta (teal con transparencia).              |
+| `auth.text`         | `#F2F7F6`   | Texto principal.                                                     |
+| `auth.textMuted`    | `#9DB8B5`   | Texto secundario (gris verdoso).                                     |
+| `auth.accent`       | `#3FD0B5`   | Acento: enlaces, palabra destacada, anillo de foco, íconos de marca. |
+| `auth.accentRing`   | `#3FD0B538` | Halo del anillo de foco de los campos (acento con transparencia).    |
+| `auth.accentTop`    | `#5BE6CC`   | Extremo claro (arriba) del degradado del botón principal.            |
+| `auth.accentBottom` | `#2FB39D`   | Extremo oscuro (abajo) del degradado del botón principal.            |
+| `auth.onAccent`     | `#04211D`   | Texto sobre el botón principal.                                      |
+| `auth.cardGlow`     | `#4DB6A640` | Resplandor del borde de la tarjeta (teal con transparencia).         |
+| `auth.glow`         | `#1D7568`   | Brillo grande de fondo (verde de marca).                             |
+| `auth.glowSoft`     | `#4DB6A6`   | Brillo suave y trazo de las curvas de fondo (teal claro).            |
+| `auth.danger`       | `#F28B80`   | Errores sobre fondo oscuro.                                          |
+| `auth.dangerSoft`   | `#3D1F1C`   | Fondo de errores sobre fondo oscuro.                                 |
+
+- Textos y fondos cumplen AA (≥ 4,5:1); lo prueba `AUTH_TEXT_PAIRS` en `tokens.ts`.
+- Nunca hex sueltos: se usan los tokens `auth.*` (en componentes de acceso) o `useTheme().c`.
+- La «G» de Google de «Continuar con Google» usa los colores de la marca de Google (`googleMark` en `tokens.ts`): excepción por las pautas de Google, no es un token de interfaz.
+- Brillos y curvas de fondo estáticos (SVG), sin animación. Ilustración 3D de Illari solo aquí
+  (`app/assets/brand/illari-3d-web.png`); el resto de la app usa `Mascot`.
+
 ## Qué evitar
 
 - Resaltar una palabra del título con otro color o cursiva.
@@ -183,6 +217,8 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 - Estilos de otras marcas (Linear, Stripe, etc.) o temas prediseñados que cambien esta paleta.
 
 ## Qué evitar (estética genérica de IA)
+
+> Excepción aprobada por la persona dueña, solo para las pantallas de acceso (`app/src/app/(auth)/**`): brillo, degradado del botón principal, borde luminoso de la tarjeta, palabra destacada del título y curvas de fondo. No se usan en ningún otro lugar; siguen prohibidos los íconos flotantes en recuadros.
 
 - Íconos dentro de cuadrados o círculos de color suave como adorno de tarjetas o secciones. Un
   ícono funcional va plano.

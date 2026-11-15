@@ -33,12 +33,7 @@ export default function ConfirmAge() {
   };
 
   return (
-    <AuthLayout
-      title={k.title}
-      subtitle={k.subtitle}
-      header={<TopBar title={k.header} />}
-      mood="curious"
-    >
+    <AuthLayout title={k.title} subtitle={k.subtitle} header={<TopBar title={k.header} />}>
       <View style={styles.intro}>
         <DateField
           label={k.birthDate}
@@ -56,12 +51,14 @@ export default function ConfirmAge() {
       </View>
       <Button
         label={k.submit}
+        icon="arrow-right"
         loading={busy}
         disabled={birthDate.length < 10}
         onPress={() => void submit()}
       />
       <View style={styles.start}>
         <TextLink
+          icon="log-out"
           label={k.signOut}
           onPress={() => void signOut().then(() => router.replace('/login'))}
         />

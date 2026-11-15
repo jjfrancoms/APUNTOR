@@ -25,10 +25,9 @@ function NotificationsPermission() {
       title={s.notificationsPermission.title}
       subtitle={s.notificationsPermission.subtitle}
       header={<TopBar icon="x" onBack={done} />}
-      mood="surprised"
       footer={
         <>
-          <Button label={s.notificationsPermission.enable} onPress={enable} />
+          <Button icon="bell" label={s.notificationsPermission.enable} onPress={enable} />
           <View style={styles.start}>
             <TextLink label={s.notificationsPermission.notNow} color="textMuted" onPress={skip} />
           </View>

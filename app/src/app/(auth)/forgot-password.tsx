@@ -25,19 +25,24 @@ export default function ForgotPassword() {
     <AuthLayout
       title={s.forgot.title}
       subtitle={s.forgot.subtitle}
+      phoneIllari
       header={<TopBar title={s.forgot.header} />}
-      mood="curious"
       footer={
         <View style={styles.inline}>
           <Text variant="small" color="textMuted">
             {s.forgot.remembered}
           </Text>
-          <TextLink label={s.forgot.backToLogin} onPress={() => router.replace('/login')} />
+          <TextLink
+            icon="arrow-left"
+            label={s.forgot.backToLogin}
+            onPress={() => router.replace('/login')}
+          />
         </View>
       }
     >
       <TextField
         label={s.forgot.email}
+        icon="mail"
         placeholder={s.login.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
@@ -48,6 +53,7 @@ export default function ForgotPassword() {
       />
       <Button
         label={s.forgot.submit}
+        icon="send"
         disabled={!isValidEmail(email)}
         loading={busy}
         onPress={() => void send()}

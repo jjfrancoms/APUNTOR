@@ -29,13 +29,15 @@ export default function LinkSent() {
       title={s.linkSent.title}
       subtitle={s.linkSent.body(email)}
       header={<TopBar />}
-      mood="happy"
+      phoneIllari
     >
       <Button
         label={s.linkSent.openMail}
+        icon="mail"
         onPress={() => void Linking.openURL('mailto:').catch(() => undefined)}
       />
       <Button
+        icon="refresh-cw"
         label={left > 0 ? s.linkSent.resendIn(formatCountdown(left)) : s.linkSent.resend}
         variant="secondary"
         disabled={left > 0}
@@ -48,7 +50,7 @@ export default function LinkSent() {
         <Text variant="small" color="textMuted">
           {s.linkSent.wrongEmail}
         </Text>
-        <TextLink label={s.common.change} onPress={() => router.back()} />
+        <TextLink icon="edit-2" label={s.common.change} onPress={() => router.back()} />
       </View>
     </AuthLayout>
   );

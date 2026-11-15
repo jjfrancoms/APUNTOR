@@ -27,10 +27,9 @@ export default function Onboarding() {
   return (
     <AuthLayout
       title={s.onboarding.greeting}
-      mood="happy"
       footer={
         <>
-          <Button label={s.common.continue} onPress={next} />
+          <Button icon="arrow-right" label={s.common.continue} onPress={next} />
           <View style={styles.start}>
             <TextLink label={s.onboarding.skip} color="textMuted" onPress={next} />
           </View>

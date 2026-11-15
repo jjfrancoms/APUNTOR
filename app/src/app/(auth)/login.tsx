@@ -26,10 +26,18 @@ export default function Login() {
     else setError(s.errors[r.error]);
   };
   return (
-    <AuthLayout title={s.login.title} subtitle={s.login.subtitle} mood="happy">
+    <AuthLayout
+      title={s.login.title}
+      highlight={s.login.titleAccent}
+      subtitle={s.login.subtitle}
+      cardTitle={s.login.cardTitle}
+      cardSubtitle={s.login.cardSubtitle}
+      phoneIllari
+    >
       {backendConfigured ? null : <Banner tone="warning" title={s.live.notConfigured} />}
       <TextField
         label={s.login.email}
+        icon="mail"
         placeholder={s.login.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
@@ -44,18 +52,24 @@ export default function Login() {
           setPassword(v);
           setError(undefined);
         }}
-        secureTextEntry
+        icon="lock"
+        secureToggle
         autoComplete="current-password"
         onSubmitEditing={() => void submit()}
         error={error}
       />
       <View style={styles.start}>
-        <TextLink label={s.login.forgot} onPress={() => router.push('/forgot-password')} />
+        <TextLink
+          icon="help-circle"
+          label={s.login.forgot}
+          onPress={() => router.push('/forgot-password')}
+        />
       </View>
       <View style={styles.actions}>
         <Button
           label={s.login.submit}
           onPress={() => void submit()}
+          icon="log-in"
           loading={busy}
           disabled={email.length === 0 || password.length === 0}
         />
@@ -65,7 +79,11 @@ export default function Login() {
         <Text variant="small" color="textMuted">
           {s.login.firstTime}
         </Text>
-        <TextLink label={s.login.createAccount} onPress={() => router.push('/register')} />
+        <TextLink
+          icon="user-plus"
+          label={s.login.createAccount}
+          onPress={() => router.push('/register')}
+        />
       </View>
       <View style={styles.inline}>
         <Icon name="lock" size={12} color="textMuted" />

@@ -39,10 +39,10 @@ export default function Register() {
       title={s.register.title}
       subtitle={s.register.subtitle}
       header={<TopBar title={s.register.header} />}
-      mood="curious"
     >
       <TextField
         label={s.register.name}
+        icon="user"
         placeholder={s.register.namePlaceholder}
         value={name}
         onChangeText={setName}
@@ -50,6 +50,7 @@ export default function Register() {
       />
       <TextField
         label={s.register.email}
+        icon="mail"
         placeholder={s.register.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
@@ -60,22 +61,24 @@ export default function Register() {
       />
       <TextField
         label={s.register.password}
+        icon="lock"
         placeholder={s.register.passwordPlaceholder}
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        secureToggle
         autoComplete="new-password"
         error={error?.field === 'password' ? s.errors[error.code] : undefined}
       />
       <TextField
         label={s.register.confirm}
+        icon="lock"
         placeholder={s.register.confirmPlaceholder}
         value={confirm}
         onChangeText={(v) => {
           setConfirm(v);
           if (error?.field === 'confirm') setError(null);
         }}
-        secureTextEntry
+        secureToggle
         autoComplete="new-password"
         error={error?.field === 'confirm' ? s.errors[error.code] : undefined}
       />
@@ -122,6 +125,7 @@ export default function Register() {
       </Checkbox>
       <Button
         label={s.register.submit}
+        icon="user-plus"
         onPress={() => void submit()}
         loading={busy}
         disabled={
@@ -137,7 +141,11 @@ export default function Register() {
         <Text variant="small" color="textMuted">
           {s.register.haveAccount}
         </Text>
-        <TextLink label={s.register.signIn} onPress={() => router.replace('/login')} />
+        <TextLink
+          icon="log-in"
+          label={s.register.signIn}
+          onPress={() => router.replace('/login')}
+        />
       </View>
     </AuthLayout>
   );
