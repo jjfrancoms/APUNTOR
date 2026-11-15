@@ -118,6 +118,7 @@ export const en: Strings = {
     privacyNote: 'Your documents are private and only help you.',
   },
   register: {
+    emailInvalid: 'Check the email: it should look like name@email.com.',
     header: 'Create account',
     title: "Let's get started",
     subtitle: 'With an account, your mascot gets to know you and saves your progress.',
@@ -158,6 +159,7 @@ export const en: Strings = {
     wrongEmail: 'Wrong email?',
   },
   onboarding: {
+    start: 'Start studying',
     greeting: 'Hi! To help you better, tell me what you study.',
     levels: {
       school: { title: 'School', detail: 'Primary or secondary' },
@@ -218,6 +220,8 @@ export const en: Strings = {
     reviewNow: 'Review now',
     continue: 'Pick up where you left off',
     myCourses: 'My courses',
+    resume: 'Pick up where you left off',
+    resumeChat: 'Conversation',
     summary: 'Your summary',
     documents: 'Documents',
     questions: 'Questions today',
@@ -448,7 +452,8 @@ export const en: Strings = {
     suggestedNew: (course: string) => `Suggested new course: ${course}`,
     confidence: { high: 'High confidence', medium: 'Medium confidence', low: 'Low confidence' },
     reason: (text: string) => `Why: ${text}`,
-    accept: 'Accept',
+    accept: 'Move to suggested course',
+    createAndMove: 'Create and move',
     chooseOther: 'Choose another course',
     newCourse: 'Create course',
     notNow: 'Not now',
@@ -653,7 +658,7 @@ export const en: Strings = {
   study: {
     practice: 'Practice',
     cards: 'Cards',
-    loading: 'Loading…',
+    loading: 'Preparing your practice…',
     loadingHint: 'One moment.',
     errorTitle: "We couldn't load this",
     errorBody: 'Try again in a moment.',
@@ -855,7 +860,7 @@ export const en: Strings = {
     offlineTitle: 'Offline',
     offlineBody: 'You can read what you already downloaded. Uploading and asking need internet.',
     downloaded: 'See downloaded courses',
-    loading: 'Loading…',
+    loading: 'Loading your notes…',
   },
   demo: {
     signOut: 'Sign out',
@@ -904,7 +909,7 @@ export const en: Strings = {
     title: 'Document options',
     renameTitle: 'Rename document',
     name: 'Name',
-    save: 'Save',
+    save: 'Save name',
     moveTitle: 'Move to another course',
   },
   editProfile: {
@@ -1006,7 +1011,7 @@ export const en: Strings = {
     birthDate: 'Date of birth',
     birthPlaceholder: 'DD/MM/YYYY',
     birthNote: "We only store that you're 18 or over, never the date.",
-    submit: 'Continue',
+    submit: 'Confirm my age',
     signOut: 'Use another account',
   },
   admin: {
@@ -1016,7 +1021,7 @@ export const en: Strings = {
     privacyNote:
       'You see file names and metadata; never the content of documents or the questions.',
     checking: 'Checking access…',
-    loading: 'Loading…',
+    loading: 'Loading the panel…',
     loadMore: 'Load more',
     retry: 'Try again',
     refresh: 'Refresh',

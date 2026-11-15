@@ -161,7 +161,7 @@ function ReviewRow({
           />
           <Button
             icon="plus"
-            label={s.review.newCourse}
+            label={s.review.createAndMove}
             compact
             loading={busy}
             disabled={courseName.trim().length === 0}
@@ -174,6 +174,7 @@ function ReviewRow({
           icon="check"
           label={s.review.accept}
           compact
+          variant={mode === 'idle' ? 'primary' : 'secondary'}
           loading={busy && mode === 'idle'}
           disabled={busy}
           onPress={() => void decide({ action: 'accept' })}

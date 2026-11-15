@@ -151,12 +151,7 @@ function FlashcardsPlay({ title, items }: { title: string; items: ApiStudyItem[]
         flipped ? (
           <View style={styles.grades}>
             <View style={styles.flex}>
-              <Button
-                label={f.notYet}
-                variant="dangerOutline"
-                icon="x"
-                onPress={() => grade(false)}
-              />
+              <Button label={f.notYet} variant="secondary" icon="x" onPress={() => grade(false)} />
             </View>
             <View style={styles.flex}>
               <Button label={f.know} icon="check" onPress={() => grade(true)} />

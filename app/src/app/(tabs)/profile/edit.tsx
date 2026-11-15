@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Banner, Button, Card, Icon, Screen, Text, TextField, TopBar } from '@/components/ui';
 import { useStrings, type ErrorCode } from '@/i18n/es';
+import { isValidEmail } from '@/lib/validation';
 import { changePassword, updateProfile, useStore } from '@/store/store';
 import { radius, space, useTheme, useWide } from '@/theme';
 
@@ -27,14 +28,28 @@ export default function EditProfile() {
   const level = s.onboarding.levels[session?.level ?? 'university'];
 
   const [emailPending, setEmailPending] = useState(false);
+  // Mientras guarda, el botón queda inactivo: sin doble envío.
+  const [saving, setSaving] = useState(false);
+  const [changingPw, setChangingPw] = useState(false);
+  const [emailBlurred, setEmailBlurred] = useState(false);
+  const emailHint =
+    emailBlurred && email.trim().length > 0 && !isValidEmail(email)
+      ? s.register.emailInvalid
+      : undefined;
   const save = async () => {
+    if (saving) return;
+    setSaving(true);
     const r = await updateProfile({ fullName, email });
+    setSaving(false);
     setSaved(r.ok);
     setEmailPending(r.ok && r.needsConfirmation === true);
     setError(r.ok ? null : r.error);
   };
   const savePassword = async () => {
+    if (changingPw) return;
+    setChangingPw(true);
     const r = await changePassword(current, next, confirm);
+    setChangingPw(false);
     setPwSaved(r.ok);
     setPwError(r.ok ? null : r.error);
     if (r.ok) {
@@ -56,6 +71,7 @@ export default function EditProfile() {
         <Button
           icon="check"
           label={e.save}
+          loading={saving}
           onPress={() => void save()}
           disabled={fullName.trim().length === 0}
         />
@@ -87,10 +103,11 @@ export default function EditProfile() {
               setSaved(false);
               setError(null);
             }}
+            onBlur={() => setEmailBlurred(true)}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
-            error={error ? s.errors[error] : undefined}
+            error={error ? s.errors[error] : emailHint}
           />
           <View style={styles.gap}>
             <Text variant="smallStrong">{e.level}</Text>
@@ -158,6 +175,7 @@ export default function EditProfile() {
               icon="lock"
               label={e.changePassword}
               variant="secondary"
+              loading={changingPw}
               disabled={current.length === 0 || next.length === 0 || confirm.length === 0}
               onPress={() => void savePassword()}
             />

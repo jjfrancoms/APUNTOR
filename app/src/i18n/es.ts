@@ -123,6 +123,7 @@ export const es = {
     privacyNote: 'Tus documentos son privados y solo te ayudan a ti.',
   },
   register: {
+    emailInvalid: 'Revisa el correo: debe verse como nombre@correo.com.',
     header: 'Crear cuenta',
     title: 'Empecemos',
     subtitle: 'Con tu cuenta, tu mascota te conoce y guarda tu progreso.',
@@ -163,6 +164,7 @@ export const es = {
     wrongEmail: '¿Correo equivocado?',
   },
   onboarding: {
+    start: 'Empezar a estudiar',
     greeting: '¡Hola! Para ayudarte mejor, cuéntame qué estudias.',
     levels: {
       school: { title: 'Colegio', detail: 'Primaria o secundaria' },
@@ -223,6 +225,8 @@ export const es = {
     reviewNow: 'Repasar ahora',
     continue: 'Continúa donde lo dejaste',
     myCourses: 'Mis cursos',
+    resume: 'Sigue donde lo dejaste',
+    resumeChat: 'Conversación',
     summary: 'Tu resumen',
     documents: 'Documentos',
     questions: 'Preguntas hoy',
@@ -450,7 +454,8 @@ export const es = {
     suggestedNew: (course: string) => `Curso nuevo sugerido: ${course}`,
     confidence: { high: 'Confianza alta', medium: 'Confianza media', low: 'Confianza baja' },
     reason: (text: string) => `Por qué: ${text}`,
-    accept: 'Aceptar',
+    accept: 'Mover al curso sugerido',
+    createAndMove: 'Crear y mover',
     chooseOther: 'Elegir otro curso',
     newCourse: 'Crear curso',
     notNow: 'Ahora no',
@@ -657,7 +662,7 @@ export const es = {
   study: {
     practice: 'Practicar',
     cards: 'Tarjetas',
-    loading: 'Cargando…',
+    loading: 'Preparando tu práctica…',
     loadingHint: 'Un momento.',
     errorTitle: 'No pudimos cargar esto',
     errorBody: 'Inténtalo de nuevo en un momento.',
@@ -860,7 +865,7 @@ export const es = {
     offlineTitle: 'Sin conexión',
     offlineBody: 'Puedes leer lo que ya descargaste. Subir y preguntar necesitan internet.',
     downloaded: 'Ver cursos descargados',
-    loading: 'Cargando…',
+    loading: 'Cargando tus apuntes…',
   },
   demo: {
     signOut: 'Cerrar sesión',
@@ -909,7 +914,7 @@ export const es = {
     title: 'Opciones del documento',
     renameTitle: 'Renombrar documento',
     name: 'Nombre',
-    save: 'Guardar',
+    save: 'Guardar nombre',
     moveTitle: 'Mover a otro curso',
   },
   editProfile: {
@@ -1013,7 +1018,7 @@ export const es = {
     birthDate: 'Fecha de nacimiento',
     birthPlaceholder: 'DD/MM/AAAA',
     birthNote: 'Solo guardamos que tienes 18 años o más, nunca la fecha.',
-    submit: 'Continuar',
+    submit: 'Confirmar mi edad',
     signOut: 'Usar otra cuenta',
   },
   admin: {
@@ -1023,7 +1028,7 @@ export const es = {
     privacyNote:
       'Ves nombres de archivo y metadatos; nunca el contenido de los documentos ni las preguntas.',
     checking: 'Comprobando el acceso…',
-    loading: 'Cargando…',
+    loading: 'Cargando el panel…',
     loadMore: 'Cargar más',
     retry: 'Reintentar',
     refresh: 'Actualizar',

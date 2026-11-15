@@ -89,7 +89,7 @@ export default function AdminUsers() {
       <Button
         label={u.delete}
         icon="trash-2"
-        variant="dangerOutline"
+        variant="secondary"
         compact
         onPress={() => {
           setDeleted(null);

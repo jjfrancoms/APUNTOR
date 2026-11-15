@@ -6,6 +6,7 @@ import { GoogleSignIn } from '@/components/domain/GoogleSignIn';
 import { Button, Checkbox, DateField, Text, TextField, TextLink, TopBar } from '@/components/ui';
 import { useStrings } from '@/i18n/es';
 import type { ErrorCode } from '@/i18n/es';
+import { isValidEmail, isWeakPassword } from '@/lib/validation';
 import { signUp, type AuthField } from '@/store/store';
 import { space } from '@/theme';
 
@@ -21,6 +22,26 @@ export default function Register() {
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<{ code: ErrorCode; field: AuthField } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Validación al salir del campo (no mientras se escribe): el aviso queda junto al campo.
+  const [touched, setTouched] = useState<{ email: boolean; password: boolean; confirm: boolean }>({
+    email: false,
+    password: false,
+    confirm: false,
+  });
+  const touch = (field: 'email' | 'password' | 'confirm') =>
+    setTouched((t) => ({ ...t, [field]: true }));
+  const emailHint =
+    touched.email && email.trim().length > 0 && !isValidEmail(email)
+      ? s.register.emailInvalid
+      : undefined;
+  const passwordHint =
+    touched.password && password.length > 0 && isWeakPassword(password)
+      ? s.errors.AUTH_WEAK_PASSWORD
+      : undefined;
+  const confirmHint =
+    touched.confirm && confirm.length > 0 && confirm !== password
+      ? s.errors.AUTH_PASSWORD_MISMATCH
+      : undefined;
   const submit = async () => {
     if (busy) return;
     setBusy(true);
@@ -54,10 +75,17 @@ export default function Register() {
         placeholder={s.register.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
+        onBlur={() => touch('email')}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
-        error={error?.field === 'email' ? s.errors[error.code] : undefined}
+        error={
+          error?.field === 'email'
+            ? error.code === 'AUTH_INVALID'
+              ? s.register.emailInvalid
+              : s.errors[error.code]
+            : emailHint
+        }
       />
       <TextField
         label={s.register.password}
@@ -65,9 +93,10 @@ export default function Register() {
         placeholder={s.register.passwordPlaceholder}
         value={password}
         onChangeText={setPassword}
+        onBlur={() => touch('password')}
         secureToggle
         autoComplete="new-password"
-        error={error?.field === 'password' ? s.errors[error.code] : undefined}
+        error={error?.field === 'password' ? s.errors[error.code] : passwordHint}
       />
       <TextField
         label={s.register.confirm}
@@ -78,9 +107,10 @@ export default function Register() {
           setConfirm(v);
           if (error?.field === 'confirm') setError(null);
         }}
+        onBlur={() => touch('confirm')}
         secureToggle
         autoComplete="new-password"
-        error={error?.field === 'confirm' ? s.errors[error.code] : undefined}
+        error={error?.field === 'confirm' ? s.errors[error.code] : confirmHint}
       />
       <View style={styles.intro}>
         <DateField

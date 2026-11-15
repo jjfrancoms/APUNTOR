@@ -29,7 +29,7 @@ export default function Onboarding() {
       title={s.onboarding.greeting}
       footer={
         <>
-          <Button icon="arrow-right" label={s.common.continue} onPress={next} />
+          <Button icon="arrow-right" label={s.onboarding.start} onPress={next} />
           <View style={styles.start}>
             <TextLink label={s.onboarding.skip} color="textMuted" onPress={next} />
           </View>

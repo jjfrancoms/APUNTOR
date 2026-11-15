@@ -34,6 +34,15 @@ export default function Home() {
   const courses = useStore((st) => st.courses);
   const docCount = useStore((st) => st.documents.length);
   const lastDoc = useStore((st) => st.documents[0]);
+  // La última conversación con mensajes: lo que se puede retomar sin buscarlo.
+  const lastConv = useStore((st) =>
+    st.conversations
+      .filter((conv) => conv.messages.length > 0)
+      .reduce<(typeof st.conversations)[number] | undefined>(
+        (best, conv) => (best === undefined || conv.updatedAt > best.updatedAt ? conv : best),
+        undefined,
+      ),
+  );
   const sync = useStore((st) => st.sync);
   const asked = useStore(questionsToday);
   const limit = useStore(dailyQuestionLimit);
@@ -125,40 +134,63 @@ export default function Home() {
           </View>
         </View>
       </View>
-      {lastDoc ? (
+      {/* Zeigarnik: lo que quedó a medias va primero, con un toque para retomarlo. */}
+      {lastConv || lastDoc ? (
         <View style={styles.section}>
-          {/* Encabezado de sección (sin etiqueta en mayúsculas sobre el título). */}
-          <Text variant="heading">{s.live.lastDocument}</Text>
-          <Tap
-            accessibilityRole="button"
-            accessibilityLabel={`${s.live.lastDocument}: ${lastDoc.name}`}
-            onPress={() => router.push(`/documents/${lastDoc.id}`)}
-          >
-            {/* Fila sin caja: solo espacio vertical, sin borde ni fondo. */}
-            <View style={styles.bareRow}>
-              <View style={styles.row}>
-                <View style={styles.flex}>
-                  <Text variant="bodyStrong" numberOfLines={1}>
-                    {lastDoc.name}
-                  </Text>
-                  <Text variant="caption" color="textMuted">
-                    {lastDoc.path[0] ?? s.live.noCourse}
-                  </Text>
+          <Text variant="heading">{s.home.resume}</Text>
+          <View>
+            {lastConv ? (
+              <Tap
+                accessibilityRole="button"
+                accessibilityLabel={`${s.home.resumeChat}: ${lastConv.title}`}
+                onPress={() => router.push(`/conversation?id=${lastConv.id}`)}
+              >
+                <View style={styles.bareRow}>
+                  <View style={styles.row}>
+                    <Icon name="message-circle" color="textMuted" />
+                    <View style={styles.flex}>
+                      <Text variant="bodyStrong" numberOfLines={1}>
+                        {lastConv.title}
+                      </Text>
+                      <Text variant="caption" color="textMuted" numberOfLines={1}>
+                        {`${s.home.resumeChat} · ${lastConv.course}`}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-right" color="textMuted" />
+                  </View>
                 </View>
-                <Chip
-                  label={s.live.status[lastDoc.status]}
-                  tone={
-                    lastDoc.status === 'failed'
-                      ? 'danger'
-                      : lastDoc.status === 'completed'
-                        ? 'neutral'
-                        : 'warning'
-                  }
-                />
-                <Icon name="chevron-right" color="textMuted" />
-              </View>
-            </View>
-          </Tap>
+              </Tap>
+            ) : null}
+            {lastDoc ? (
+              <Tap
+                accessibilityRole="button"
+                accessibilityLabel={`${s.live.lastDocument}: ${lastDoc.name}`}
+                onPress={() => router.push(`/documents/${lastDoc.id}`)}
+              >
+                {/* Fila sin caja: solo espacio vertical, sin borde ni fondo. */}
+                <View style={styles.bareRow}>
+                  <View style={styles.row}>
+                    <Icon name="file-text" color="textMuted" />
+                    <View style={styles.flex}>
+                      <Text variant="bodyStrong" numberOfLines={1}>
+                        {lastDoc.name}
+                      </Text>
+                      <Text variant="caption" color="textMuted">
+                        {lastDoc.path[0] ?? s.live.noCourse}
+                      </Text>
+                    </View>
+                    {lastDoc.status === 'completed' ? null : (
+                      <Chip
+                        label={s.live.status[lastDoc.status]}
+                        tone={lastDoc.status === 'failed' ? 'danger' : 'warning'}
+                      />
+                    )}
+                    <Icon name="chevron-right" color="textMuted" />
+                  </View>
+                </View>
+              </Tap>
+            ) : null}
+          </View>
         </View>
       ) : null}
       <View style={styles.section}>
