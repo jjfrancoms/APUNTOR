@@ -171,7 +171,8 @@ cabeza de llama de línea; el logotipo es "APUNTOR" en Montserrat Bold, ya conve
 - **Cambio de tema (web)**: el tema nuevo se revela en círculo desde el control tocado (View
   Transitions, `revealThemeChange` en `app/src/lib/theme-transition.ts`). En nativo, en
   navegadores sin la API o con “reducir movimiento”, el cambio es inmediato.
-- **Landing**: las secciones bajo el hero aparecen al entrar en pantalla (12 px y fundido, con
+- **Landing (siempre oscura)**: usa la paleta `auth` de abajo en los dos temas del sistema (`color-scheme: dark`, `theme-color` `#0D2427`), copiada a propiedades CSS. Barra con logo, navegación en píldoras (Inicio, Características, Cómo funciona, Planes) y «Entrar»; en móvil la navegación pasa a un `<details>` y «Entrar» sigue visible. El hero lleva la ilustración de Illari (`illari-estudiando.webp`/`.png` en `app/public/`, 900 px; el original de 2 MB queda fuera del repositorio), una franja de formatos con insignias SVG propias (rojo PDF, azul Word, naranja PowerPoint; no son logos oficiales ni tokens de interfaz) y, más abajo, filas con filetes y numerales, pasos, planes (solo «Gratis» se puede usar; los de pago dicen «Muy pronto») y el cierre. Precios en soles con IGV incluido.
+- **Landing (revelado)**: las secciones bajo el hero aparecen al entrar en pantalla (12 px y fundido, con
   `animation-timeline: view()` y respaldo con `IntersectionObserver`). El contenido es visible sin
   JavaScript y con “reducir movimiento”. La app no usa revelado al hacer scroll.
 
@@ -207,7 +208,7 @@ oscuro"). Vive en `auth` (`tokens.ts`); `AuthTheme` la reparte a los componentes
 - Nunca hex sueltos: se usan los tokens `auth.*` (en componentes de acceso) o `useTheme().c`.
 - La «G» de Google de «Continuar con Google» usa los colores de la marca de Google (`googleMark` en `tokens.ts`): excepción por las pautas de Google, no es un token de interfaz.
 - Brillos y curvas de fondo estáticos (SVG), sin animación. Ilustración 3D de Illari solo aquí
-  (`app/assets/brand/illari-3d-web.png`); el resto de la app usa `Mascot`.
+  (`app/assets/brand/illari-3d-web.png`) y en el hero de la landing (`app/public/illari-estudiando.*`); el resto de la app usa `Mascot`.
 
 ## Qué evitar
 
@@ -218,7 +219,7 @@ oscuro"). Vive en `auth` (`tokens.ts`); `AuthTheme` la reparte a los componentes
 
 ## Qué evitar (estética genérica de IA)
 
-> Excepción aprobada por la persona dueña, solo para las pantallas de acceso (`app/src/app/(auth)/**`): brillo, degradado del botón principal, borde luminoso de la tarjeta, palabra destacada del título y curvas de fondo. No se usan en ningún otro lugar; siguen prohibidos los íconos flotantes en recuadros.
+> Excepción aprobada por la persona dueña, solo para las pantallas de acceso (`app/src/app/(auth)/**`) y para la landing pública (`app/public/landing.html`, con las páginas legales y la 404 que comparten su cabecera y su pie): brillo, degradado del botón principal, borde luminoso de tarjetas y franjas, palabra destacada del título con su subrayado, curvas de fondo, pastilla «eyebrow» sobre el título, íconos en insignias y, en la landing, la ilustración de Illari con íconos flotantes en recuadros (viene dibujada en la imagen). No se usan en ningún otro lugar de la app; ahí siguen prohibidos.
 
 - Íconos dentro de cuadrados o círculos de color suave como adorno de tarjetas o secciones. Un
   ícono funcional va plano.
