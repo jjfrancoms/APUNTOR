@@ -129,7 +129,6 @@ export default function DocumentDetail() {
                     : 'warning'
               }
             />
-            {doc.pages > 0 ? <Chip label={s.live.pagesOf(doc.pages)} /> : null}
           </View>
           {failed ? <Banner tone="danger" title={s.live.actionFailed} /> : null}
           <View style={[styles.rule, { borderTopColor: c.border }]}>
@@ -159,15 +158,6 @@ export default function DocumentDetail() {
                   setNewName(record.name);
                   setSheet('rename');
                 }}
-              />
-            </View>
-            <View style={styles.flex}>
-              <Button
-                label={s.document.delete}
-                icon="trash-2"
-                variant="dangerOutline"
-                size="sm"
-                onPress={() => setConfirming(true)}
               />
             </View>
           </View>
